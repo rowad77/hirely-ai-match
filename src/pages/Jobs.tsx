@@ -7,15 +7,48 @@ import { Input } from '@/components/ui/input';
 import { Building, MapPin, Clock, DollarSign, Search } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { featuredJobs } from '@/data/jobs';
+import JobFilters, { JobFilters as JobFiltersType } from '@/components/JobFilters';
 
 const Jobs = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<JobFiltersType>({
+    jobTypes: [],
+    locations: [],
+    salaryRanges: [],
+  });
   
-  const filteredJobs = featuredJobs.filter(job => 
-    job.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    job.location.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredJobs = featuredJobs.filter(job => {
+    // Text search filter
+    const matchesSearch = 
+      job.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.location.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Job type filter
+    const matchesJobType = filters.jobTypes.length === 0 || 
+      filters.jobTypes.some(type => job.type === type);
+    
+    // Location filter
+    const matchesLocation = filters.locations.length === 0 || 
+      filters.locations.some(location => job.location === location);
+    
+    // Salary range filter (simplified implementation)
+    const matchesSalary = filters.salaryRanges.length === 0 || 
+      filters.salaryRanges.some(range => {
+        const jobSalary = parseInt(job.salary.replace(/[^0-9]/g, ''));
+        if (range === "Under $50k") return jobSalary < 50000;
+        if (range === "$50k - $100k") return jobSalary >= 50000 && jobSalary < 100000;
+        if (range === "$100k - $150k") return jobSalary >= 100000 && jobSalary < 150000;
+        if (range === "$150k+") return jobSalary >= 150000;
+        return true;
+      });
+    
+    return matchesSearch && matchesJobType && matchesLocation && matchesSalary;
+  });
+  
+  const handleFilterChange = (newFilters: JobFiltersType) => {
+    setFilters(newFilters);
+  };
   
   return (
     <MainLayout>
@@ -40,6 +73,8 @@ const Jobs = () => {
           </div>
         </div>
         
+        <JobFilters onFilterChange={handleFilterChange} />
+        
         {filteredJobs.length === 0 ? (
           <div className="text-center py-12">
             <h3 className="text-xl font-medium text-gray-900 mb-2">No jobs found</h3>
@@ -47,9 +82,16 @@ const Jobs = () => {
             <Button 
               variant="outline" 
               className="mt-4"
-              onClick={() => setSearchTerm('')}
+              onClick={() => {
+                setSearchTerm('');
+                setFilters({
+                  jobTypes: [],
+                  locations: [],
+                  salaryRanges: [],
+                });
+              }}
             >
-              Clear Search
+              Clear All Filters
             </Button>
           </div>
         ) : (

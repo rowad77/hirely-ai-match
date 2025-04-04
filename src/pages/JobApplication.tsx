@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,12 +9,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ArrowLeft, ArrowRight, Upload, Video } from 'lucide-react';
 import MainLayout from '../components/layout/MainLayout';
 import { Progress } from '@/components/ui/progress';
+import { useToast } from "@/hooks/use-toast";
 
 const JobApplication = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [coverLetter, setCoverLetter] = useState('');
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [videoQuestions, setVideoQuestions] = useState([
@@ -64,6 +68,13 @@ const JobApplication = () => {
     setTimeout(() => {
       setLoading(false);
       handleNextStep();
+      
+      // Show success notification
+      toast({
+        title: "Application Submitted",
+        description: "Your application has been successfully submitted. We'll be in touch soon!",
+        duration: 5000,
+      });
     }, 2000);
   };
 
@@ -71,19 +82,24 @@ const JobApplication = () => {
     <MainLayout withFooter={false}>
       <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
-          {step < 4 && (
+          {step < 5 && (
             <div className="mb-8">
-              <Progress value={step * 25} className="h-2" />
+              <Progress value={step * 25} className={`h-2 ${
+                step === 1 ? 'bg-blue-100' : 
+                step === 2 ? 'bg-blue-200' : 
+                step === 3 ? 'bg-blue-300' : 
+                'bg-blue-400'
+              }`} />
               <div className="flex justify-between mt-2 text-sm text-gray-500">
-                <span>Personal Info</span>
-                <span>Resume</span>
-                <span>Video Interview</span>
-                <span>Complete</span>
+                <span className={step >= 1 ? 'font-semibold text-hirely' : ''}>Personal Info</span>
+                <span className={step >= 2 ? 'font-semibold text-hirely' : ''}>Resume</span>
+                <span className={step >= 3 ? 'font-semibold text-hirely' : ''}>Video Interview</span>
+                <span className={step >= 4 ? 'font-semibold text-hirely' : ''}>Complete</span>
               </div>
             </div>
           )}
           
-          <Card className="mt-4">
+          <Card className="mt-4 shadow-md">
             {step === 1 && (
               <>
                 <CardHeader>
@@ -128,10 +144,21 @@ const JobApplication = () => {
                         className="mt-1"
                       />
                     </div>
+                    
+                    <div>
+                      <Label htmlFor="coverLetter">Cover Letter</Label>
+                      <Textarea
+                        id="coverLetter"
+                        value={coverLetter}
+                        onChange={(e) => setCoverLetter(e.target.value)}
+                        className="mt-1 min-h-[150px]"
+                        placeholder="Tell us why you're a great fit for this position..."
+                      />
+                    </div>
                   </CardContent>
                   
                   <CardFooter className="flex justify-between">
-                    <Link to="/">
+                    <Link to="/jobs">
                       <Button variant="outline" type="button">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Cancel
@@ -251,7 +278,7 @@ const JobApplication = () => {
                   </Button>
                   <Button 
                     className="bg-hirely hover:bg-hirely-dark" 
-                    onClick={handleNextStep}
+                    onClick={handleSubmit}
                     disabled={recordingStep < videoQuestions.length - 1 || isRecording}
                   >
                     Submit Application
@@ -283,7 +310,12 @@ const JobApplication = () => {
                   </div>
                 </CardContent>
                 
-                <CardFooter className="flex justify-center">
+                <CardFooter className="flex justify-center gap-4">
+                  <Link to="/jobs">
+                    <Button variant="outline">
+                      Browse More Jobs
+                    </Button>
+                  </Link>
                   <Link to="/">
                     <Button className="bg-hirely hover:bg-hirely-dark">
                       Return to Home
