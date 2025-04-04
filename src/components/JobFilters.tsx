@@ -8,13 +8,14 @@ import { ChevronDown, ChevronUp, Filter } from 'lucide-react';
 
 type JobFilterProps = {
   onFilterChange: (filters: JobFilters) => void;
-  inModal?: boolean; // Add the optional inModal prop
+  inModal?: boolean;
 };
 
 export type JobFilters = {
   jobTypes: string[];
   locations: string[];
   salaryRanges: string[];
+  categories: string[]; // Added categories
 };
 
 const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
@@ -23,11 +24,13 @@ const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
     jobTypes: [],
     locations: [],
     salaryRanges: [],
+    categories: [], // Initialize categories array
   });
 
   const jobTypes = ["Full-time", "Part-time", "Contract", "Remote"];
   const locations = ["San Francisco, CA", "New York, NY", "Chicago, IL", "Seattle, WA", "Remote"];
   const salaryRanges = ["Under $50k", "$50k - $100k", "$100k - $150k", "$150k+"];
+  const categories = ["Engineering", "Design", "Data", "Product", "Marketing"]; // Added categories array
 
   const handleFilterChange = (
     category: keyof JobFilters,
@@ -53,6 +56,7 @@ const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
       jobTypes: [],
       locations: [],
       salaryRanges: [],
+      categories: [], // Clear categories as well
     };
     setFilters(emptyFilters);
     onFilterChange(emptyFilters);
@@ -61,7 +65,8 @@ const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
   const hasActiveFilters = () => {
     return filters.jobTypes.length > 0 || 
            filters.locations.length > 0 || 
-           filters.salaryRanges.length > 0;
+           filters.salaryRanges.length > 0 ||
+           filters.categories.length > 0; // Include categories in check
   };
 
   // If in modal mode, always show the content without the collapsible wrapper
@@ -123,6 +128,25 @@ const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
                 ))}
               </div>
             </div>
+            
+            {/* Add Categories filter */}
+            <div>
+              <h3 className="font-medium mb-2">Categories</h3>
+              <div className="space-y-2">
+                {categories.map((category) => (
+                  <div key={category} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`category-${category}-modal`}
+                      checked={filters.categories.includes(category)}
+                      onCheckedChange={(checked) => 
+                        handleFilterChange('categories', category, checked === true)
+                      }
+                    />
+                    <Label htmlFor={`category-${category}-modal`} className="cursor-pointer">{category}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           
           <div className="flex justify-end mt-4">
@@ -150,7 +174,7 @@ const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
             <span className="font-medium">Filters</span>
             {hasActiveFilters() && (
               <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-semibold text-white bg-hirely rounded-full">
-                {filters.jobTypes.length + filters.locations.length + filters.salaryRanges.length}
+                {filters.jobTypes.length + filters.locations.length + filters.salaryRanges.length + filters.categories.length}
               </span>
             )}
           </div>
@@ -162,7 +186,7 @@ const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
         </div>
         
         <CollapsibleContent>
-          <div className="grid md:grid-cols-3 gap-6 p-4 bg-white rounded-lg border border-t-0 rounded-t-none">
+          <div className="grid md:grid-cols-4 gap-6 p-4 bg-white rounded-lg border border-t-0 rounded-t-none">
             <div>
               <h3 className="font-medium mb-2">Job Type</h3>
               <div className="space-y-2">
@@ -212,6 +236,25 @@ const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
                       }
                     />
                     <Label htmlFor={`salary-${range}`} className="cursor-pointer">{range}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Add Categories filter */}
+            <div>
+              <h3 className="font-medium mb-2">Categories</h3>
+              <div className="space-y-2">
+                {categories.map((category) => (
+                  <div key={category} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`category-${category}`}
+                      checked={filters.categories.includes(category)}
+                      onCheckedChange={(checked) => 
+                        handleFilterChange('categories', category, checked === true)
+                      }
+                    />
+                    <Label htmlFor={`category-${category}`} className="cursor-pointer">{category}</Label>
                   </div>
                 ))}
               </div>
