@@ -8,6 +8,7 @@ import { ChevronDown, ChevronUp, Filter } from 'lucide-react';
 
 type JobFilterProps = {
   onFilterChange: (filters: JobFilters) => void;
+  inModal?: boolean; // Add the optional inModal prop
 };
 
 export type JobFilters = {
@@ -16,8 +17,8 @@ export type JobFilters = {
   salaryRanges: string[];
 };
 
-const JobFilters = ({ onFilterChange }: JobFilterProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
+  const [isOpen, setIsOpen] = useState(inModal ? true : false);
   const [filters, setFilters] = useState<JobFilters>({
     jobTypes: [],
     locations: [],
@@ -63,6 +64,83 @@ const JobFilters = ({ onFilterChange }: JobFilterProps) => {
            filters.salaryRanges.length > 0;
   };
 
+  // If in modal mode, always show the content without the collapsible wrapper
+  if (inModal) {
+    return (
+      <div className="md:block mb-8">
+        <div>
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-medium mb-2">Job Type</h3>
+              <div className="space-y-2">
+                {jobTypes.map((type) => (
+                  <div key={type} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`job-type-${type}-modal`} 
+                      checked={filters.jobTypes.includes(type)}
+                      onCheckedChange={(checked) => 
+                        handleFilterChange('jobTypes', type, checked === true)
+                      }
+                    />
+                    <Label htmlFor={`job-type-${type}-modal`} className="cursor-pointer">{type}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-2">Location</h3>
+              <div className="space-y-2">
+                {locations.map((location) => (
+                  <div key={location} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`location-${location}-modal`} 
+                      checked={filters.locations.includes(location)}
+                      onCheckedChange={(checked) => 
+                        handleFilterChange('locations', location, checked === true)
+                      }
+                    />
+                    <Label htmlFor={`location-${location}-modal`} className="cursor-pointer">{location}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-2">Salary Range</h3>
+              <div className="space-y-2">
+                {salaryRanges.map((range) => (
+                  <div key={range} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`salary-${range}-modal`}
+                      checked={filters.salaryRanges.includes(range)}
+                      onCheckedChange={(checked) => 
+                        handleFilterChange('salaryRanges', range, checked === true)
+                      }
+                    />
+                    <Label htmlFor={`salary-${range}-modal`} className="cursor-pointer">{range}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end mt-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={clearFilters}
+              disabled={!hasActiveFilters()}
+            >
+              Clear Filters
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Regular collapsible filter for normal page view
   return (
     <div className="md:block mb-8">
       <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
