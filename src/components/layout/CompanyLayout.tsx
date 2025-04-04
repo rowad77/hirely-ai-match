@@ -1,8 +1,9 @@
 
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Building, Briefcase, Users, Settings, LogOut, Home } from 'lucide-react';
+import { Building, Briefcase, Users, Settings, LogOut, Home, BarChart3, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 import Navbar from './Navbar';
 import CompanyMobileSidebar from './CompanyMobileSidebar';
 
@@ -13,6 +14,7 @@ type CompanyLayoutProps = {
 
 const CompanyLayout = ({ children, title }: CompanyLayoutProps) => {
   const location = useLocation();
+  const { logout } = useAuth();
   
   const isActiveRoute = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
@@ -22,8 +24,14 @@ const CompanyLayout = ({ children, title }: CompanyLayoutProps) => {
     { name: 'Dashboard', path: '/company', icon: Home },
     { name: 'Jobs', path: '/company/jobs', icon: Briefcase },
     { name: 'Applications', path: '/company/applications', icon: Users },
+    { name: 'Analytics', path: '/company/analytics', icon: BarChart3 },
+    { name: 'Candidate Search', path: '/company/candidates', icon: Search },
     { name: 'Company Settings', path: '/company/settings', icon: Settings },
   ];
+
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -64,6 +72,7 @@ const CompanyLayout = ({ children, title }: CompanyLayoutProps) => {
                 <div className="pt-8">
                   <button 
                     className="w-full group flex items-center px-2 py-2 text-sm font-medium rounded-md text-red-600 hover:bg-red-50"
+                    onClick={handleLogout}
                   >
                     <LogOut className="mr-3 flex-shrink-0 h-5 w-5 text-red-400" />
                     Sign Out
