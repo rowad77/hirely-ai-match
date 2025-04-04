@@ -113,9 +113,11 @@ const CompanyJobs = () => {
                             <Eye className="h-4 w-4 mr-2" />
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuItem as={Link} to={`/company/jobs/edit/${job.id}`}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
+                          <DropdownMenuItem>
+                            <Link to={`/company/jobs/edit/${job.id}`} className="flex items-center w-full">
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDuplicateJob(job.id)}>
                             <Copy className="h-4 w-4 mr-2" />
