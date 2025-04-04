@@ -7,6 +7,7 @@ import Jobs from './pages/Jobs';
 import JobDetails from './pages/JobDetails';
 import Dashboard from './pages/Dashboard';
 import JobApplication from './pages/JobApplication';
+import ApplicationHistory from './pages/ApplicationHistory';
 import NotFound from './pages/NotFound';
 import CompanyDashboard from './pages/company/CompanyDashboard';
 import CompanyJobs from './pages/company/CompanyJobs';
@@ -33,7 +34,8 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/job/:id" element={<JobDetails />} />
-          <Route path="/job/apply/:id" element={<JobApplication />} />
+          <Route path="/apply" element={<JobApplication />} />
+          <Route path="/applications" element={<ApplicationHistory />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/create-job" element={<CreateJob />} />
           <Route path="/company" element={<CompanyDashboard />} />
