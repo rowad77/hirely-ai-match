@@ -160,8 +160,7 @@ const Signup = () => {
                       </div>
                       <Progress 
                         value={passwordStrength} 
-                        className="h-1 bg-gray-200" 
-                        indicatorClassName={getPasswordStrengthColor()} 
+                        className={`h-1 bg-gray-200 ${getPasswordStrengthColor()}`}
                       />
                     </div>
                   )}
