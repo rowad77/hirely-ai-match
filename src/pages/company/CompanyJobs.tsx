@@ -58,7 +58,7 @@ const CompanyJobs = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Link to="/dashboard/create-job">
+          <Link to="/company/jobs/create">
             <Button className="bg-hirely hover:bg-hirely-dark flex items-center">
               <Plus className="h-4 w-4 mr-2" />
               Post New Job
@@ -113,7 +113,7 @@ const CompanyJobs = () => {
                             <Eye className="h-4 w-4 mr-2" />
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem as={Link} to={`/company/jobs/edit/${job.id}`}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>

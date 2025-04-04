@@ -1,7 +1,7 @@
 
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Building, Briefcase, Users, Settings, LogOut, Home, BarChart3, Search } from 'lucide-react';
+import { Building, Briefcase, Users, Settings, LogOut, Home, BarChart3, Search, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from './Navbar';
@@ -17,13 +17,30 @@ const CompanyLayout = ({ children, title }: CompanyLayoutProps) => {
   const { logout } = useAuth();
   
   const isActiveRoute = (path: string) => {
-    return location.pathname === path || location.pathname.startsWith(path + '/');
+    // For exact matches
+    if (location.pathname === path) {
+      return true;
+    }
+    
+    // For parent paths - check if the current path starts with the nav path
+    // But make sure it's actually a parent path by checking for the trailing slash
+    if (path !== '/company' && location.pathname.startsWith(path + '/')) {
+      return true;
+    }
+    
+    // Special case for the dashboard
+    if (path === '/company' && location.pathname === '/company') {
+      return true;
+    }
+    
+    return false;
   };
 
   const navItems = [
     { name: 'Dashboard', path: '/company', icon: Home },
     { name: 'Jobs', path: '/company/jobs', icon: Briefcase },
     { name: 'Applications', path: '/company/applications', icon: Users },
+    { name: 'Interviews', path: '/company/interviews', icon: Calendar },
     { name: 'Analytics', path: '/company/analytics', icon: BarChart3 },
     { name: 'Candidate Search', path: '/company/candidates', icon: Search },
     { name: 'Company Settings', path: '/company/settings', icon: Settings },
@@ -48,12 +65,13 @@ const CompanyLayout = ({ children, title }: CompanyLayoutProps) => {
               <nav className="flex-1 px-2 space-y-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
+                  const active = isActiveRoute(item.path);
                   return (
                     <Link
                       key={item.name}
                       to={item.path}
                       className={cn(
-                        isActiveRoute(item.path)
+                        active
                           ? 'bg-hirely text-white'
                           : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
                         'group flex items-center px-2 py-2 text-sm font-medium rounded-md'
@@ -61,7 +79,7 @@ const CompanyLayout = ({ children, title }: CompanyLayoutProps) => {
                     >
                       <Icon
                         className={cn(
-                          isActiveRoute(item.path) ? 'text-white' : 'text-gray-400 group-hover:text-gray-500',
+                          active ? 'text-white' : 'text-gray-400 group-hover:text-gray-500',
                           'mr-3 flex-shrink-0 h-5 w-5'
                         )}
                       />

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import CompanyLayout from '@/components/layout/CompanyLayout';
@@ -66,7 +65,7 @@ const CompanyDashboard = () => {
             <p className="text-gray-600">Here's what's happening with your job postings today.</p>
           </div>
           <div className="flex gap-2">
-            <Link to="/company/jobs/new">
+            <Link to="/company/jobs/create">
               <Button className="bg-hirely hover:bg-hirely-dark flex items-center">
                 <Plus className="h-4 w-4 mr-2" />
                 Post New Job
