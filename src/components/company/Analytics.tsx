@@ -31,6 +31,10 @@ const Analytics = () => {
   ];
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+  
+  const handleDateRangeChange = (value: string) => {
+    setDateRange(value);
+  };
 
   return (
     <Card className="border shadow-sm">
@@ -38,29 +42,13 @@ const Analytics = () => {
         <CardTitle>Analytics Dashboard</CardTitle>
         <div className="flex items-center space-x-2">
           <CalendarIcon className="h-4 w-4 text-gray-500" />
-          <TabsList className="bg-muted">
-            <TabsTrigger 
-              value="7d" 
-              className={dateRange === '7d' ? 'bg-white' : ''}
-              onClick={() => setDateRange('7d')}
-            >
-              7d
-            </TabsTrigger>
-            <TabsTrigger 
-              value="30d" 
-              className={dateRange === '30d' ? 'bg-white' : ''}
-              onClick={() => setDateRange('30d')}
-            >
-              30d
-            </TabsTrigger>
-            <TabsTrigger 
-              value="90d" 
-              className={dateRange === '90d' ? 'bg-white' : ''}
-              onClick={() => setDateRange('90d')}
-            >
-              90d
-            </TabsTrigger>
-          </TabsList>
+          <Tabs value={dateRange} onValueChange={handleDateRangeChange}>
+            <TabsList className="bg-muted">
+              <TabsTrigger value="7d">7d</TabsTrigger>
+              <TabsTrigger value="30d">30d</TabsTrigger>
+              <TabsTrigger value="90d">90d</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
