@@ -18,6 +18,7 @@ import CompanyDashboard from "./pages/company/CompanyDashboard";
 import CompanyJobs from "./pages/company/CompanyJobs";
 import CompanyApplications from "./pages/company/CompanyApplications";
 import CompanyApplicationDetail from "./pages/company/CompanyApplicationDetail";
+import CompanySettings from "./pages/company/CompanySettings";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/company/jobs" element={<CompanyJobs />} />
           <Route path="/company/applications" element={<CompanyApplications />} />
           <Route path="/company/applications/:id" element={<CompanyApplicationDetail />} />
+          <Route path="/company/settings" element={<CompanySettings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

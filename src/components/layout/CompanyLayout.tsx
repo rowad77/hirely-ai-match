@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Building, Briefcase, Users, Settings, LogOut, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Navbar from './Navbar';
+import CompanyMobileSidebar from './CompanyMobileSidebar';
 
 type CompanyLayoutProps = {
   children: ReactNode;
@@ -79,6 +80,11 @@ const CompanyLayout = ({ children, title }: CompanyLayoutProps) => {
             <div className="max-w-7xl mx-auto">
               <div className="pb-5 border-b border-gray-200 mb-5 flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+                <div className="flex items-center">
+                  <div className="md:hidden">
+                    <CompanyMobileSidebar />
+                  </div>
+                </div>
               </div>
               {children}
             </div>
