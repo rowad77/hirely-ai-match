@@ -10,6 +10,7 @@ type AuthContextType = {
   isAuthenticated: boolean;
   isCompany: boolean;
   isCandidate: boolean;
+  isOwner: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         isCompany: user?.role === 'company',
         isCandidate: user?.role === 'candidate',
+        isOwner: user?.role === 'owner',
       }}
     >
       {children}

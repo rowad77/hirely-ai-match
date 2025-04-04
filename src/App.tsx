@@ -19,6 +19,9 @@ import CompanyCandidates from './pages/company/CompanyCandidates';
 import CompanySettings from './pages/company/CompanySettings';
 import CompanyInterviews from './pages/company/CompanyInterviews';
 import CreateJob from './pages/CreateJob';
+import OwnerDashboard from './pages/owner/OwnerDashboard';
+import OwnerCompanies from './pages/owner/OwnerCompanies';
+import OwnerUsers from './pages/owner/OwnerUsers';
 import { AuthProvider } from './context/AuthContext';
 import { Toaster } from './components/ui/toaster';
 import { Toaster as SonnerToaster } from 'sonner';
@@ -38,6 +41,8 @@ function App() {
           <Route path="/applications" element={<ApplicationHistory />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/create-job" element={<CreateJob />} />
+          
+          {/* Company Routes */}
           <Route path="/company" element={<CompanyDashboard />} />
           <Route path="/company/jobs" element={<CompanyJobs />} />
           <Route path="/company/jobs/create" element={<CompanyJobCreate />} />
@@ -47,6 +52,12 @@ function App() {
           <Route path="/company/candidates" element={<CompanyCandidates />} />
           <Route path="/company/interviews" element={<CompanyInterviews />} />
           <Route path="/company/settings" element={<CompanySettings />} />
+          
+          {/* Owner Routes */}
+          <Route path="/owner" element={<OwnerDashboard />} />
+          <Route path="/owner/companies" element={<OwnerCompanies />} />
+          <Route path="/owner/users" element={<OwnerUsers />} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />

@@ -1,11 +1,10 @@
-
 import { toast } from "sonner";
 
 export type User = {
   id: string;
   name: string;
   email: string;
-  role: 'candidate' | 'company';
+  role: 'candidate' | 'company' | 'owner';
   companyId?: string;
 };
 
@@ -25,6 +24,13 @@ const MOCK_USERS = {
     email: 'candidate@example.com',
     password: 'password',
     role: 'candidate' as const,
+  },
+  'owner@example.com': {
+    id: 'o1',
+    name: 'Platform Owner',
+    email: 'owner@example.com',
+    password: 'password',
+    role: 'owner' as const,
   }
 };
 
@@ -78,6 +84,11 @@ class AuthService {
   isCandidate(): boolean {
     const user = this.getCurrentUser();
     return user?.role === 'candidate';
+  }
+
+  isOwner(): boolean {
+    const user = this.getCurrentUser();
+    return user?.role === 'owner';
   }
 }
 
