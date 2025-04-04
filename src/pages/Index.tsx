@@ -1,9 +1,9 @@
-
 import { Link } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Play, Building, MapPin, Clock, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { featuredJobs } from '@/data/jobs';
 
 const Index = () => {
   const features = [
@@ -13,39 +13,8 @@ const Index = () => {
     { id: 4, title: "Smart Matching", description: "Match candidates to jobs with AI-powered precision" },
   ];
   
-  // Sample job listings for the home page
-  const featuredJobs = [
-    {
-      id: 1,
-      title: "Senior Frontend Developer",
-      company: "TechCorp Solutions",
-      location: "San Francisco, CA",
-      type: "Full-time",
-      salary: "$120,000 - $150,000",
-      postedDate: "2 days ago",
-      description: "Join our innovative team to build next-generation web applications using React and TypeScript."
-    },
-    {
-      id: 2,
-      title: "UX/UI Designer",
-      company: "Creative Design Studio",
-      location: "Remote",
-      type: "Contract",
-      salary: "$85,000 - $110,000",
-      postedDate: "1 week ago",
-      description: "Design intuitive user experiences for our client's digital products across various industries."
-    },
-    {
-      id: 3,
-      title: "Data Scientist",
-      company: "Analytics Insights",
-      location: "New York, NY",
-      type: "Full-time",
-      salary: "$140,000 - $180,000",
-      postedDate: "3 days ago",
-      description: "Apply machine learning and statistical models to extract valuable insights from complex datasets."
-    }
-  ];
+  // Get only 3 job listings for the homepage
+  const homepageJobs = featuredJobs.slice(0, 3);
   
   return (
     <MainLayout>
@@ -118,7 +87,7 @@ const Index = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredJobs.map(job => (
+            {homepageJobs.map(job => (
               <Card key={job.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xl">{job.title}</CardTitle>
@@ -141,7 +110,7 @@ const Index = () => {
                       <DollarSign className="h-4 w-4 mr-2" />
                       <span>{job.salary}</span>
                     </div>
-                    <p className="mt-4 text-gray-600">{job.description}</p>
+                    <p className="mt-4 text-gray-600 line-clamp-3">{job.description}</p>
                   </div>
                 </CardContent>
                 <CardFooter>
