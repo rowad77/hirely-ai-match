@@ -2,7 +2,8 @@
 import { Link } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Play } from 'lucide-react';
+import { CheckCircle, Play, Building, MapPin, Clock, DollarSign } from 'lucide-react';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Index = () => {
   const features = [
@@ -10,6 +11,40 @@ const Index = () => {
     { id: 2, title: "AI Video Interviewing", description: "Automated interviews with intelligent question generation" },
     { id: 3, title: "Emotion & Sentiment Analysis", description: "Assess candidate fit beyond just words" },
     { id: 4, title: "Smart Matching", description: "Match candidates to jobs with AI-powered precision" },
+  ];
+  
+  // Sample job listings for the home page
+  const featuredJobs = [
+    {
+      id: 1,
+      title: "Senior Frontend Developer",
+      company: "TechCorp Solutions",
+      location: "San Francisco, CA",
+      type: "Full-time",
+      salary: "$120,000 - $150,000",
+      postedDate: "2 days ago",
+      description: "Join our innovative team to build next-generation web applications using React and TypeScript."
+    },
+    {
+      id: 2,
+      title: "UX/UI Designer",
+      company: "Creative Design Studio",
+      location: "Remote",
+      type: "Contract",
+      salary: "$85,000 - $110,000",
+      postedDate: "1 week ago",
+      description: "Design intuitive user experiences for our client's digital products across various industries."
+    },
+    {
+      id: 3,
+      title: "Data Scientist",
+      company: "Analytics Insights",
+      location: "New York, NY",
+      type: "Full-time",
+      salary: "$140,000 - $180,000",
+      postedDate: "3 days ago",
+      description: "Apply machine learning and statistical models to extract valuable insights from complex datasets."
+    }
   ];
   
   return (
@@ -68,6 +103,64 @@ const Index = () => {
               <p className="text-3xl font-bold text-hirely">60%</p>
               <p className="text-gray-600 mt-2">Lower recruitment costs</p>
             </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Featured Jobs Section */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-gray-900">Featured Job Opportunities</h2>
+            <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+              Find your next career opportunity from our curated selection of top positions
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {featuredJobs.map(job => (
+              <Card key={job.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xl">{job.title}</CardTitle>
+                  <div className="flex items-center text-gray-500 mt-2">
+                    <Building className="h-4 w-4 mr-2" />
+                    <span>{job.company}</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="pb-4">
+                  <div className="flex flex-col gap-2 text-gray-500 text-sm">
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      <span>{job.location}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Clock className="h-4 w-4 mr-2" />
+                      <span>{job.type} • {job.postedDate}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      <span>{job.salary}</span>
+                    </div>
+                    <p className="mt-4 text-gray-600">{job.description}</p>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Link to={`/job/${job.id}`} className="w-full">
+                    <Button className="w-full bg-hirely hover:bg-hirely-dark">
+                      View Details
+                    </Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+          
+          <div className="mt-10 text-center">
+            <Link to="/jobs">
+              <Button variant="outline" className="px-8 py-2">
+                View All Jobs
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
