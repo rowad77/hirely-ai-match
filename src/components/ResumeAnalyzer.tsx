@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,12 +42,36 @@ const ResumeAnalyzer = ({ resumeText, userId }: ResumeAnalyzerProps) => {
       if (data.structuredData && userId) {
         await saveResumeData(data.structuredData);
         setSavedToProfile(true);
+        
+        // Track the CV upload activity in the user_activity table
+        await trackResumeUpload(userId, data.structuredData);
       }
     } catch (err) {
       console.error('Error analyzing resume:', err);
       setError('Failed to analyze resume. Please try again later.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const trackResumeUpload = async (userId: string, structuredData: any) => {
+    try {
+      await supabase
+        .from('user_activity')
+        .insert({
+          user_id: userId,
+          activity_type: 'resume_upload',
+          activity_data: {
+            skills_count: structuredData.skills?.length || 0,
+            education_count: structuredData.education?.length || 0,
+            experience_count: structuredData.experience?.length || 0,
+            has_full_name: !!structuredData.full_name,
+            timestamp: new Date().toISOString()
+          }
+        });
+    } catch (err) {
+      console.error('Error tracking resume upload activity:', err);
+      // Silently fail - this shouldn't stop the main functionality
     }
   };
 
