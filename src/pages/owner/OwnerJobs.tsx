@@ -20,7 +20,8 @@ import {
   Eye, 
   CheckCircle, 
   Ban,
-  Clock
+  Clock,
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { featuredJobs } from '@/data/jobs';
@@ -31,19 +32,20 @@ const MOCK_JOBS = featuredJobs.map(job => ({
   active: Math.random() > 0.2, // Random initial active state
   featured: Math.random() > 0.7, // Random initial featured state
   approved: Math.random() > 0.3, // Random initial approval state
-  companyName: job.company
+  companyName: job.company,
+  date: job.postedDate // Use postedDate as date for display
 }));
 
 const OwnerJobs = () => {
   const [jobs, setJobs] = useState(MOCK_JOBS);
   const [searchTerm, setSearchTerm] = useState('');
   
-  const handleDeleteJob = (jobId: string) => {
+  const handleDeleteJob = (jobId: number) => {
     setJobs(jobs.filter(job => job.id !== jobId));
     toast.success('Job deleted successfully');
   };
   
-  const toggleJobStatus = (jobId: string) => {
+  const toggleJobStatus = (jobId: number) => {
     setJobs(jobs.map(job => 
       job.id === jobId ? { ...job, active: !job.active } : job
     ));
@@ -54,7 +56,7 @@ const OwnerJobs = () => {
     }
   };
   
-  const toggleJobFeatured = (jobId: string) => {
+  const toggleJobFeatured = (jobId: number) => {
     setJobs(jobs.map(job => 
       job.id === jobId ? { ...job, featured: !job.featured } : job
     ));
@@ -65,7 +67,7 @@ const OwnerJobs = () => {
     }
   };
   
-  const toggleJobApproval = (jobId: string) => {
+  const toggleJobApproval = (jobId: number) => {
     setJobs(jobs.map(job => 
       job.id === jobId ? { ...job, approved: !job.approved } : job
     ));
@@ -74,6 +76,11 @@ const OwnerJobs = () => {
     if (job) {
       toast.success(`Job ${job.approved ? 'unapproved' : 'approved'} successfully`);
     }
+  };
+
+  const handleExportJobs = () => {
+    toast.success('Jobs data exported successfully');
+    // In a real app, this would generate a CSV or Excel file
   };
   
   // Filter jobs based on search term
@@ -97,7 +104,11 @@ const OwnerJobs = () => {
             />
           </div>
           <div className="flex space-x-2">
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+              onClick={handleExportJobs}
+            >
+              <Download className="h-4 w-4" />
               Export Jobs
             </Button>
             <Button className="bg-purple-600 hover:bg-purple-700">
@@ -106,7 +117,7 @@ const OwnerJobs = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <Card>
             <CardContent className="p-6">
               <div className="text-center">

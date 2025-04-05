@@ -23,6 +23,8 @@ import OwnerDashboard from './pages/owner/OwnerDashboard';
 import OwnerCompanies from './pages/owner/OwnerCompanies';
 import OwnerUsers from './pages/owner/OwnerUsers';
 import OwnerJobs from './pages/owner/OwnerJobs';
+import OwnerAnalytics from './pages/owner/OwnerAnalytics';
+import OwnerSettings from './pages/owner/OwnerSettings';
 import { AuthProvider } from './context/AuthContext';
 import { Toaster } from './components/ui/toaster';
 import { Toaster as SonnerToaster } from 'sonner';
@@ -59,6 +61,8 @@ function App() {
           <Route path="/owner/companies" element={<OwnerCompanies />} />
           <Route path="/owner/users" element={<OwnerUsers />} />
           <Route path="/owner/jobs" element={<OwnerJobs />} />
+          <Route path="/owner/analytics" element={<OwnerAnalytics />} />
+          <Route path="/owner/settings" element={<OwnerSettings />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
