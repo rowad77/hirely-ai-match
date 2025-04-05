@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Index from './pages/Index';
 import Login from './pages/Login';
@@ -25,6 +24,7 @@ import OwnerUsers from './pages/owner/OwnerUsers';
 import OwnerJobs from './pages/owner/OwnerJobs';
 import OwnerAnalytics from './pages/owner/OwnerAnalytics';
 import OwnerSettings from './pages/owner/OwnerSettings';
+import Documentation from './pages/Documentation';
 import { AuthProvider } from './context/AuthContext';
 import { Toaster } from './components/ui/toaster';
 import { Toaster as SonnerToaster } from 'sonner';
@@ -63,6 +63,8 @@ function App() {
           <Route path="/owner/jobs" element={<OwnerJobs />} />
           <Route path="/owner/analytics" element={<OwnerAnalytics />} />
           <Route path="/owner/settings" element={<OwnerSettings />} />
+          
+          <Route path="/documentation" element={<Documentation />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
