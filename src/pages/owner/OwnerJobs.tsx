@@ -26,18 +26,34 @@ import {
 import { toast } from 'sonner';
 import { featuredJobs } from '@/data/jobs';
 
+// Type definitions for job data
+interface Job {
+  id: number;
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  salary: string;
+  postedDate: string;
+  description: string;
+  category: string;
+  active: boolean;
+  featured: boolean;
+  approved: boolean;
+  companyName: string;
+}
+
 // Enhanced jobs data with additional control properties
-const MOCK_JOBS = featuredJobs.map(job => ({
+const MOCK_JOBS: Job[] = featuredJobs.map(job => ({
   ...job,
   active: Math.random() > 0.2, // Random initial active state
   featured: Math.random() > 0.7, // Random initial featured state
   approved: Math.random() > 0.3, // Random initial approval state
   companyName: job.company,
-  date: job.postedDate // Use postedDate as date for display
 }));
 
 const OwnerJobs = () => {
-  const [jobs, setJobs] = useState(MOCK_JOBS);
+  const [jobs, setJobs] = useState<Job[]>(MOCK_JOBS);
   const [searchTerm, setSearchTerm] = useState('');
   
   const handleDeleteJob = (jobId: number) => {
@@ -172,7 +188,7 @@ const OwnerJobs = () => {
                       <td className="px-4 py-3 font-medium">{job.title}</td>
                       <td className="px-4 py-3 text-sm">{job.company}</td>
                       <td className="px-4 py-3 text-sm">{job.location}</td>
-                      <td className="px-4 py-3 text-sm">{job.date}</td>
+                      <td className="px-4 py-3 text-sm">{job.postedDate}</td>
                       <td className="px-4 py-3 text-sm">
                         <div className="flex flex-wrap gap-1">
                           <Badge variant="outline" className={job.active 
