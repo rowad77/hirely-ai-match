@@ -69,83 +69,84 @@ const OwnerUsers = () => {
         </div>
         
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50 text-gray-600 text-sm">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Name</th>
-                  <th className="px-4 py-3 font-medium">Email</th>
-                  <th className="px-4 py-3 font-medium">Role</th>
-                  <th className="px-4 py-3 font-medium">Joined Date</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium w-20">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">{user.name}</td>
-                    <td className="px-4 py-3 text-sm">{user.email}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <Badge variant="outline" className={
-                        user.role === 'owner' 
-                          ? "bg-purple-50 text-purple-700 hover:bg-purple-50 border-purple-200"
-                          : user.role === 'company'
-                          ? "bg-blue-50 text-blue-700 hover:bg-blue-50 border-blue-200"
-                          : "bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
-                      }>
-                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-sm">{user.joinedDate}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <Badge variant="outline" className={user.active 
-                        ? "bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
-                        : "bg-red-50 text-red-700 hover:bg-red-50 border-red-200"
-                      }>
-                        {user.active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleUserStatus(user.id)}>
-                            {user.active 
-                              ? <UserX className="h-4 w-4 mr-2" />
-                              : <UserCheck className="h-4 w-4 mr-2" />
-                            }
-                            {user.active ? 'Deactivate' : 'Activate'}
-                          </DropdownMenuItem>
-                          {user.role !== 'owner' && (
-                            <DropdownMenuItem onClick={() => handleDeleteUser(user.id)} className="text-red-600 focus:text-red-600">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 text-gray-600 text-sm">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Name</th>
+                    <th className="px-4 py-3 font-medium">Email</th>
+                    <th className="px-4 py-3 font-medium">Role</th>
+                    <th className="px-4 py-3 font-medium">Joined Date</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium w-20">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredUsers.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No users found matching your search.</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
+                </thead>
+                <tbody className="divide-y">
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium">{user.name}</td>
+                      <td className="px-4 py-3 text-sm">{user.email}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <Badge variant="outline" className={
+                          user.role === 'owner' 
+                            ? "bg-purple-50 text-purple-700 hover:bg-purple-50 border-purple-200"
+                            : user.role === 'company'
+                            ? "bg-blue-50 text-blue-700 hover:bg-blue-50 border-blue-200"
+                            : "bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
+                        }>
+                          {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{user.joinedDate}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <Badge variant="outline" className={user.active 
+                          ? "bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
+                          : "bg-red-50 text-red-700 hover:bg-red-50 border-red-200"
+                        }>
+                          {user.active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => toggleUserStatus(user.id)}>
+                              {user.active 
+                                ? <UserX className="h-4 w-4 mr-2" />
+                                : <UserCheck className="h-4 w-4 mr-2" />
+                              }
+                              {user.active ? 'Deactivate' : 'Activate'}
+                            </DropdownMenuItem>
+                            {user.role !== 'owner' && (
+                              <DropdownMenuItem onClick={() => handleDeleteUser(user.id)} className="text-red-600 focus:text-red-600">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredUsers.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No users found matching your search.</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
         </Card>
       </div>
     </OwnerLayout>
