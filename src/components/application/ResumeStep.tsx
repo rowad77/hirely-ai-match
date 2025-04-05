@@ -1,7 +1,8 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Upload } from 'lucide-react';
+import ResumeAnalyzer from '@/components/ResumeAnalyzer';
 
 interface ResumeStepProps {
   resumeFile: File | null;
@@ -17,6 +18,7 @@ const ResumeStep = ({
   onPrevious
 }: ResumeStepProps) => {
   const [error, setError] = useState<string | null>(null);
+  const [resumeText, setResumeText] = useState<string>('');
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -29,14 +31,31 @@ const ResumeStep = ({
       }
       
       // Check file type
-      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
       if (!validTypes.includes(file.type)) {
-        setError('Only PDF, DOC, or DOCX files are allowed');
+        setError('Only PDF, DOC, DOCX, or TXT files are allowed');
         return;
       }
       
       setError(null);
       setResumeFile(file);
+      
+      // For text files, read the content for analysis
+      if (file.type === 'text/plain') {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const text = e.target?.result as string;
+          setResumeText(text || '');
+        };
+        reader.readAsText(file);
+      } else {
+        // For now, just simulate text for PDF/DOC files
+        // In a production app, you'd want server-side extraction
+        setResumeText(`Resume for ${file.name}. 
+This is a placeholder for extracted text from ${file.type} file.
+For the MVP, we're simulating text extraction from non-text files.
+In a full implementation, you would use a document parsing service.`);
+      }
     }
   };
   
@@ -59,14 +78,30 @@ const ResumeStep = ({
       }
       
       // Check file type
-      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
       if (!validTypes.includes(file.type)) {
-        setError('Only PDF, DOC, or DOCX files are allowed');
+        setError('Only PDF, DOC, DOCX, or TXT files are allowed');
         return;
       }
       
       setError(null);
       setResumeFile(file);
+      
+      // For text files, read the content for analysis
+      if (file.type === 'text/plain') {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const text = e.target?.result as string;
+          setResumeText(text || '');
+        };
+        reader.readAsText(file);
+      } else {
+        // Simulate text extraction from non-text files
+        setResumeText(`Resume for ${file.name}. 
+This is a placeholder for extracted text from ${file.type} file.
+For the MVP, we're simulating text extraction from non-text files.
+In a full implementation, you would use a document parsing service.`);
+      }
     }
   };
   
@@ -101,10 +136,10 @@ const ResumeStep = ({
               name="resume"
               type="file"
               className="sr-only"
-              accept=".pdf,.doc,.docx"
+              accept=".pdf,.doc,.docx,.txt"
               onChange={handleFileChange}
             />
-            <p className="text-sm text-gray-500 mt-1">PDF, DOC, or DOCX up to 5MB</p>
+            <p className="text-sm text-gray-500 mt-1">PDF, DOC, DOCX or TXT up to 5MB</p>
           </label>
         </div>
         
@@ -119,7 +154,10 @@ const ResumeStep = ({
               <button
                 type="button"
                 className="ml-2 text-red-500 hover:underline"
-                onClick={() => setResumeFile(null)}
+                onClick={() => {
+                  setResumeFile(null);
+                  setResumeText('');
+                }}
               >
                 Remove
               </button>
@@ -131,6 +169,12 @@ const ResumeStep = ({
           <p>Our AI will analyze your resume to match you with the right job opportunities.</p>
         </div>
       </div>
+      
+      {resumeFile && resumeText && (
+        <div className="mt-6">
+          <ResumeAnalyzer resumeText={resumeText} />
+        </div>
+      )}
       
       <div className="flex justify-between mt-8">
         <Button variant="outline" type="button" onClick={onPrevious}>

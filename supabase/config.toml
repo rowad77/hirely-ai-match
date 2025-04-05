@@ -1,1 +1,9 @@
+
 project_id = "lckyfjxdnmwhmruvgpwn"
+
+[api]
+enabled = true
+url = "https://lckyfjxdnmwhmruvgpwn.supabase.co"
+
+[functions]
+[functions.analyze-resume]
