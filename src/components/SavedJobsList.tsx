@@ -6,20 +6,46 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Building, MapPin, DollarSign, Heart, Trash2 } from 'lucide-react';
 import { featuredJobs } from '@/data/jobs';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type SavedJobsListProps = {
-  savedJobIds: number[];
-  onRemove: (id: number) => void;
+  savedJobIds: string[];
+  onRemove: (id: string) => void;
+  isLoading?: boolean;
 };
 
-const SavedJobsList = ({ savedJobIds, onRemove }: SavedJobsListProps) => {
+const SavedJobsList = ({ savedJobIds, onRemove, isLoading = false }: SavedJobsListProps) => {
   const [savedJobs, setSavedJobs] = useState<typeof featuredJobs>([]);
 
   useEffect(() => {
     // Get all jobs that match the saved IDs
-    const jobs = featuredJobs.filter(job => savedJobIds.includes(job.id));
+    // Note: In a real implementation, we would fetch this from Supabase
+    const jobs = featuredJobs.filter(job => savedJobIds.includes(job.id.toString()));
     setSavedJobs(jobs);
   }, [savedJobIds]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold mb-4">Saved Jobs</h2>
+        {[1, 2, 3].map((index) => (
+          <Card key={index} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                <div className="flex-1">
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-1/2 mb-2" />
+                  <Skeleton className="h-4 w-1/3 mb-2" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+                <Skeleton className="h-10 w-28" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   if (savedJobs.length === 0) {
     return (
@@ -51,7 +77,7 @@ const SavedJobsList = ({ savedJobIds, onRemove }: SavedJobsListProps) => {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    onClick={() => onRemove(job.id)}
+                    onClick={() => onRemove(job.id.toString())}
                     className="text-gray-400 hover:text-red-500"
                   >
                     <Trash2 className="h-5 w-5" />
