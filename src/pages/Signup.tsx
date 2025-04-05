@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '../components/layout/MainLayout';
+import { useAuth } from '@/context/AuthContext';
 
 const Signup = () => {
   const [email, setEmail] = useState('');
@@ -16,6 +17,15 @@ const Signup = () => {
   const [companyName, setCompanyName] = useState('');
   const [loading, setLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     // Simple password strength calculation
@@ -46,30 +56,49 @@ const Signup = () => {
     setLoading(true);
     
     try {
-      // This is a placeholder for future Supabase Auth integration
-      // const { data, error } = await supabase.auth.signUp({
-      //   email,
-      //   password,
-      //   options: {
-      //     data: {
-      //       company_name: companyName
-      //     }
-      //   }
-      // });
+      // Create user using Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: companyName,
+            role: 'company'  // Set role to 'company' for company signups
+          }
+        }
+      });
       
-      // if (error) throw error;
+      if (error) throw error;
       
-      // Simulate signup for now
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Create company entry if user is registering as a company
+      if (data.user) {
+        const { error: companyError } = await supabase
+          .from('companies')
+          .insert({
+            name: companyName,
+          })
+          .select();
+
+        if (companyError) {
+          console.error('Error creating company:', companyError);
+          // We don't throw here because the user is already created
+        }
+
+        // Add activity log
+        await supabase.rpc('track_activity', {
+          p_user_id: data.user.id,
+          p_activity_type: 'signup',
+          p_activity_data: { company_name: companyName }
+        });
+      }
       
       toast({
         title: "Account created successfully!",
         description: "Welcome to Hirely. Let's start hiring smarter.",
       });
       
-      // For now, just show a success message
-      // In the future, we would redirect to the dashboard
-      // navigate("/dashboard");
+      // Redirect to dashboard
+      navigate("/dashboard");
     } catch (error) {
       toast({
         variant: "destructive",
