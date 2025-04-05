@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CheckCircle } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '../components/layout/MainLayout';
@@ -91,18 +90,15 @@ const Signup = () => {
         });
       }
       
-      toast({
-        title: "Account created successfully!",
-        description: "Welcome to Hirely. Let's start hiring smarter.",
+      toast.success("Account created successfully!", {
+        description: "Welcome to Hirely. Let's start hiring smarter."
       });
       
       // Redirect to dashboard
       navigate("/dashboard");
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error creating account",
-        description: error instanceof Error ? error.message : "Please try again later.",
+      toast.error("Error creating account", {
+        description: error instanceof Error ? error.message : "Please try again later."
       });
     } finally {
       setLoading(false);
@@ -227,7 +223,12 @@ const Signup = () => {
                 Start hiring smarter with AI-powered interviews
               </h2>
               <ul className="mt-8 space-y-5">
-                {benefits.map((benefit, index) => (
+                {[
+                  'Create unlimited job postings',
+                  'Interview candidates with AI',
+                  'Get detailed candidate insights',
+                  'Match candidates to positions automatically',
+                ].map((benefit, index) => (
                   <li key={index} className="flex items-start animate-slide-in" style={{ animationDelay: `${index * 150}ms` }}>
                     <CheckCircle className="h-6 w-6 text-white flex-shrink-0" />
                     <span className="ml-3 text-white text-lg">{benefit}</span>
