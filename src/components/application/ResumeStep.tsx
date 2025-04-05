@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Upload } from 'lucide-react';
 import ResumeAnalyzer from '@/components/ResumeAnalyzer';
+import { useAuth } from '@/context/AuthContext';
 
 interface ResumeStepProps {
   resumeFile: File | null;
@@ -19,6 +19,7 @@ const ResumeStep = ({
 }: ResumeStepProps) => {
   const [error, setError] = useState<string | null>(null);
   const [resumeText, setResumeText] = useState<string>('');
+  const { user } = useAuth();
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -172,7 +173,7 @@ In a full implementation, you would use a document parsing service.`);
       
       {resumeFile && resumeText && (
         <div className="mt-6">
-          <ResumeAnalyzer resumeText={resumeText} />
+          <ResumeAnalyzer resumeText={resumeText} userId={user?.id} />
         </div>
       )}
       
