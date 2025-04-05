@@ -172,7 +172,7 @@ const ResumeAnalyzer = ({ resumeText, userId }: ResumeAnalyzerProps) => {
               <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />
               <span className="font-medium">Analysis Complete</span>
               {savedToProfile && (
-                <SimpleBadge variant="success" className="ml-2">Profile Updated</SimpleBadge>
+                <SimpleBadge variant="secondary" className="ml-2 bg-green-100 text-green-800 hover:bg-green-200">Profile Updated</SimpleBadge>
               )}
             </div>
             <div className="bg-gray-50 p-4 rounded-md border border-gray-200 whitespace-pre-line">
