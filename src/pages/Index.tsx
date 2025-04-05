@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import {
   Users, Search, Award, TrendingUp, Shield, Heart
 } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { SimpleBadge } from '@/components/ui/SimpleBadge';
 import { featuredJobs } from '@/data/jobs';
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
@@ -22,10 +21,8 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'tech' | 'marketing' | 'design'>('all');
   const { toggleSavedJob, isSaved } = useSavedJobs();
   
-  // Get only 6 job listings for the homepage
   const allJobs = featuredJobs.slice(0, 6);
   
-  // Filter jobs based on active tab
   const homepageJobs = activeTab === 'all' 
     ? allJobs 
     : allJobs.filter(job => {
@@ -47,7 +44,6 @@ const Index = () => {
     
     setUploading(true);
     
-    // Simulate upload - in a real app, this would connect to a backend
     setTimeout(() => {
       setUploading(false);
       setFile(null);
@@ -61,7 +57,6 @@ const Index = () => {
   
   return (
     <MainLayout>
-      {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-hirely-light via-white to-hirely-lightgray py-20 md:py-24 lg:py-32 overflow-hidden">
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
         <div className="absolute top-64 -left-24 w-96 h-96 bg-hirely rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
@@ -115,7 +110,6 @@ const Index = () => {
         </div>
       </section>
       
-      {/* CV Upload Section */}
       <section className="py-20 bg-white relative">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-50 -z-10"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -224,7 +218,6 @@ const Index = () => {
         </div>
       </section>
       
-      {/* Featured Jobs Section */}
       <section className="py-20 bg-gray-50 relative">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-30 -z-10"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -237,7 +230,6 @@ const Index = () => {
               Discover your next career move with top companies looking for talent like yours
             </p>
             
-            {/* Category tabs */}
             <div className="flex flex-wrap justify-center mt-8 mb-10 gap-2">
               <Button 
                 variant={activeTab === 'all' ? 'default' : 'outline'} 
@@ -327,12 +319,12 @@ const Index = () => {
                     </div>
                     
                     <div className="flex gap-2 mt-2">
-                      <Badge variant="outline" className="text-xs py-0 px-2 rounded-full bg-blue-50 text-blue-700 border-blue-100">
+                      <SimpleBadge variant="outline" className="text-xs py-0 px-2 rounded-full bg-blue-50 text-blue-700 border-blue-100">
                         {job.type}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs py-0 px-2 rounded-full bg-green-50 text-green-700 border-green-100">
+                      </SimpleBadge>
+                      <SimpleBadge variant="outline" className="text-xs py-0 px-2 rounded-full bg-green-50 text-green-700 border-green-100">
                         {job.category}
-                      </Badge>
+                      </SimpleBadge>
                     </div>
                     
                     <p className="mt-3 text-gray-600 line-clamp-3">{job.description}</p>
@@ -361,7 +353,6 @@ const Index = () => {
         </div>
       </section>
       
-      {/* How It Works Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in-up">
@@ -402,7 +393,6 @@ const Index = () => {
         </div>
       </section>
       
-      {/* Feature Grid Section */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -467,7 +457,6 @@ const Index = () => {
         </div>
       </section>
       
-      {/* CTA Section */}
       <section className="relative py-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-hirely to-hirely-dark -z-10"></div>
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQ0MCIgaGVpZ2h0PSI1MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCAwaDEiLz48cGF0aCBkPSJNMCAzNUwxNDQwIDUwMFYwSDAiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjA1Ii8+PHBhdGggZD0iTTAgMTM1TDE0NDAgNTAwVjBIMCIgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiLz48cGF0aCBkPSJNMCAyMzVMMTQ0MCA1MDBWMEgwIiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9Ii4wNSIvPjwvZz48L3N2Zz4=')] bg-cover bg-bottom opacity-10 -z-10"></div>
