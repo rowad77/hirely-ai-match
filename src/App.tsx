@@ -22,6 +22,7 @@ import CreateJob from './pages/CreateJob';
 import OwnerDashboard from './pages/owner/OwnerDashboard';
 import OwnerCompanies from './pages/owner/OwnerCompanies';
 import OwnerUsers from './pages/owner/OwnerUsers';
+import OwnerJobs from './pages/owner/OwnerJobs';
 import { AuthProvider } from './context/AuthContext';
 import { Toaster } from './components/ui/toaster';
 import { Toaster as SonnerToaster } from 'sonner';
@@ -57,6 +58,7 @@ function App() {
           <Route path="/owner" element={<OwnerDashboard />} />
           <Route path="/owner/companies" element={<OwnerCompanies />} />
           <Route path="/owner/users" element={<OwnerUsers />} />
+          <Route path="/owner/jobs" element={<OwnerJobs />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -11,7 +11,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { Search, MoreVertical, Edit, Trash2, Eye } from 'lucide-react';
+import { Search, MoreVertical, Edit, Trash2, Eye, Ban, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Mock companies data
@@ -68,7 +68,7 @@ const OwnerCompanies = () => {
         </div>
         
         <Card className="overflow-hidden">
-          <CardContent>
+          <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-gray-50 text-gray-600 text-sm">
@@ -114,7 +114,10 @@ const OwnerCompanies = () => {
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => toggleCompanyStatus(company.id)}>
-                              <Badge className="h-4 w-4 mr-2" />
+                              {company.active 
+                                ? <Ban className="h-4 w-4 mr-2" />
+                                : <CheckCircle className="h-4 w-4 mr-2" />
+                              }
                               {company.active ? 'Deactivate' : 'Activate'}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleDeleteCompany(company.id)} className="text-red-600 focus:text-red-600">

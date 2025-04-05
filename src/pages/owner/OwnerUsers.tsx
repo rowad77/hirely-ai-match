@@ -11,7 +11,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { Search, MoreVertical, Edit, Trash2, UserCheck, UserX } from 'lucide-react';
+import { Search, MoreVertical, Edit, Trash2, UserCheck, UserX, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Mock users data
@@ -42,6 +42,13 @@ const OwnerUsers = () => {
       toast.success(`User ${user.active ? 'deactivated' : 'activated'} successfully`);
     }
   };
+
+  const changeUserRole = (userId: string, newRole: 'candidate' | 'company' | 'owner') => {
+    setUsers(users.map(user => 
+      user.id === userId ? { ...user, role: newRole } : user
+    ));
+    toast.success(`User role changed to ${newRole} successfully`);
+  };
   
   // Filter users based on search term
   const filteredUsers = users.filter(user => 
@@ -69,7 +76,7 @@ const OwnerUsers = () => {
         </div>
         
         <Card className="overflow-hidden">
-          <CardContent>
+          <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-gray-50 text-gray-600 text-sm">
@@ -120,6 +127,22 @@ const OwnerUsers = () => {
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
+                            {user.role !== 'owner' && (
+                              <>
+                                <DropdownMenuItem onClick={() => changeUserRole(user.id, 'candidate')}>
+                                  <UserCheck className="h-4 w-4 mr-2" />
+                                  Set as Candidate
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => changeUserRole(user.id, 'company')}>
+                                  <UserCheck className="h-4 w-4 mr-2" />
+                                  Set as Company
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => changeUserRole(user.id, 'owner')}>
+                                  <Shield className="h-4 w-4 mr-2" />
+                                  Make Owner
+                                </DropdownMenuItem>
+                              </>
+                            )}
                             <DropdownMenuItem onClick={() => toggleUserStatus(user.id)}>
                               {user.active 
                                 ? <UserX className="h-4 w-4 mr-2" />
