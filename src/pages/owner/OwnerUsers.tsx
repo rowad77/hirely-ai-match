@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +21,9 @@ import {
   Shield, 
   Eye, 
   BarChart2, 
-  Clock
+  Clock,
+  Users,
+  Briefcase
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -41,7 +42,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// Enhanced mock users data with activity information
 const MOCK_USERS = [
   { 
     id: '1', 
@@ -163,7 +163,6 @@ const OwnerUsers = () => {
     setShowActivityDialog(true);
   };
   
-  // Filter users based on search term
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -198,7 +197,6 @@ const OwnerUsers = () => {
           </Button>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardContent className="p-6">
@@ -363,7 +361,6 @@ const OwnerUsers = () => {
         </Card>
       </div>
 
-      {/* User Activity Dialog */}
       <Dialog open={showActivityDialog} onOpenChange={setShowActivityDialog}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
@@ -375,7 +372,6 @@ const OwnerUsers = () => {
           
           {selectedUser && (
             <div className="space-y-6">
-              {/* User Info Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card>
                   <CardContent className="p-4">
@@ -397,7 +393,6 @@ const OwnerUsers = () => {
                 </Card>
               </div>
 
-              {/* Profile Completeness */}
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Profile Completeness</CardTitle>
@@ -415,7 +410,6 @@ const OwnerUsers = () => {
                 </CardContent>
               </Card>
 
-              {/* Activity Table */}
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Recent Activity</CardTitle>
