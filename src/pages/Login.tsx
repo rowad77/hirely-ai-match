@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 
@@ -26,15 +26,12 @@ const Login = () => {
 
     try {
       await login(email, password);
-      toast({
-        title: "Login successful",
+      toast.success("Login successful", {
         description: "Welcome back to Hirely!",
       });
       navigate('/dashboard');
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Login failed",
+      toast.error("Login failed", {
         description: error instanceof Error ? error.message : "Please check your credentials and try again.",
       });
     }

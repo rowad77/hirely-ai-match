@@ -75,9 +75,8 @@ const Signup = () => {
         const { error: companyError } = await supabase
           .from('companies')
           .insert({
-            name: companyName,
-          })
-          .select();
+            name: companyName
+          });
 
         if (companyError) {
           console.error('Error creating company:', companyError);
