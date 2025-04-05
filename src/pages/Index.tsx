@@ -18,6 +18,7 @@ const Index = () => {
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'tech' | 'marketing' | 'design'>('all');
   const { toggleSavedJob, isSaved } = useSavedJobs();
   
@@ -34,25 +35,58 @@ const Index = () => {
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      
+      if (selectedFile.size > 5 * 1024 * 1024) {
+        setUploadError('File size should not exceed 5MB');
+        return;
+      }
+      
+      const allowedTypes = [
+        'application/pdf', 
+        'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+        'text/plain'
+      ];
+      
+      if (!allowedTypes.includes(selectedFile.type)) {
+        setUploadError('Only PDF, DOC, DOCX, or TXT files are allowed');
+        return;
+      }
+      
+      setFile(selectedFile);
+      setUploadError(null);
     }
   };
   
-  const handleUpload = (e: React.FormEvent) => {
+  const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return;
     
     setUploading(true);
+    setUploadError(null);
     
-    setTimeout(() => {
-      setUploading(false);
-      setFile(null);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       toast({
         title: "CV Uploaded Successfully",
         description: "We'll match you with suitable positions soon.",
         duration: 5000,
       });
-    }, 1500);
+      
+      setFile(null);
+    } catch (error) {
+      setUploadError('Failed to upload CV. Please try again.');
+      toast({
+        title: "Upload Failed",
+        description: "There was an error uploading your CV.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
+      setUploading(false);
+    }
   };
   
   return (
@@ -165,7 +199,7 @@ const Index = () => {
                 
                 <form onSubmit={handleUpload} className="space-y-6">
                   <div className={cn(
-                    "border-2 border-dashed rounded-xl p-10 text-center transition-all duration-300",
+                    "border-2 border-dashed rounded-lg p-10 text-center transition-all duration-300",
                     file ? "border-hirely/50 bg-blue-50/50" : "border-gray-200 hover:border-hirely/30 hover:bg-blue-50/30"
                   )}>
                     <div className="flex justify-center">
@@ -187,13 +221,17 @@ const Index = () => {
                           name="cv"
                           type="file"
                           className="sr-only"
-                          accept=".pdf,.doc,.docx"
+                          accept=".pdf,.doc,.docx,.txt"
                           onChange={handleFileChange}
                         />
-                        <p className="text-xs text-gray-500 mt-1">PDF, DOC, or DOCX up to 5MB</p>
+                        <p className="text-xs text-gray-500 mt-1">PDF, DOC, DOCX, or TXT (max 5MB)</p>
                       </label>
                     </div>
                   </div>
+                  
+                  {uploadError && (
+                    <p className="text-red-500 text-sm text-center">{uploadError}</p>
+                  )}
                   
                   <div>
                     <Button 
