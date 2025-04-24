@@ -1,18 +1,17 @@
-import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import MainLayout from '../components/layout/MainLayout';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Filter, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Building, MapPin, Clock, DollarSign, Search, Briefcase, Filter, Heart } from 'lucide-react';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import JobFilters, { JobFilters as JobFiltersType } from '@/components/JobFilters';
-import { Badge } from '@/components/ui/badge';
-import { fetchJobs } from '@/data/jobs';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { useQuery } from '@tanstack/react-query';
+import MainLayout from '../components/layout/MainLayout';
+import JobFilters, { JobFilters as JobFiltersType } from '@/components/JobFilters';
+import { fetchJobs } from '@/data/jobs';
 import JobListItem from '@/components/JobListItem';
+import SearchHeader from '@/components/jobs/SearchHeader';
+import ActiveFilters from '@/components/jobs/ActiveFilters';
+import JobsGrid from '@/components/jobs/JobsGrid';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -26,7 +25,7 @@ const Jobs = () => {
     categories: [],
   });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [favoriteJobs, setFavoriteJobs] = useState<number[]>([]);
+  const [favoriteJobs, setFavoriteJobs] = useState<string[]>([]);
 
   const { data: jobs = [], isLoading, error } = useQuery({
     queryKey: ['jobs', currentPage, filters, searchTerm],
@@ -35,8 +34,6 @@ const Jobs = () => {
       search: searchTerm
     })
   });
-
-  console.log('Jobs loaded:', jobs?.length || 0);
 
   const filteredJobs = useMemo(() => {
     return jobs.filter(job => {
@@ -81,7 +78,7 @@ const Jobs = () => {
     setCurrentPage(1);
   };
 
-  const toggleFavorite = (jobId: number) => {
+  const toggleFavorite = (jobId: string) => {
     setFavoriteJobs(prev => 
       prev.includes(jobId) 
         ? prev.filter(id => id !== jobId) 
@@ -92,28 +89,13 @@ const Jobs = () => {
   return (
     <MainLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900">Find Your Dream Job</h1>
-          <p className="mt-4 text-xl text-gray-600">
-            Browse through our current openings in Saudi Arabia from the last 4 days
-          </p>
-        </div>
+        <SearchHeader searchTerm={searchTerm} onSearchChange={(value) => {
+          setSearchTerm(value);
+          setCurrentPage(1);
+        }} />
         
         <div className="flex flex-col md:flex-row gap-4 items-center mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Search by title, company, location or keywords..."
-              className="pl-10 py-6"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 ml-auto">
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" className="flex items-center">
@@ -155,69 +137,7 @@ const Jobs = () => {
           </div>
         </div>
         
-        {(filters.jobTypes.length > 0 || filters.locations.length > 0 || 
-          filters.salaryRanges.length > 0 || filters.categories.length > 0) && (
-          <div className="mb-6 flex flex-wrap gap-2 items-center">
-            <span className="text-sm text-gray-500 mr-2">Active filters:</span>
-            {filters.jobTypes.map(type => (
-              <Badge key={type} variant="secondary" className="flex items-center gap-1">
-                {type}
-                <button 
-                  className="ml-1" 
-                  onClick={() => handleFilterChange({...filters, jobTypes: filters.jobTypes.filter(t => t !== type)})}
-                >
-                  ×
-                </button>
-              </Badge>
-            ))}
-            {filters.locations.map(location => (
-              <Badge key={location} variant="secondary" className="flex items-center gap-1">
-                {location}
-                <button 
-                  className="ml-1" 
-                  onClick={() => handleFilterChange({...filters, locations: filters.locations.filter(l => l !== location)})}
-                >
-                  ×
-                </button>
-              </Badge>
-            ))}
-            {filters.salaryRanges.map(range => (
-              <Badge key={range} variant="secondary" className="flex items-center gap-1">
-                {range}
-                <button 
-                  className="ml-1" 
-                  onClick={() => handleFilterChange({...filters, salaryRanges: filters.salaryRanges.filter(r => r !== range)})}
-                >
-                  ×
-                </button>
-              </Badge>
-            ))}
-            {filters.categories.map(category => (
-              <Badge key={category} variant="secondary" className="flex items-center gap-1">
-                {category}
-                <button 
-                  className="ml-1" 
-                  onClick={() => handleFilterChange({...filters, categories: filters.categories.filter(c => c !== category)})}
-                >
-                  ×
-                </button>
-              </Badge>
-            ))}
-            <Button 
-              variant="link" 
-              size="sm" 
-              className="text-hirely"
-              onClick={() => handleFilterChange({
-                jobTypes: [],
-                locations: [],
-                salaryRanges: [],
-                categories: [],
-              })}
-            >
-              Clear all
-            </Button>
-          </div>
-        )}
+        <ActiveFilters filters={filters} onFilterChange={handleFilterChange} />
         
         <div className="mb-6">
           <p className="text-gray-600">
@@ -274,59 +194,11 @@ const Jobs = () => {
                 <p className="mt-2 text-gray-600">Try adjusting your search or filters</p>
               </div>
             ) : viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {currentJobs.map(job => (
-                  <Card key={job.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-xl">{job.title}</CardTitle>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            toggleFavorite(job.id);
-                          }}
-                          className="text-gray-400 hover:text-hirely"
-                        >
-                          <Heart 
-                            className={`h-5 w-5 ${favoriteJobs.includes(job.id) ? 'fill-hirely text-hirely' : ''}`} 
-                          />
-                        </Button>
-                      </div>
-                      <div className="flex items-center text-gray-500 mt-2">
-                        <Building className="h-4 w-4 mr-2" />
-                        <span>{job.company}</span>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pb-4">
-                      <div className="flex flex-col gap-2 text-gray-500 text-sm">
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          <span>{job.location}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 mr-2" />
-                          <span>{job.type} • {job.postedDate}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <DollarSign className="h-4 w-4 mr-2" />
-                          <span>{job.salary}</span>
-                        </div>
-                        <Badge className="w-fit mt-2">{job.category}</Badge>
-                        <p className="mt-4 text-gray-600 line-clamp-3">{job.description}</p>
-                      </div>
-                    </CardContent>
-                    <CardFooter>
-                      <Link to={`/job/${job.id}`} className="w-full">
-                        <Button className="w-full bg-hirely hover:bg-hirely-dark">
-                          View Details
-                        </Button>
-                      </Link>
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
+              <JobsGrid 
+                jobs={currentJobs}
+                favoriteJobs={favoriteJobs}
+                onFavorite={toggleFavorite}
+              />
             ) : (
               <div className="space-y-4">
                 {currentJobs.map(job => (

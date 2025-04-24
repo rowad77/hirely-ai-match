@@ -7,7 +7,7 @@ import { Building, MapPin, Heart, DollarSign } from 'lucide-react';
 
 interface JobListItemProps {
   job: {
-    id: string;
+    id: string; // Changed from number to string
     title: string;
     company: string;
     location: string;
@@ -16,7 +16,7 @@ interface JobListItemProps {
     category: string;
     postedDate: string;
   };
-  onFavorite: (id: string) => void;
+  onFavorite: (id: string) => void; // Changed from number to string
   isFavorite: boolean;
 }
 
