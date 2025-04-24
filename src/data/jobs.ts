@@ -1,12 +1,49 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export async function fetchJobs(page = 1, filters = {}) {
+export interface JobFilter {
+  jobTypes?: string[];
+  locations?: string[];
+  salaryRanges?: string[];
+  categories?: string[];
+  remote?: boolean;
+  search?: string;
+  [key: string]: any;
+}
+
+export async function fetchJobs(page = 1, filters: JobFilter = {}) {
   try {
     console.log('Fetching jobs with filters:', filters);
     
+    // Prepare filter parameters for the API
+    const apiFilters: Record<string, any> = {};
+    
+    // Map frontend filters to API-compatible format
+    if (filters.locations?.length) {
+      apiFilters.location = filters.locations[0]; // Use first location for now
+    }
+    
+    if (filters.jobTypes?.includes('Remote')) {
+      apiFilters.remote = true;
+    }
+    
+    if (filters.search) {
+      apiFilters.search = filters.search;
+    }
+    
+    if (filters.categories?.length) {
+      apiFilters.category = filters.categories[0]; // Use first category
+    }
+    
+    // Call the Supabase edge function
     const { data, error } = await supabase.functions.invoke('fetch-jobs', {
-      body: { page, filters }
+      body: { 
+        page, 
+        filters: {
+          ...apiFilters,
+          ...filters // Include original filters as well
+        }
+      }
     });
 
     if (error) {

@@ -14,10 +14,12 @@ import JobListItem from '@/components/JobListItem';
 import SearchHeader from '@/components/jobs/SearchHeader';
 import ActiveFilters from '@/components/jobs/ActiveFilters';
 import JobsGrid from '@/components/jobs/JobsGrid';
+import { useToast } from '@/components/ui/use-toast';
 
 const ITEMS_PER_PAGE = 6;
 
 const Jobs = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<JobFiltersType>({
@@ -29,34 +31,43 @@ const Jobs = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [favoriteJobs, setFavoriteJobs] = useState<string[]>([]);
 
+  // Fetch jobs from the API
   const { data: jobs = [], isLoading, error } = useQuery({
     queryKey: ['jobs', currentPage, filters, searchTerm],
     queryFn: () => fetchJobs(currentPage, {
       ...filters,
       search: searchTerm
-    })
+    }),
+    onError: (err) => {
+      toast({
+        title: "Error fetching jobs",
+        description: "There was an issue loading jobs. Using fallback data instead.",
+        variant: "destructive"
+      });
+    }
   });
 
+  // Filter jobs on the frontend as well for immediate feedback
   const filteredJobs = useMemo(() => {
     return jobs.filter(job => {
-      const matchesSearch = 
-        job.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        job.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch = searchTerm === '' || 
+        job.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        job.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (job.description && job.description.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesJobType = filters.jobTypes.length === 0 || 
         filters.jobTypes.some(type => job.type === type);
       
       const matchesLocation = filters.locations.length === 0 || 
-        filters.locations.some(location => job.location === location);
+        filters.locations.some(location => job.location?.includes(location));
       
       const matchesCategory = filters.categories.length === 0 ||
         filters.categories.some(category => job.category === category);
       
       const matchesSalary = filters.salaryRanges.length === 0 || 
         filters.salaryRanges.some(range => {
-          const jobSalary = parseInt(job.salary.replace(/[^0-9]/g, ''));
+          const jobSalary = job.salary ? parseInt(job.salary.replace(/[^0-9]/g, '')) : 0;
           if (range === "Under $50k") return jobSalary < 50000;
           if (range === "$50k - $100k") return jobSalary >= 50000 && jobSalary < 100000;
           if (range === "$100k - $150k") return jobSalary >= 100000 && jobSalary < 150000;
@@ -70,6 +81,7 @@ const Jobs = () => {
 
   const totalPages = Math.ceil(filteredJobs.length / ITEMS_PER_PAGE);
 
+  // Paginate the filtered jobs
   const currentJobs = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredJobs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
