@@ -18,9 +18,20 @@ serve(async (req) => {
   try {
     const { page = 1, filters = {} } = await req.json();
     
+    // Calculate date 4 days ago
+    const fourDaysAgo = new Date();
+    fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
+    
+    // Add our fixed filters
+    const jobFilters = {
+      ...filters,
+      location: 'Saudi Arabia',
+      posted_after: fourDaysAgo.toISOString(),
+    };
+
     const queryParams = new URLSearchParams({
       page: page.toString(),
-      ...filters
+      ...jobFilters
     });
 
     const response = await fetch(`${BASE_URL}/jobs?${queryParams}`, {
