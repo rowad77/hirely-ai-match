@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Filter, Briefcase } from 'lucide-react';
@@ -31,19 +30,21 @@ const Jobs = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [favoriteJobs, setFavoriteJobs] = useState<string[]>([]);
 
-  // Fetch jobs from the API
+  // Fetch jobs from the API with fixed useQuery configuration
   const { data: jobs = [], isLoading, error } = useQuery({
     queryKey: ['jobs', currentPage, filters, searchTerm],
     queryFn: () => fetchJobs(currentPage, {
       ...filters,
       search: searchTerm
     }),
-    onError: (err) => {
-      toast({
-        title: "Error fetching jobs",
-        description: "There was an issue loading jobs. Using fallback data instead.",
-        variant: "destructive"
-      });
+    onSettled: (data, error) => {
+      if (error) {
+        toast({
+          title: "Error fetching jobs",
+          description: "There was an issue loading jobs. Using fallback data instead.",
+          variant: "destructive"
+        });
+      }
     }
   });
 
