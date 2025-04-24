@@ -1,3 +1,19 @@
+import { supabase } from "@/integrations/supabase/client";
+
+export async function fetchJobs(page = 1, filters = {}) {
+  try {
+    const { data, error } = await supabase.functions.invoke('fetch-jobs', {
+      body: { page, filters }
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching jobs:', error);
+    // Fallback to mock data in case of error
+    return featuredJobs;
+  }
+}
 
 export const featuredJobs = [
   {

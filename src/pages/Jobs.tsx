@@ -1,70 +1,59 @@
-
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Building, MapPin, Clock, DollarSign, Search, Briefcase, Filter, Heart } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { featuredJobs } from '@/data/jobs';
 import JobFilters, { JobFilters as JobFiltersType } from '@/components/JobFilters';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetDescription, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetTrigger 
-} from '@/components/ui/sheet';
+import { fetchJobs } from '@/data/jobs';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { useQuery } from '@tanstack/react-query';
 
-const ITEMS_PER_PAGE = 6; // Number of jobs to display per page
+const ITEMS_PER_PAGE = 6;
 
 const Jobs = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<JobFiltersType>({
     jobTypes: [],
     locations: [],
     salaryRanges: [],
-    categories: [], // Add categories to filters
+    categories: [],
   });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [currentPage, setCurrentPage] = useState(1);
   const [favoriteJobs, setFavoriteJobs] = useState<number[]>([]);
-  
-  // Filter jobs based on all criteria
+
+  const { data: jobsData, isLoading, error } = useQuery({
+    queryKey: ['jobs', currentPage, filters, searchTerm],
+    queryFn: () => fetchJobs(currentPage, {
+      ...filters,
+      search: searchTerm
+    })
+  });
+
+  const jobs = jobsData || [];
+
   const filteredJobs = useMemo(() => {
-    return featuredJobs.filter(job => {
-      // Text search filter
+    return jobs.filter(job => {
       const matchesSearch = 
         job.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
         job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
         job.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
         job.description.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Job type filter
       const matchesJobType = filters.jobTypes.length === 0 || 
         filters.jobTypes.some(type => job.type === type);
       
-      // Location filter
       const matchesLocation = filters.locations.length === 0 || 
         filters.locations.some(location => job.location === location);
       
-      // Category filter
       const matchesCategory = filters.categories.length === 0 ||
         filters.categories.some(category => job.category === category);
       
-      // Salary range filter (simplified implementation)
       const matchesSalary = filters.salaryRanges.length === 0 || 
         filters.salaryRanges.some(range => {
           const jobSalary = parseInt(job.salary.replace(/[^0-9]/g, ''));
@@ -78,21 +67,19 @@ const Jobs = () => {
       return matchesSearch && matchesJobType && matchesLocation && matchesSalary && matchesCategory;
     });
   }, [searchTerm, filters]);
-  
-  // Calculate pagination
+
   const totalPages = Math.ceil(filteredJobs.length / ITEMS_PER_PAGE);
-  
-  // Get current page's jobs
+
   const currentJobs = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredJobs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredJobs, currentPage]);
-  
+
   const handleFilterChange = (newFilters: JobFiltersType) => {
     setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
   };
-  
+
   const toggleFavorite = (jobId: number) => {
     setFavoriteJobs(prev => 
       prev.includes(jobId) 
@@ -100,7 +87,7 @@ const Jobs = () => {
         : [...prev, jobId]
     );
   };
-  
+
   return (
     <MainLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -111,7 +98,6 @@ const Jobs = () => {
           </p>
         </div>
         
-        {/* Search and Filter Controls */}
         <div className="flex flex-col md:flex-row gap-4 items-center mb-8">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -122,7 +108,7 @@ const Jobs = () => {
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search changes
+                setCurrentPage(1);
               }}
             />
           </div>
@@ -168,7 +154,6 @@ const Jobs = () => {
           </div>
         </div>
         
-        {/* Applied Filters */}
         {(filters.jobTypes.length > 0 || filters.locations.length > 0 || filters.salaryRanges.length > 0 || filters.categories.length > 0) && (
           <div className="mb-6 flex flex-wrap gap-2 items-center">
             <span className="text-sm text-gray-500 mr-2">Active filters:</span>
@@ -232,32 +217,38 @@ const Jobs = () => {
           </div>
         )}
         
-        {/* Job Count */}
         <div className="mb-6">
           <p className="text-gray-600">
             {filteredJobs.length} {filteredJobs.length === 1 ? 'job' : 'jobs'} found
           </p>
         </div>
         
-        {filteredJobs.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <Card key={n} className="animate-pulse">
+                <CardHeader className="space-y-4">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="h-3 bg-gray-200 rounded"></div>
+                  <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : error ? (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <Briefcase className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-4 text-xl font-medium text-gray-900">No jobs found</h3>
-            <p className="mt-2 text-gray-600">Try adjusting your search or browse all jobs</p>
+            <h3 className="mt-4 text-xl font-medium text-gray-900">Error loading jobs</h3>
+            <p className="mt-2 text-gray-600">Please try again later</p>
             <Button 
               variant="outline" 
               className="mt-4"
-              onClick={() => {
-                setSearchTerm('');
-                setFilters({
-                  jobTypes: [],
-                  locations: [],
-                  salaryRanges: [],
-                  categories: [],
-                });
-              }}
+              onClick={() => window.location.reload()}
             >
-              Clear All Filters
+              Retry
             </Button>
           </div>
         ) : (
@@ -374,7 +365,6 @@ const Jobs = () => {
               </div>
             )}
             
-            {/* Pagination */}
             {totalPages > 1 && (
               <Pagination className="mt-8">
                 <PaginationContent>
@@ -387,7 +377,6 @@ const Jobs = () => {
                   
                   {Array.from({ length: totalPages }).map((_, index) => {
                     const pageNumber = index + 1;
-                    // Show first page, last page, and pages around current page
                     if (
                       pageNumber === 1 || 
                       pageNumber === totalPages || 
@@ -405,7 +394,6 @@ const Jobs = () => {
                       );
                     }
                     
-                    // Show ellipsis
                     if (
                       (pageNumber === 2 && currentPage > 3) ||
                       (pageNumber === totalPages - 1 && currentPage < totalPages - 2)
