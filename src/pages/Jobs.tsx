@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useQuery } from '@tanstack/react-query';
+import JobListItem from '@/components/JobListItem';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -27,7 +28,7 @@ const Jobs = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [favoriteJobs, setFavoriteJobs] = useState<number[]>([]);
 
-  const { data: jobsData, isLoading, error } = useQuery({
+  const { data: jobs = [], isLoading, error } = useQuery({
     queryKey: ['jobs', currentPage, filters, searchTerm],
     queryFn: () => fetchJobs(currentPage, {
       ...filters,
@@ -35,7 +36,7 @@ const Jobs = () => {
     })
   });
 
-  const jobs = jobsData || [];
+  console.log('Jobs loaded:', jobs?.length || 0);
 
   const filteredJobs = useMemo(() => {
     return jobs.filter(job => {
@@ -43,7 +44,7 @@ const Jobs = () => {
         job.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
         job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
         job.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        job.description.toLowerCase().includes(searchTerm.toLowerCase());
+        (job.description && job.description.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesJobType = filters.jobTypes.length === 0 || 
         filters.jobTypes.some(type => job.type === type);
@@ -66,7 +67,7 @@ const Jobs = () => {
       
       return matchesSearch && matchesJobType && matchesLocation && matchesSalary && matchesCategory;
     });
-  }, [searchTerm, filters]);
+  }, [searchTerm, filters, jobs]);
 
   const totalPages = Math.ceil(filteredJobs.length / ITEMS_PER_PAGE);
 
@@ -94,7 +95,7 @@ const Jobs = () => {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900">Find Your Dream Job</h1>
           <p className="mt-4 text-xl text-gray-600">
-            Browse through our current openings and discover your perfect career opportunity
+            Browse through our current openings in Saudi Arabia from the last 4 days
           </p>
         </div>
         
@@ -154,7 +155,8 @@ const Jobs = () => {
           </div>
         </div>
         
-        {(filters.jobTypes.length > 0 || filters.locations.length > 0 || filters.salaryRanges.length > 0 || filters.categories.length > 0) && (
+        {(filters.jobTypes.length > 0 || filters.locations.length > 0 || 
+          filters.salaryRanges.length > 0 || filters.categories.length > 0) && (
           <div className="mb-6 flex flex-wrap gap-2 items-center">
             <span className="text-sm text-gray-500 mr-2">Active filters:</span>
             {filters.jobTypes.map(type => (
@@ -265,7 +267,13 @@ const Jobs = () => {
               </TabsList>
             </Tabs>
             
-            {viewMode === 'grid' ? (
+            {currentJobs.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <Briefcase className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-4 text-xl font-medium text-gray-900">No jobs found</h3>
+                <p className="mt-2 text-gray-600">Try adjusting your search or filters</p>
+              </div>
+            ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {currentJobs.map(job => (
                   <Card key={job.id} className="hover:shadow-lg transition-shadow">
@@ -322,45 +330,12 @@ const Jobs = () => {
             ) : (
               <div className="space-y-4">
                 {currentJobs.map(job => (
-                  <Card key={job.id} className="hover:shadow-md transition-shadow">
-                    <div className="p-4 flex flex-col md:flex-row gap-4 items-start md:items-center">
-                      <div className="flex-1">
-                        <div className="flex justify-between">
-                          <h3 className="text-lg font-medium">{job.title}</h3>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              toggleFavorite(job.id);
-                            }}
-                            className="text-gray-400 hover:text-hirely"
-                          >
-                            <Heart 
-                              className={`h-5 w-5 ${favoriteJobs.includes(job.id) ? 'fill-hirely text-hirely' : ''}`} 
-                            />
-                          </Button>
-                        </div>
-                        <div className="flex items-center text-gray-500 mt-1">
-                          <Building className="h-4 w-4 mr-1" />
-                          <span className="mr-3">{job.company}</span>
-                          <MapPin className="h-4 w-4 mr-1" />
-                          <span>{job.location}</span>
-                        </div>
-                        <div className="flex items-center gap-3 mt-2 text-sm">
-                          <Badge variant="outline">{job.type}</Badge>
-                          <Badge>{job.category}</Badge>
-                          <span className="text-gray-500">{job.postedDate}</span>
-                          <span className="text-hirely font-medium">{job.salary}</span>
-                        </div>
-                      </div>
-                      <Link to={`/job/${job.id}`}>
-                        <Button className="whitespace-nowrap bg-hirely hover:bg-hirely-dark">
-                          View Details
-                        </Button>
-                      </Link>
-                    </div>
-                  </Card>
+                  <JobListItem 
+                    key={job.id} 
+                    job={job} 
+                    onFavorite={toggleFavorite}
+                    isFavorite={favoriteJobs.includes(job.id)} 
+                  />
                 ))}
               </div>
             )}
