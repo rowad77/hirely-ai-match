@@ -245,9 +245,13 @@ const Jobs = () => {
           filterCounts={filterCounts}
         />
         
-        {/* Personalized job recommendations */}
+        {/* Personalized job recommendations - fixed by adding currentJobId */}
         {!searchTerm && filters.jobTypes.length === 0 && filters.categories.length === 0 && (
-          <JobRecommendations userInterests={userInterests} limit={3} />
+          <JobRecommendations 
+            userInterests={userInterests} 
+            limit={3}
+            currentJobId="0" // Providing a default value since we're on the jobs listing page
+          />
         )}
         
         <RecentlyViewed />

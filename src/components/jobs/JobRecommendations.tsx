@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -42,6 +43,7 @@ const JobRecommendations = ({
 
   const filterRecommendations = (jobs: any[]) => {
     return jobs
+      // Fixed: Ensure consistent string comparison by converting both to strings
       .filter(job => job.id.toString() !== currentJobId.toString())
       .slice(0, limit);
   };
