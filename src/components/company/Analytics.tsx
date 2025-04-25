@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarIcon, Download, TrendingUp, TrendingDown, Info } from "lucide-react";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -9,90 +8,33 @@ import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 
 export interface AnalyticsProps {
   dataType?: 'applications' | 'hiring' | 'engagement';
+  data: {
+    applications: Array<{
+      name: string;
+      applications: number;
+      interviews: number;
+    }>;
+    sources: Array<{
+      name: string;
+      value: number;
+    }>;
+    skills: Array<{
+      name: string;
+      count: number;
+    }>;
+  };
 }
 
-const Analytics = ({ dataType = 'applications' }: AnalyticsProps) => {
+const Analytics = ({ dataType = 'applications', data }: AnalyticsProps) => {
   const [dateRange, setDateRange] = useState('30d');
   const [showComparison, setShowComparison] = useState(false);
   const isMobile = useIsMobile();
-
-  // Sample data for different time periods
-  const dataByPeriod = {
-    '7d': {
-      applications: [
-        { name: 'Day 1', applications: 5, interviews: 2 },
-        { name: 'Day 2', applications: 7, interviews: 3 },
-        { name: 'Day 3', applications: 3, interviews: 1 },
-        { name: 'Day 4', applications: 6, interviews: 2 },
-        { name: 'Day 5', applications: 8, interviews: 4 },
-        { name: 'Day 6', applications: 4, interviews: 2 },
-        { name: 'Day 7', applications: 9, interviews: 3 },
-      ],
-      sources: [
-        { name: 'LinkedIn', value: 18 },
-        { name: 'Direct', value: 12 },
-        { name: 'Referral', value: 8 },
-        { name: 'Other', value: 4 },
-      ],
-      skills: [
-        { name: 'JavaScript', count: 16 },
-        { name: 'React', count: 14 },
-        { name: 'Python', count: 10 },
-        { name: 'AWS', count: 8 },
-        { name: 'UI/UX', count: 6 },
-      ],
-    },
-    '30d': {
-      applications: [
-        { name: 'Week 1', applications: 12, interviews: 4 },
-        { name: 'Week 2', applications: 19, interviews: 7 },
-        { name: 'Week 3', applications: 15, interviews: 5 },
-        { name: 'Week 4', applications: 21, interviews: 8 },
-      ],
-      sources: [
-        { name: 'LinkedIn', value: 45 },
-        { name: 'Direct', value: 28 },
-        { name: 'Referral', value: 17 },
-        { name: 'Other', value: 10 },
-      ],
-      skills: [
-        { name: 'JavaScript', count: 42 },
-        { name: 'React', count: 35 },
-        { name: 'Python', count: 28 },
-        { name: 'AWS', count: 22 },
-        { name: 'UI/UX', count: 18 },
-      ],
-    },
-    '90d': {
-      applications: [
-        { name: 'Month 1', applications: 45, interviews: 18 },
-        { name: 'Month 2', applications: 62, interviews: 23 },
-        { name: 'Month 3', applications: 54, interviews: 19 },
-      ],
-      sources: [
-        { name: 'LinkedIn', value: 87 },
-        { name: 'Direct', value: 53 },
-        { name: 'Referral', value: 41 },
-        { name: 'Other', value: 19 },
-      ],
-      skills: [
-        { name: 'JavaScript', count: 86 },
-        { name: 'React', count: 72 },
-        { name: 'Python', count: 55 },
-        { name: 'AWS', count: 43 },
-        { name: 'UI/UX', count: 29 },
-      ],
-    },
-  };
-
-  // Get current period data
-  const currentData = dataByPeriod[dateRange as keyof typeof dataByPeriod];
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
   
   const getComparisonData = () => {
     const change = {
-      applications: Math.floor(Math.random() * 20) - 10, // Random number between -10 and 10
+      applications: Math.floor(Math.random() * 20) - 10,
       interviews: Math.floor(Math.random() * 15) - 7,
       sources: {
         linkedin: Math.floor(Math.random() * 30) - 15,
@@ -106,7 +48,6 @@ const Analytics = ({ dataType = 'applications' }: AnalyticsProps) => {
   const comparisonData = getComparisonData();
 
   const handleDownloadReport = () => {
-    // In a real app, this would generate a PDF or Excel file
     alert("Report download started. This feature would generate a full analytics report.");
   };
 
@@ -185,7 +126,7 @@ const Analytics = ({ dataType = 'applications' }: AnalyticsProps) => {
             >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
-                  data={currentData.applications}
+                  data={data.applications}
                   margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
@@ -229,7 +170,7 @@ const Analytics = ({ dataType = 'applications' }: AnalyticsProps) => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={currentData.sources}
+                      data={data.sources}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -239,7 +180,7 @@ const Analytics = ({ dataType = 'applications' }: AnalyticsProps) => {
                       nameKey="name"
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     >
-                      {currentData.sources.map((entry, index) => (
+                      {data.sources.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -275,7 +216,7 @@ const Analytics = ({ dataType = 'applications' }: AnalyticsProps) => {
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={currentData.skills}
+                    data={data.skills}
                     margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />

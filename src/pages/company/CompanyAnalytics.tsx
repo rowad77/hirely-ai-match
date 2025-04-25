@@ -1,23 +1,31 @@
-
 import { useState, useEffect } from 'react';
 import CompanyLayout from '@/components/layout/CompanyLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Analytics from '@/components/company/Analytics';
 import { LoadingState } from '@/components/ui/loading-state';
+import { useCompanyAnalytics } from '@/hooks/useCompanyAnalytics';
 
 const CompanyAnalytics = () => {
   const [activeTab, setActiveTab] = useState('applications');
-  const [isLoading, setIsLoading] = useState(true);
+  const { data, loading, error } = useCompanyAnalytics('30d');
 
-  useEffect(() => {
-    // Simulate data loading when tab changes
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, [activeTab]);
+  if (loading) {
+    return (
+      <CompanyLayout title="Company Analytics">
+        <LoadingState message="Loading analytics data..." />
+      </CompanyLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <CompanyLayout title="Company Analytics">
+        <div className="bg-red-50 p-4 rounded-md">
+          <p className="text-red-800">Error loading analytics: {error}</p>
+        </div>
+      </CompanyLayout>
+    );
+  }
 
   return (
     <CompanyLayout title="Company Analytics">
@@ -41,20 +49,18 @@ const CompanyAnalytics = () => {
             <TabsTrigger value="engagement">Candidate Engagement</TabsTrigger>
           </TabsList>
           
-          {isLoading ? (
-            <LoadingState message="Loading analytics data..." />
-          ) : (
+          {data && (
             <>
               <TabsContent value="applications">
-                <Analytics dataType="applications" />
+                <Analytics dataType="applications" data={data} />
               </TabsContent>
               
               <TabsContent value="hiring">
-                <Analytics dataType="hiring" />
+                <Analytics dataType="hiring" data={data} />
               </TabsContent>
               
               <TabsContent value="engagement">
-                <Analytics dataType="engagement" />
+                <Analytics dataType="engagement" data={data} />
               </TabsContent>
             </>
           )}
