@@ -1,6 +1,7 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Filter, Briefcase } from 'lucide-react';
+import { Filter, Briefcase, SearchX, Loader, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,6 +19,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import RecentlyViewed from '@/components/jobs/RecentlyViewed';
 import ViewModeToggle from '@/components/jobs/ViewModeToggle';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorDisplay } from '@/components/ui/error-display';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -54,15 +57,19 @@ const Jobs = () => {
       return result;
     },
     meta: {
-      onError: (error: Error) => {
-        toast({
-          title: "Error fetching jobs",
-          description: "There was an issue loading jobs. Using fallback data instead.",
-          variant: "destructive"
-        });
-        setIsUsingFallback(true);
+      onSettled: (data, error) => {
+        if (error) {
+          toast({
+            title: "Error fetching jobs",
+            description: "There was an issue loading jobs. Using fallback data instead.",
+            variant: "destructive"
+          });
+          setIsUsingFallback(true);
+        }
       }
-    }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 2
   });
 
   const filteredJobs = useMemo(() => {
@@ -114,6 +121,14 @@ const Jobs = () => {
         ? prev.filter(id => id !== jobId) 
         : [...prev, jobId]
     );
+
+    // Show appropriate toast message
+    const isFavorited = !favoriteJobs.includes(jobId);
+    toast({
+      title: isFavorited ? "Job saved" : "Job removed",
+      description: isFavorited ? "Job added to your saved list" : "Job removed from your saved list",
+      duration: 2000
+    });
   };
 
   const handleRefetch = () => {
@@ -140,6 +155,26 @@ const Jobs = () => {
     };
     return grouped;
   }, [filteredJobs, favoriteJobs]);
+
+  // Function to suggest search terms for empty results
+  const getSuggestedSearches = () => {
+    // Based on filtered conditions, suggest more generic terms
+    const suggestions = [];
+    
+    if (filters.jobTypes.length > 0 || filters.locations.length > 0) {
+      suggestions.push("Try removing some filters");
+    }
+    
+    if (searchTerm) {
+      suggestions.push("Try using more general keywords");
+      // Suggest similar terms or corrections
+      if (searchTerm.toLowerCase().includes('develop')) {
+        suggestions.push("Try searching for 'engineer' instead");
+      }
+    }
+    
+    return suggestions.length > 0 ? suggestions : ["Try different search terms"];
+  };
 
   return (
     <MainLayout>
@@ -216,37 +251,29 @@ const Jobs = () => {
         </div>
         
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <Card key={n} className="animate-pulse">
-                <CardHeader className="space-y-4">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="h-3 bg-gray-200 rounded"></div>
-                  <div className="h-3 bg-gray-200 rounded w-5/6"></div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex items-center justify-center p-12 bg-gray-50 rounded-lg">
+            <div className="text-center">
+              <Loader className="animate-spin h-8 w-8 mx-auto text-hirely mb-4" />
+              <p className="text-gray-600">Loading jobs...</p>
+              <p className="text-sm text-gray-500">This may take a moment</p>
+            </div>
           </div>
         ) : error ? (
-          <div className="text-center py-12 bg-gray-50 rounded-lg">
-            <Briefcase className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-4 text-xl font-medium text-gray-900">Error loading jobs</h3>
-            <p className="mt-2 text-gray-600">Please try again later</p>
-            <Button 
-              variant="outline" 
-              className="mt-4"
-              onClick={() => refetch()}
-            >
-              Retry
-            </Button>
-          </div>
+          <ErrorDisplay
+            title="Error loading jobs"
+            description="We encountered a problem while fetching job listings."
+            error={error instanceof Error ? error : "Unknown error occurred"}
+            retryAction={() => refetch()}
+            icon={<AlertTriangle className="h-10 w-10" />}
+          >
+            <p className="text-sm text-gray-600">
+              We're showing demo job listings instead. You can try again or browse our sample listings.
+            </p>
+          </ErrorDisplay>
         ) : (
           <>
             <Tabs defaultValue="all" className="mb-6">
-              <TabsList>
+              <TabsList className="mb-4 flex overflow-x-auto hide-scrollbar">
                 <TabsTrigger value="all">All Jobs</TabsTrigger>
                 <TabsTrigger value="recent">Recently Added</TabsTrigger>
                 <TabsTrigger value="remote">Remote Jobs</TabsTrigger>
@@ -299,11 +326,40 @@ const Jobs = () => {
   function renderJobList(jobs: any[]) {
     if (jobs.length === 0) {
       return (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <Briefcase className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-4 text-xl font-medium text-gray-900">No jobs found</h3>
-          <p className="mt-2 text-gray-600">Try adjusting your search or filters</p>
-        </div>
+        <EmptyState
+          icon={<SearchX className="h-12 w-12" />}
+          title="No jobs found"
+          description={
+            searchTerm || Object.values(filters).some(f => Array.isArray(f) && f.length > 0)
+              ? "Try adjusting your search terms or filters"
+              : "There are currently no jobs in this category"
+          }
+          action={
+            (searchTerm || Object.values(filters).some(f => Array.isArray(f) && f.length > 0))
+              ? {
+                  label: "Clear filters",
+                  onClick: () => {
+                    setSearchTerm("");
+                    setFilters({
+                      jobTypes: [],
+                      locations: [],
+                      salaryRanges: [],
+                      categories: [],
+                    });
+                  },
+                }
+              : undefined
+          }
+        >
+          <div className="mt-4 text-sm text-gray-500">
+            <p>Suggestions:</p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              {getSuggestedSearches().map((suggestion, i) => (
+                <li key={i}>{suggestion}</li>
+              ))}
+            </ul>
+          </div>
+        </EmptyState>
       );
     }
     
