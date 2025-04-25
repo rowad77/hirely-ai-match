@@ -1,132 +1,160 @@
 
 import { useState } from 'react';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent } from '@/components/ui/card';
-import { Pencil, Trash2, GraduationCap, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface ProfileEducationProps {
-  education: Tables<'education'>[];
-  setEducation: (education: Tables<'education'>[]) => void;
+  profile: Partial<Tables<'profiles'>> | null;
+  setProfile: (profile: Partial<Tables<'profiles'>> | null) => void;
 }
 
-const educationSchema = z.object({
-  institution: z.string().min(1, { message: 'Institution is required' }),
-  degree: z.string().min(1, { message: 'Degree is required' }),
-  field_of_study: z.string().optional(),
-  start_date: z.date({ required_error: "Start date is required" }),
-  end_date: z.date().optional().nullable(),
-  is_current: z.boolean().default(false),
-  description: z.string().optional(),
-});
+type Education = {
+  id?: string;
+  institution: string;
+  degree: string;
+  field_of_study?: string;
+  start_date: string;
+  end_date?: string;
+  is_current?: boolean;
+  description?: string;
+};
 
-type EducationFormValues = z.infer<typeof educationSchema>;
-
-const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) => {
-  const { user } = useAuth();
+const ProfileEducation = ({ profile }: ProfileEducationProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentEducation, setCurrentEducation] = useState<Tables<'education'> | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const form = useForm<EducationFormValues>({
-    resolver: zodResolver(educationSchema),
-    defaultValues: {
-      institution: '',
-      degree: '',
-      field_of_study: '',
-      start_date: new Date(),
-      end_date: null,
-      is_current: false,
-      description: '',
-    }
+  const [isLoading, setIsLoading] = useState(false);
+  const [education, setEducation] = useState<Education[]>([]);
+  const [currentEducation, setCurrentEducation] = useState<Education>({
+    institution: '',
+    degree: '',
+    start_date: '',
   });
+  const [isEditing, setIsEditing] = useState(false);
 
-  const openEditDialog = (edu: Tables<'education'>) => {
-    setCurrentEducation(edu);
-    form.reset({
-      institution: edu.institution,
-      degree: edu.degree,
-      field_of_study: edu.field_of_study || '',
-      start_date: edu.start_date ? new Date(edu.start_date) : new Date(),
-      end_date: edu.end_date ? new Date(edu.end_date) : null,
-      is_current: edu.is_current || false,
-      description: edu.description || '',
-    });
-    setIsDialogOpen(true);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setCurrentEducation(prev => ({ ...prev, [name]: value }));
   };
 
-  const openNewDialog = () => {
-    setCurrentEducation(null);
-    form.reset({
+  const handleSwitchChange = (checked: boolean) => {
+    setCurrentEducation(prev => {
+      const updated = { ...prev, is_current: checked };
+      if (checked) {
+        delete updated.end_date;
+      }
+      return updated;
+    });
+  };
+
+  const handleAddEducation = () => {
+    setIsEditing(false);
+    setCurrentEducation({
       institution: '',
       degree: '',
-      field_of_study: '',
-      start_date: new Date(),
-      end_date: null,
-      is_current: false,
-      description: '',
+      start_date: '',
     });
     setIsDialogOpen(true);
   };
 
-  const watchIsCurrent = form.watch('is_current');
+  const handleEditEducation = (edu: Education) => {
+    setIsEditing(true);
+    setCurrentEducation(edu);
+    setIsDialogOpen(true);
+  };
 
-  const onSubmit = async (values: EducationFormValues) => {
-    if (!user) return;
+  const handleDeleteEducation = async (id: string) => {
+    if (!profile?.id) return;
+
+    try {
+      setIsLoading(true);
+      const { error } = await supabase
+        .from('education')
+        .delete()
+        .eq('id', id)
+        .eq('profile_id', profile.id);
+
+      if (error) throw error;
+      
+      setEducation(prev => prev.filter(edu => edu.id !== id));
+      toast.success('Education entry deleted');
+    } catch (error) {
+      console.error('Error deleting education entry:', error);
+      toast.error('Failed to delete education entry');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!profile?.id) return;
     
-    setSaving(true);
+    if (!currentEducation.institution || !currentEducation.degree || !currentEducation.start_date) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
+    setIsLoading(true);
     
     try {
-      // Format dates for database
-      const formattedValues = {
-        ...values,
-        profile_id: user.id,
-        start_date: format(values.start_date, 'yyyy-MM-dd'),
-        end_date: values.is_current ? null : values.end_date ? format(values.end_date, 'yyyy-MM-dd') : null,
-      };
-      
-      if (currentEducation) {
-        // Update existing education
+      if (isEditing && currentEducation.id) {
+        // Update existing education entry
         const { error } = await supabase
           .from('education')
-          .update(formattedValues)
+          .update({
+            institution: currentEducation.institution,
+            degree: currentEducation.degree,
+            field_of_study: currentEducation.field_of_study,
+            start_date: currentEducation.start_date,
+            end_date: currentEducation.end_date,
+            is_current: currentEducation.is_current,
+            description: currentEducation.description
+          })
           .eq('id', currentEducation.id);
           
         if (error) throw error;
         
-        setEducation(education.map(edu => 
-          edu.id === currentEducation.id ? { ...edu, ...formattedValues } : edu
-        ));
+        setEducation(prev => 
+          prev.map(edu => (edu.id === currentEducation.id ? currentEducation : edu))
+        );
         
         toast.success('Education updated successfully');
       } else {
-        // Add new education
+        // Create new education entry
         const { data, error } = await supabase
           .from('education')
-          .insert(formattedValues)
-          .select();
+          .insert({
+            profile_id: profile.id,
+            institution: currentEducation.institution,
+            degree: currentEducation.degree,
+            field_of_study: currentEducation.field_of_study,
+            start_date: currentEducation.start_date,
+            end_date: currentEducation.end_date,
+            is_current: currentEducation.is_current || false,
+            description: currentEducation.description
+          })
+          .select()
+          .single();
           
         if (error) throw error;
         
-        if (data && data[0]) {
-          setEducation([...education, data[0]]);
-          toast.success('Education added successfully');
-        }
+        setEducation(prev => [...prev, data as Education]);
+        toast.success('Education added successfully');
       }
       
       setIsDialogOpen(false);
@@ -134,273 +162,179 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
       console.error('Error saving education:', error);
       toast.error('Failed to save education');
     } finally {
-      setSaving(false);
-    }
-  };
-
-  const deleteEducation = async (edu: Tables<'education'>) => {
-    if (!confirm('Are you sure you want to delete this education record?')) return;
-    
-    try {
-      const { error } = await supabase
-        .from('education')
-        .delete()
-        .eq('id', edu.id);
-        
-      if (error) throw error;
-      
-      setEducation(education.filter(e => e.id !== edu.id));
-      toast.success('Education deleted successfully');
-    } catch (error) {
-      console.error('Error deleting education:', error);
-      toast.error('Failed to delete education');
+      setIsLoading(false);
     }
   };
 
   return (
-    <div>
-      <div className="space-y-4 mb-6">
-        {education.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <GraduationCap className="mx-auto h-12 w-12 mb-4 text-muted-foreground/70" />
-            <h3 className="text-lg font-medium">No education added yet</h3>
-            <p className="text-sm mt-1 mb-4">Add your educational background to enhance your profile</p>
-          </div>
-        ) : (
-          education.map((edu) => (
-            <Card key={edu.id} className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="flex flex-col md:flex-row md:items-center">
-                  <div className="flex-grow p-6">
-                    <h3 className="text-lg font-semibold">{edu.degree}</h3>
-                    <p className="text-muted-foreground">{edu.institution}</p>
-                    {edu.field_of_study && (
-                      <p className="text-sm">{edu.field_of_study}</p>
-                    )}
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {edu.start_date && format(new Date(edu.start_date), 'MMM yyyy')} - {' '}
-                      {edu.is_current ? 'Present' : edu.end_date && format(new Date(edu.end_date), 'MMM yyyy')}
-                    </div>
-                    {edu.description && (
-                      <p className="text-sm mt-2">{edu.description}</p>
-                    )}
-                  </div>
-                  <div className="flex justify-end p-4 md:p-6 gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => openEditDialog(edu)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => deleteEducation(edu)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-      
-      <div className="flex justify-end">
-        <Button 
-          onClick={openNewDialog} 
-          className="bg-hirely hover:bg-hirely-dark"
-        >
-          Add Education
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold tracking-tight">Education</h2>
+        <Button onClick={handleAddEducation} size="sm" className="bg-hirely hover:bg-hirely-dark">
+          <Plus className="mr-2 h-4 w-4" /> Add Education
         </Button>
       </div>
-      
+
+      {education.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6 text-center text-muted-foreground">
+            No education added yet. Add your educational background to improve your profile.
+          </CardContent>
+        </Card>
+      ) : (
+        education.map((edu) => (
+          <Card key={edu.id} className="overflow-hidden">
+            <CardHeader className="p-4 pb-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>{edu.institution}</CardTitle>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {edu.degree} {edu.field_of_study && `in ${edu.field_of_study}`}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditEducation(edu)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    <span className="sr-only">Edit</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => edu.id && handleDeleteEducation(edu.id)}
+                    className="h-8 w-8 p-0 text-destructive hover:text-destructive/90"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Delete</span>
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-4 pt-0">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline">
+                  {format(new Date(edu.start_date), 'MMM yyyy')} - 
+                  {edu.is_current 
+                    ? ' Present'
+                    : edu.end_date
+                      ? ` ${format(new Date(edu.end_date), 'MMM yyyy')}`
+                      : ''
+                  }
+                </Badge>
+                {edu.is_current && <Badge>Current</Badge>}
+              </div>
+              
+              {edu.description && (
+                <p className="text-sm text-muted-foreground">{edu.description}</p>
+              )}
+            </CardContent>
+          </Card>
+        ))
+      )}
+
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle>{currentEducation ? 'Edit Education' : 'Add Education'}</DialogTitle>
+            <DialogTitle>{isEditing ? 'Edit Education' : 'Add Education'}</DialogTitle>
           </DialogHeader>
           
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-              <FormField
-                control={form.control}
-                name="institution"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Institution</FormLabel>
-                    <FormControl>
-                      <Input placeholder="University or school name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="degree"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Degree</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Bachelor's, Master's, Certificate" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="field_of_study"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Field of Study</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Computer Science" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="start_date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Start Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "MMM yyyy")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <Label htmlFor="institution">Institution*</Label>
+                <Input
+                  id="institution"
+                  name="institution"
+                  value={currentEducation.institution}
+                  onChange={handleInputChange}
+                  placeholder="University or School Name"
                 />
-                
-                {!watchIsCurrent && (
-                  <FormField
-                    control={form.control}
-                    name="end_date"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>End Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "MMM yyyy")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value || undefined}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
               </div>
               
-              <FormField
-                control={form.control}
-                name="is_current"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel>I'm currently studying here</FormLabel>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Additional information about your education" 
-                        className="min-h-[100px]" 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="flex justify-end gap-2 pt-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="bg-hirely hover:bg-hirely-dark"
-                  disabled={saving}
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </Button>
+              <div className="col-span-1">
+                <Label htmlFor="degree">Degree*</Label>
+                <Input
+                  id="degree"
+                  name="degree"
+                  value={currentEducation.degree}
+                  onChange={handleInputChange}
+                  placeholder="Bachelor's, Master's, etc."
+                />
               </div>
-            </form>
-          </Form>
+              
+              <div className="col-span-1">
+                <Label htmlFor="field_of_study">Field of Study</Label>
+                <Input
+                  id="field_of_study"
+                  name="field_of_study"
+                  value={currentEducation.field_of_study || ''}
+                  onChange={handleInputChange}
+                  placeholder="Computer Science, Business, etc."
+                />
+              </div>
+              
+              <div className="col-span-1">
+                <Label htmlFor="start_date">Start Date*</Label>
+                <Input
+                  id="start_date"
+                  name="start_date"
+                  type="date"
+                  value={currentEducation.start_date}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="col-span-1">
+                <div className="flex items-center justify-between mb-2">
+                  <Label htmlFor="end_date">End Date</Label>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="is_current"
+                      checked={currentEducation.is_current || false}
+                      onCheckedChange={handleSwitchChange}
+                    />
+                    <Label htmlFor="is_current" className="text-sm">
+                      Currently studying here
+                    </Label>
+                  </div>
+                </div>
+                <Input
+                  id="end_date"
+                  name="end_date"
+                  type="date"
+                  value={currentEducation.end_date || ''}
+                  onChange={handleInputChange}
+                  disabled={currentEducation.is_current}
+                />
+              </div>
+              
+              <div className="col-span-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={currentEducation.description || ''}
+                  onChange={handleInputChange}
+                  placeholder="Tell us about your studies, achievements, etc."
+                  rows={3}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={isLoading}>
+              {isLoading ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

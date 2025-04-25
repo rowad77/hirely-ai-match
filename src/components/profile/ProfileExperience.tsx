@@ -1,128 +1,157 @@
 
 import { useState } from 'react';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent } from '@/components/ui/card';
-import { Pencil, Trash2, Briefcase, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { Briefcase, Pencil, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface ProfileExperienceProps {
-  experiences: Tables<'work_experiences'>[];
-  setExperiences: (experiences: Tables<'work_experiences'>[]) => void;
+  profile: Partial<Tables<'profiles'>> | null;
+  setProfile: (profile: Partial<Tables<'profiles'>> | null) => void;
 }
 
-const experienceSchema = z.object({
-  job_title: z.string().min(1, { message: 'Job title is required' }),
-  company_name: z.string().min(1, { message: 'Company name is required' }),
-  start_date: z.date({ required_error: "Start date is required" }),
-  end_date: z.date().optional().nullable(),
-  is_current: z.boolean().default(false),
-  description: z.string().optional(),
-});
+type Experience = {
+  id?: string;
+  company_name: string;
+  job_title: string;
+  start_date: string;
+  end_date?: string;
+  is_current?: boolean;
+  description?: string;
+};
 
-type ExperienceFormValues = z.infer<typeof experienceSchema>;
-
-const ProfileExperience = ({ experiences, setExperiences }: ProfileExperienceProps) => {
-  const { user } = useAuth();
+const ProfileExperience = ({ profile }: ProfileExperienceProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentExperience, setCurrentExperience] = useState<Tables<'work_experiences'> | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const form = useForm<ExperienceFormValues>({
-    resolver: zodResolver(experienceSchema),
-    defaultValues: {
-      job_title: '',
-      company_name: '',
-      start_date: new Date(),
-      end_date: null,
-      is_current: false,
-      description: '',
-    }
+  const [isLoading, setIsLoading] = useState(false);
+  const [experiences, setExperiences] = useState<Experience[]>([]);
+  const [currentExperience, setCurrentExperience] = useState<Experience>({
+    company_name: '',
+    job_title: '',
+    start_date: '',
   });
+  const [isEditing, setIsEditing] = useState(false);
 
-  const openEditDialog = (exp: Tables<'work_experiences'>) => {
-    setCurrentExperience(exp);
-    form.reset({
-      job_title: exp.job_title,
-      company_name: exp.company_name,
-      start_date: exp.start_date ? new Date(exp.start_date) : new Date(),
-      end_date: exp.end_date ? new Date(exp.end_date) : null,
-      is_current: exp.is_current || false,
-      description: exp.description || '',
-    });
-    setIsDialogOpen(true);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setCurrentExperience(prev => ({ ...prev, [name]: value }));
   };
 
-  const openNewDialog = () => {
-    setCurrentExperience(null);
-    form.reset({
-      job_title: '',
+  const handleSwitchChange = (checked: boolean) => {
+    setCurrentExperience(prev => {
+      const updated = { ...prev, is_current: checked };
+      if (checked) {
+        delete updated.end_date;
+      }
+      return updated;
+    });
+  };
+
+  const handleAddExperience = () => {
+    setIsEditing(false);
+    setCurrentExperience({
       company_name: '',
-      start_date: new Date(),
-      end_date: null,
-      is_current: false,
-      description: '',
+      job_title: '',
+      start_date: '',
     });
     setIsDialogOpen(true);
   };
 
-  const watchIsCurrent = form.watch('is_current');
+  const handleEditExperience = (exp: Experience) => {
+    setIsEditing(true);
+    setCurrentExperience(exp);
+    setIsDialogOpen(true);
+  };
 
-  const onSubmit = async (values: ExperienceFormValues) => {
-    if (!user) return;
+  const handleDeleteExperience = async (id: string) => {
+    if (!profile?.id) return;
+
+    try {
+      setIsLoading(true);
+      const { error } = await supabase
+        .from('work_experiences')
+        .delete()
+        .eq('id', id)
+        .eq('profile_id', profile.id);
+
+      if (error) throw error;
+      
+      setExperiences(prev => prev.filter(exp => exp.id !== id));
+      toast.success('Experience deleted');
+    } catch (error) {
+      console.error('Error deleting experience:', error);
+      toast.error('Failed to delete experience');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!profile?.id) return;
     
-    setSaving(true);
+    if (!currentExperience.company_name || !currentExperience.job_title || !currentExperience.start_date) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
+    setIsLoading(true);
     
     try {
-      // Format dates for database
-      const formattedValues = {
-        ...values,
-        profile_id: user.id,
-        start_date: format(values.start_date, 'yyyy-MM-dd'),
-        end_date: values.is_current ? null : values.end_date ? format(values.end_date, 'yyyy-MM-dd') : null,
-      };
-      
-      if (currentExperience) {
+      if (isEditing && currentExperience.id) {
         // Update existing experience
         const { error } = await supabase
           .from('work_experiences')
-          .update(formattedValues)
+          .update({
+            company_name: currentExperience.company_name,
+            job_title: currentExperience.job_title,
+            start_date: currentExperience.start_date,
+            end_date: currentExperience.end_date,
+            is_current: currentExperience.is_current,
+            description: currentExperience.description
+          })
           .eq('id', currentExperience.id);
           
         if (error) throw error;
         
-        setExperiences(experiences.map(exp => 
-          exp.id === currentExperience.id ? { ...exp, ...formattedValues } : exp
-        ));
+        setExperiences(prev => 
+          prev.map(exp => (exp.id === currentExperience.id ? currentExperience : exp))
+        );
         
         toast.success('Experience updated successfully');
       } else {
-        // Add new experience
+        // Create new experience
         const { data, error } = await supabase
           .from('work_experiences')
-          .insert(formattedValues)
-          .select();
+          .insert({
+            profile_id: profile.id,
+            company_name: currentExperience.company_name,
+            job_title: currentExperience.job_title,
+            start_date: currentExperience.start_date,
+            end_date: currentExperience.end_date,
+            is_current: currentExperience.is_current || false,
+            description: currentExperience.description
+          })
+          .select()
+          .single();
           
         if (error) throw error;
         
-        if (data && data[0]) {
-          setExperiences([...experiences, data[0]]);
-          toast.success('Experience added successfully');
-        }
+        setExperiences(prev => [...prev, data as Experience]);
+        toast.success('Experience added successfully');
       }
       
       setIsDialogOpen(false);
@@ -130,256 +159,169 @@ const ProfileExperience = ({ experiences, setExperiences }: ProfileExperiencePro
       console.error('Error saving experience:', error);
       toast.error('Failed to save experience');
     } finally {
-      setSaving(false);
-    }
-  };
-
-  const deleteExperience = async (exp: Tables<'work_experiences'>) => {
-    if (!confirm('Are you sure you want to delete this work experience?')) return;
-    
-    try {
-      const { error } = await supabase
-        .from('work_experiences')
-        .delete()
-        .eq('id', exp.id);
-        
-      if (error) throw error;
-      
-      setExperiences(experiences.filter(e => e.id !== exp.id));
-      toast.success('Experience deleted successfully');
-    } catch (error) {
-      console.error('Error deleting experience:', error);
-      toast.error('Failed to delete experience');
+      setIsLoading(false);
     }
   };
 
   return (
-    <div>
-      <div className="space-y-4 mb-6">
-        {experiences.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Briefcase className="mx-auto h-12 w-12 mb-4 text-muted-foreground/70" />
-            <h3 className="text-lg font-medium">No work experience added yet</h3>
-            <p className="text-sm mt-1 mb-4">Add your work history to enhance your profile</p>
-          </div>
-        ) : (
-          experiences.map((exp) => (
-            <Card key={exp.id} className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="flex flex-col md:flex-row md:items-center">
-                  <div className="flex-grow p-6">
-                    <h3 className="text-lg font-semibold">{exp.job_title}</h3>
-                    <p className="text-muted-foreground">{exp.company_name}</p>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {exp.start_date && format(new Date(exp.start_date), 'MMM yyyy')} - {' '}
-                      {exp.is_current ? 'Present' : exp.end_date && format(new Date(exp.end_date), 'MMM yyyy')}
-                    </div>
-                    {exp.description && (
-                      <p className="text-sm mt-2">{exp.description}</p>
-                    )}
-                  </div>
-                  <div className="flex justify-end p-4 md:p-6 gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => openEditDialog(exp)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => deleteExperience(exp)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-      
-      <div className="flex justify-end">
-        <Button 
-          onClick={openNewDialog} 
-          className="bg-hirely hover:bg-hirely-dark"
-        >
-          Add Experience
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold tracking-tight">Work Experience</h2>
+        <Button onClick={handleAddExperience} size="sm" className="bg-hirely hover:bg-hirely-dark">
+          <Plus className="mr-2 h-4 w-4" /> Add Experience
         </Button>
       </div>
-      
+
+      {experiences.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6 text-center text-muted-foreground">
+            No work experience added yet. Add your professional experience to improve your profile.
+          </CardContent>
+        </Card>
+      ) : (
+        experiences.map((exp) => (
+          <Card key={exp.id} className="overflow-hidden">
+            <CardHeader className="p-4 pb-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>{exp.job_title}</CardTitle>
+                  <div className="flex items-center text-sm text-muted-foreground mt-1">
+                    <Briefcase className="h-3 w-3 mr-1" />
+                    {exp.company_name}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditExperience(exp)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    <span className="sr-only">Edit</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => exp.id && handleDeleteExperience(exp.id)}
+                    className="h-8 w-8 p-0 text-destructive hover:text-destructive/90"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Delete</span>
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-4 pt-0">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline">
+                  {format(new Date(exp.start_date), 'MMM yyyy')} - 
+                  {exp.is_current 
+                    ? ' Present'
+                    : exp.end_date
+                      ? ` ${format(new Date(exp.end_date), 'MMM yyyy')}`
+                      : ''
+                  }
+                </Badge>
+                {exp.is_current && <Badge>Current</Badge>}
+              </div>
+              
+              {exp.description && (
+                <p className="text-sm text-muted-foreground mt-2">{exp.description}</p>
+              )}
+            </CardContent>
+          </Card>
+        ))
+      )}
+
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle>{currentExperience ? 'Edit Experience' : 'Add Experience'}</DialogTitle>
+            <DialogTitle>{isEditing ? 'Edit Experience' : 'Add Experience'}</DialogTitle>
           </DialogHeader>
           
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-              <FormField
-                control={form.control}
-                name="job_title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Job Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Software Engineer" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="company_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Acme Corporation" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="start_date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Start Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "MMM yyyy")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-1">
+                <Label htmlFor="job_title">Job Title*</Label>
+                <Input
+                  id="job_title"
+                  name="job_title"
+                  value={currentExperience.job_title}
+                  onChange={handleInputChange}
+                  placeholder="Software Engineer, Project Manager, etc."
                 />
-                
-                {!watchIsCurrent && (
-                  <FormField
-                    control={form.control}
-                    name="end_date"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>End Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "MMM yyyy")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value || undefined}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
               </div>
               
-              <FormField
-                control={form.control}
-                name="is_current"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel>I'm currently working here</FormLabel>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Describe your responsibilities and achievements" 
-                        className="min-h-[100px]" 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="flex justify-end gap-2 pt-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="bg-hirely hover:bg-hirely-dark"
-                  disabled={saving}
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </Button>
+              <div className="col-span-1">
+                <Label htmlFor="company_name">Company*</Label>
+                <Input
+                  id="company_name"
+                  name="company_name"
+                  value={currentExperience.company_name}
+                  onChange={handleInputChange}
+                  placeholder="Company Name"
+                />
               </div>
-            </form>
-          </Form>
+              
+              <div className="col-span-1">
+                <Label htmlFor="start_date">Start Date*</Label>
+                <Input
+                  id="start_date"
+                  name="start_date"
+                  type="date"
+                  value={currentExperience.start_date}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="col-span-1">
+                <div className="flex items-center justify-between mb-2">
+                  <Label htmlFor="end_date">End Date</Label>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="is_current"
+                      checked={currentExperience.is_current || false}
+                      onCheckedChange={handleSwitchChange}
+                    />
+                    <Label htmlFor="is_current" className="text-sm">
+                      I currently work here
+                    </Label>
+                  </div>
+                </div>
+                <Input
+                  id="end_date"
+                  name="end_date"
+                  type="date"
+                  value={currentExperience.end_date || ''}
+                  onChange={handleInputChange}
+                  disabled={currentExperience.is_current}
+                />
+              </div>
+              
+              <div className="col-span-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={currentExperience.description || ''}
+                  onChange={handleInputChange}
+                  placeholder="Describe your responsibilities and achievements"
+                  rows={4}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={isLoading}>
+              {isLoading ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

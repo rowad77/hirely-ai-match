@@ -20,10 +20,12 @@ type AuthContextType = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  signOut: () => void; // Added signOut as alias to logout
   isAuthenticated: boolean;
   isCompany: boolean;
   isCandidate: boolean;
   isOwner: boolean;
+  userRole: 'owner' | 'company' | 'candidate' | null; // Added userRole
   session: Session | null;
 };
 
@@ -150,10 +152,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         logout,
+        signOut: logout, // Add signOut as alias to logout
         isAuthenticated: !!user,
         isCompany: profile?.role === 'company',
         isCandidate: profile?.role === 'candidate',
         isOwner: profile?.role === 'owner',
+        userRole: profile?.role || null, // Add userRole property
         session,
       }}
     >
