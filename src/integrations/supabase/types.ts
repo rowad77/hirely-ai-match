@@ -105,6 +105,7 @@ export type Database = {
       }
       companies: {
         Row: {
+          average_rating: number | null
           company_benefits: string[] | null
           company_culture: string | null
           company_size: string | null
@@ -114,15 +115,20 @@ export type Database = {
           hiring_process: string | null
           id: string
           industry: string | null
+          is_verified: boolean | null
           location: string | null
           logo_url: string | null
           name: string
           size: string | null
           social_links: Json | null
           updated_at: string
+          verification_date: string | null
+          verification_documents: Json | null
+          verified_by: string | null
           website: string | null
         }
         Insert: {
+          average_rating?: number | null
           company_benefits?: string[] | null
           company_culture?: string | null
           company_size?: string | null
@@ -132,15 +138,20 @@ export type Database = {
           hiring_process?: string | null
           id?: string
           industry?: string | null
+          is_verified?: boolean | null
           location?: string | null
           logo_url?: string | null
           name: string
           size?: string | null
           social_links?: Json | null
           updated_at?: string
+          verification_date?: string | null
+          verification_documents?: Json | null
+          verified_by?: string | null
           website?: string | null
         }
         Update: {
+          average_rating?: number | null
           company_benefits?: string[] | null
           company_culture?: string | null
           company_size?: string | null
@@ -150,15 +161,96 @@ export type Database = {
           hiring_process?: string | null
           id?: string
           industry?: string | null
+          is_verified?: boolean | null
           location?: string | null
           logo_url?: string | null
           name?: string
           size?: string | null
           social_links?: Json | null
           updated_at?: string
+          verification_date?: string | null
+          verification_documents?: Json | null
+          verified_by?: string | null
           website?: string | null
         }
         Relationships: []
+      }
+      company_reviews: {
+        Row: {
+          career_growth: number | null
+          company_id: string
+          cons: string | null
+          created_at: string | null
+          culture: number | null
+          helpful_count: number | null
+          id: string
+          is_anonymous: boolean | null
+          is_verified: boolean | null
+          job_security: number | null
+          management: number | null
+          pros: string | null
+          rating: number
+          review_text: string
+          salary_benefits: number | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+          work_life_balance: number | null
+        }
+        Insert: {
+          career_growth?: number | null
+          company_id: string
+          cons?: string | null
+          created_at?: string | null
+          culture?: number | null
+          helpful_count?: number | null
+          id?: string
+          is_anonymous?: boolean | null
+          is_verified?: boolean | null
+          job_security?: number | null
+          management?: number | null
+          pros?: string | null
+          rating: number
+          review_text: string
+          salary_benefits?: number | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+          work_life_balance?: number | null
+        }
+        Update: {
+          career_growth?: number | null
+          company_id?: string
+          cons?: string | null
+          created_at?: string | null
+          culture?: number | null
+          helpful_count?: number | null
+          id?: string
+          is_anonymous?: boolean | null
+          is_verified?: boolean | null
+          job_security?: number | null
+          management?: number | null
+          pros?: string | null
+          rating?: number
+          review_text?: string
+          salary_benefits?: number | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+          work_life_balance?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_reviews_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       education: {
         Row: {
