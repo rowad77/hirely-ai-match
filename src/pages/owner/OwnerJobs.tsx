@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,83 +24,29 @@ import {
   Download
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { featuredJobs } from '@/data/jobs';
-import { JobImportConfig } from '@/components/owner/JobImportConfig';
 import { 
   Sheet, 
-  SheetTrigger, 
   SheetContent, 
   SheetHeader, 
   SheetTitle, 
-  SheetDescription 
+  SheetDescription,
+  SheetTrigger
 } from '@/components/ui/sheet';
-
-// Type definitions for job data
-interface Job {
-  id: number;
-  title: string;
-  company: string;
-  location: string;
-  type: string;
-  salary: string;
-  postedDate: string;
-  description: string;
-  category: string;
-  active: boolean;
-  featured: boolean;
-  approved: boolean;
-  companyName: string;
-}
-
-// Enhanced jobs data with additional control properties
-const MOCK_JOBS: Job[] = featuredJobs.map(job => ({
-  ...job,
-  active: Math.random() > 0.2, // Random initial active state
-  featured: Math.random() > 0.7, // Random initial featured state
-  approved: Math.random() > 0.3, // Random initial approval state
-  companyName: job.company,
-}));
+import { JobImportConfig } from '@/components/owner/JobImportConfig';
+import { useOwnerJobs } from '@/hooks/use-owner-jobs';
+import { Tables } from '@/integrations/supabase/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const OwnerJobs = () => {
-  const [jobs, setJobs] = useState<Job[]>(MOCK_JOBS);
+  const { jobs, loading, refetchJobs } = useOwnerJobs();
   const [searchTerm, setSearchTerm] = useState('');
   
-  const handleDeleteJob = (jobId: number) => {
-    setJobs(jobs.filter(job => job.id !== jobId));
-    toast.success('Job deleted successfully');
+  const handleDeleteJob = async (jobId: string) => {
+    // TODO: Implement job deletion
   };
   
-  const toggleJobStatus = (jobId: number) => {
-    setJobs(jobs.map(job => 
-      job.id === jobId ? { ...job, active: !job.active } : job
-    ));
-    
-    const job = jobs.find(j => j.id === jobId);
-    if (job) {
-      toast.success(`Job ${job.active ? 'deactivated' : 'activated'} successfully`);
-    }
-  };
-  
-  const toggleJobFeatured = (jobId: number) => {
-    setJobs(jobs.map(job => 
-      job.id === jobId ? { ...job, featured: !job.featured } : job
-    ));
-    
-    const job = jobs.find(j => j.id === jobId);
-    if (job) {
-      toast.success(`Job ${job.featured ? 'unfeatured' : 'featured'} successfully`);
-    }
-  };
-  
-  const toggleJobApproval = (jobId: number) => {
-    setJobs(jobs.map(job => 
-      job.id === jobId ? { ...job, approved: !job.approved } : job
-    ));
-    
-    const job = jobs.find(j => j.id === jobId);
-    if (job) {
-      toast.success(`Job ${job.approved ? 'unapproved' : 'approved'} successfully`);
-    }
+  const toggleJobStatus = async (jobId: string) => {
+    // TODO: Implement job status toggle
   };
 
   const handleExportJobs = () => {
@@ -107,15 +54,10 @@ const OwnerJobs = () => {
     // In a real app, this would generate a CSV or Excel file
   };
 
-  const handleImportComplete = () => {
-    // Refresh the jobs list after import
-    setJobs([...jobs]); // This will trigger a re-render
-  };
-
   const filteredJobs = jobs.filter(job => 
     job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    job.location.toLowerCase().includes(searchTerm.toLowerCase())
+    job.company_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    job.location?.toLowerCase().includes(searchTerm.toLowerCase() || '')
   );
 
   return (
@@ -146,7 +88,7 @@ const OwnerJobs = () => {
                   </SheetDescription>
                 </SheetHeader>
                 <div className="mt-6">
-                  <JobImportConfig onImportComplete={handleImportComplete} />
+                  <JobImportConfig onImportComplete={refetchJobs} />
                 </div>
               </SheetContent>
             </Sheet>
@@ -163,6 +105,7 @@ const OwnerJobs = () => {
           </div>
         </div>
         
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <Card>
             <CardContent className="p-6">
@@ -175,7 +118,7 @@ const OwnerJobs = () => {
           <Card>
             <CardContent className="p-6">
               <div className="text-center">
-                <p className="text-2xl font-bold">{jobs.filter(job => job.active).length}</p>
+                <p className="text-2xl font-bold">{jobs.filter(job => job.status === 'active').length}</p>
                 <p className="text-gray-500">Active Jobs</p>
               </div>
             </CardContent>
@@ -183,7 +126,7 @@ const OwnerJobs = () => {
           <Card>
             <CardContent className="p-6">
               <div className="text-center">
-                <p className="text-2xl font-bold">{jobs.filter(job => job.featured).length}</p>
+                <p className="text-2xl font-bold">{jobs.filter(job => job.is_featured).length}</p>
                 <p className="text-gray-500">Featured Jobs</p>
               </div>
             </CardContent>
@@ -191,7 +134,7 @@ const OwnerJobs = () => {
           <Card>
             <CardContent className="p-6">
               <div className="text-center">
-                <p className="text-2xl font-bold">{jobs.filter(job => !job.approved).length}</p>
+                <p className="text-2xl font-bold">{jobs.filter(job => !job.is_approved).length}</p>
                 <p className="text-gray-500">Pending Approval</p>
               </div>
             </CardContent>
@@ -213,99 +156,78 @@ const OwnerJobs = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {filteredJobs.map((job) => (
-                    <tr key={job.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium">{job.title}</td>
-                      <td className="px-4 py-3 text-sm">{job.company}</td>
-                      <td className="px-4 py-3 text-sm">{job.location}</td>
-                      <td className="px-4 py-3 text-sm">{job.postedDate}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <div className="flex flex-wrap gap-1">
-                          <Badge variant="outline" className={job.active 
-                            ? "bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
-                            : "bg-red-50 text-red-700 hover:bg-red-50 border-red-200"
-                          }>
-                            {job.active ? 'Active' : 'Inactive'}
-                          </Badge>
-                          
-                          {job.featured && (
-                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-50 border-yellow-200">
-                              Featured
-                            </Badge>
-                          )}
-                          
-                          <Badge variant="outline" className={job.approved
-                            ? "bg-blue-50 text-blue-700 hover:bg-blue-50 border-blue-200"
-                            : "bg-orange-50 text-orange-700 hover:bg-orange-50 border-orange-200"
-                          }>
-                            {job.approved ? 'Approved' : 'Pending'}
-                          </Badge>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <a href={`/job/${job.id}`} className="flex items-center">
-                                <Eye className="h-4 w-4 mr-2" />
-                                View Job
-                              </a>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            
-                            <DropdownMenuSeparator />
-                            
-                            <DropdownMenuItem onClick={() => toggleJobStatus(job.id)}>
-                              {job.active 
-                                ? <Ban className="h-4 w-4 mr-2" />
-                                : <CheckCircle className="h-4 w-4 mr-2" />
-                              }
-                              {job.active ? 'Deactivate' : 'Activate'}
-                            </DropdownMenuItem>
-                            
-                            <DropdownMenuItem onClick={() => toggleJobFeatured(job.id)}>
-                              {job.featured
-                                ? <Ban className="h-4 w-4 mr-2" />
-                                : <CheckCircle className="h-4 w-4 mr-2" />
-                              }
-                              {job.featured ? 'Unfeature' : 'Feature'}
-                            </DropdownMenuItem>
-                            
-                            <DropdownMenuItem onClick={() => toggleJobApproval(job.id)}>
-                              {job.approved
-                                ? <Clock className="h-4 w-4 mr-2" />
-                                : <CheckCircle className="h-4 w-4 mr-2" />
-                              }
-                              {job.approved ? 'Unapprove' : 'Approve'}
-                            </DropdownMenuItem>
-                            
-                            <DropdownMenuSeparator />
-                            
-                            <DropdownMenuItem onClick={() => handleDeleteJob(job.id)} className="text-red-600 focus:text-red-600">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, index) => (
+                      <tr key={index}>
+                        <td colSpan={6} className="px-4 py-3">
+                          <Skeleton className="h-8 w-full" />
+                        </td>
+                      </tr>
+                    ))
+                  ) : filteredJobs.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-8 text-gray-500">
+                        No jobs found. Try importing some jobs or creating a new one.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredJobs.map((job) => (
+                      <tr key={job.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium">{job.title}</td>
+                        <td className="px-4 py-3 text-sm">{job.api_source || 'Manual'}</td>
+                        <td className="px-4 py-3 text-sm">{job.location || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm">{new Date(job.posted_date).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex flex-wrap gap-1">
+                            <Badge variant="outline" className={job.status === 'active'
+                              ? "bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
+                              : "bg-red-50 text-red-700 hover:bg-red-50 border-red-200"
+                            }>
+                              {job.status}
+                            </Badge>
+                            
+                            {job.is_featured && (
+                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-50 border-yellow-200">
+                                Featured
+                              </Badge>
+                            )}
+                            
+                            <Badge variant="outline" className={job.is_approved
+                              ? "bg-blue-50 text-blue-700 hover:bg-blue-50 border-blue-200"
+                              : "bg-orange-50 text-orange-700 hover:bg-orange-50 border-orange-200"
+                            }>
+                              {job.is_approved ? 'Approved' : 'Pending'}
+                            </Badge>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                                <span className="sr-only">Open menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              
+                              <DropdownMenuSeparator />
+                              
+                              <DropdownMenuItem>
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
-              {filteredJobs.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No jobs found matching your search.</p>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
