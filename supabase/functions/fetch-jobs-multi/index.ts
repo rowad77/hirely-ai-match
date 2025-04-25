@@ -1,9 +1,9 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const theirStackApiKey = Deno.env.get('THEIRSTACK_API_KEY')!;
 const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KEY') || '';
+
 const THEIRSTACK_BASE_URL = 'https://api.theirstack.com/v1';
 const FIRECRAWL_BASE_URL = 'https://api.firecrawl.dev/v1';
 
@@ -11,6 +11,14 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const JOB_BOARD_SITES = [
+  'https://boards.greenhouse.io/swissre',
+  'https://careers.google.com/jobs/results',
+  'https://linkedin.com/jobs',
+  'https://indeed.com/jobs',
+  'https://angel.co/jobs'
+];
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -22,10 +30,7 @@ serve(async (req) => {
     const jobsPromises = [];
     const errors = [];
     
-    console.log(`Fetching jobs with sources: ${JSON.stringify(sources)}, page: ${page}, filters: ${JSON.stringify(filters)}`);
-    
-    // Fetch from TheirStack API if included in sources
-    if (sources.includes('theirstack')) {
+    if (sources.includes('theirstack') && theirStackApiKey) {
       jobsPromises.push(fetchTheirStackJobs(page, filters).catch(error => {
         console.error('TheirStack API error:', error);
         errors.push({ source: 'theirstack', error: error.message });
@@ -33,37 +38,38 @@ serve(async (req) => {
       }));
     }
     
-    // Fetch from Firecrawl if included in sources
     if (sources.includes('firecrawl') && firecrawlApiKey) {
-      jobsPromises.push(fetchFirecrawlJobs(filters).catch(error => {
-        console.error('Firecrawl API error:', error);
-        errors.push({ source: 'firecrawl', error: error.message });
-        return { jobs: [], total: 0 }; 
-      }));
+      const targetSites = JOB_BOARD_SITES.filter(site => {
+        if (filters.location) {
+          const location = filters.location.toLowerCase();
+          return site.includes(location);
+        }
+        return true;
+      });
+
+      jobsPromises.push(
+        Promise.all(targetSites.map(site => 
+          fetchFirecrawlJobs(site, filters)
+        )).then(results => ({
+          jobs: results.flatMap(result => result.jobs),
+          total: results.reduce((sum, result) => sum + result.total, 0)
+        })).catch(error => {
+          console.error('Firecrawl API error:', error);
+          errors.push({ source: 'firecrawl', error: error.message });
+          return { jobs: [], total: 0 }; 
+        })
+      );
     }
     
-    // Wait for all promises to resolve
     const results = await Promise.all(jobsPromises);
     
-    // Combine and deduplicate jobs based on title and company
-    let allJobs = [];
-    let totalJobs = 0;
-    
-    results.forEach(result => {
-      if (result.jobs && result.jobs.length > 0) {
-        allJobs = [...allJobs, ...result.jobs];
-        totalJobs += result.total || result.jobs.length;
-      }
-    });
-    
-    // Basic deduplication based on title and company
+    let allJobs = results.flatMap(result => result.jobs);
     const uniqueJobs = allJobs.filter((job, index, self) =>
       index === self.findIndex((j) => 
         j.title === job.title && j.company === job.company
       )
     );
     
-    // If we have no jobs from APIs, use fallback data
     if (uniqueJobs.length === 0) {
       console.log('No jobs found from APIs, using fallback data');
       return new Response(
@@ -82,15 +88,14 @@ serve(async (req) => {
       );
     }
     
-    // Return combined results
     console.log(`Successfully fetched ${uniqueJobs.length} jobs from multiple sources`);
     
     return new Response(
       JSON.stringify({
         jobs: uniqueJobs,
-        total: totalJobs,
+        total: uniqueJobs.length,
         page: page,
-        total_pages: Math.ceil(totalJobs / 6),
+        total_pages: Math.ceil(uniqueJobs.length / 6),
         source: 'api',
         errors: errors
       }),
@@ -118,17 +123,14 @@ serve(async (req) => {
   }
 });
 
-// TheirStack API fetching function
 async function fetchTheirStackJobs(page: number, filters: any) {
   console.log('Fetching jobs from TheirStack API');
   
-  // Build query parameters according to TheirStack API documentation
   const queryParams = new URLSearchParams({
     page: page.toString(),
     ...(filters.location ? { location: filters.location } : {}),
     ...(filters.remote === true ? { remote: 'true' } : {}),
     ...(filters.search ? { search: filters.search } : {}),
-    // Add any additional filters from the request
     ...Object.fromEntries(
       Object.entries(filters).filter(([k, v]) => 
         !['location', 'remote', 'search'].includes(k) && 
@@ -140,7 +142,6 @@ async function fetchTheirStackJobs(page: number, filters: any) {
   const requestUrl = `${THEIRSTACK_BASE_URL}/job_postings?${queryParams}`;
   console.log(`TheirStack API Request: ${requestUrl}`);
   
-  // Add timeout to the fetch request to prevent hanging
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
   
@@ -164,7 +165,6 @@ async function fetchTheirStackJobs(page: number, filters: any) {
 
     const data = await response.json();
     
-    // Format the response to match our frontend expectations
     const formattedJobs = data.jobs.map(job => ({
       id: job.id,
       title: job.title,
@@ -197,38 +197,17 @@ async function fetchTheirStackJobs(page: number, filters: any) {
   }
 }
 
-// Firecrawl API fetching function
-async function fetchFirecrawlJobs(filters: any) {
+async function fetchFirecrawlJobs(site: string, filters: any) {
   if (!firecrawlApiKey) {
     throw new Error('Firecrawl API key not configured');
   }
   
-  console.log('Fetching jobs from Firecrawl API');
-  
-  // Target job boards to scrape
-  const jobSites = [
-    'https://boards.greenhouse.io/swissre',
-    'https://careers.smartrecruiters.com/publicjobs'
-  ];
-  
-  // Add additional sites based on location filter if provided
-  if (filters.location) {
-    const location = filters.location.toLowerCase();
-    if (location.includes('saudi')) {
-      jobSites.push('https://jobs.sa', 'https://saudi.tanqeeb.com');
-    }
-  }
-  
-  // Use a sample job site for testing
-  const targetSite = jobSites[0];
+  console.log(`Fetching jobs from Firecrawl API for site: ${site}`);
   
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
   
   try {
-    console.log(`Firecrawl API Request for: ${targetSite}`);
-    
-    // Initial request to crawl job listings
     const crawlResponse = await fetch(`${FIRECRAWL_BASE_URL}/crawl`, {
       method: 'POST',
       headers: {
@@ -236,25 +215,21 @@ async function fetchFirecrawlJobs(filters: any) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        url: targetSite,
+        url: site,
         limit: 10,
-        selectors: {
-          jobListings: [
-            {
-              selector: '.job-listing, .job-card, .job-item, article',
-              data: {
-                title: 'h2, h3, .job-title',
-                company: '.company-name, .employer',
-                location: '.location, .job-location',
-                description: '.description, .job-description, p',
-                salary: '.salary, .compensation',
-                link: 'a@href'
-              }
+        extractors: {
+          job_listings: {
+            selector: '.job-listing, .job-card, .job-item',
+            fields: {
+              title: '.job-title, h2, h3',
+              company: '.company-name, .employer',
+              location: '.location, .job-location',
+              description: '.description, .job-description',
+              salary: '.salary, .compensation',
+              link: 'a@href'
             }
-          ]
-        },
-        wait_for: '.job-listing, .jobs-container, main',
-        follow_links: false
+          }
+        }
       }),
       signal: controller.signal
     });
@@ -263,57 +238,43 @@ async function fetchFirecrawlJobs(filters: any) {
     
     if (!crawlResponse.ok) {
       const errorText = await crawlResponse.text();
-      console.error(`Firecrawl API error: ${crawlResponse.status}`);
-      console.error(`Error details: ${errorText}`);
-      throw new Error(`Firecrawl API error: Status ${crawlResponse.status} - ${errorText || crawlResponse.statusText}`);
+      throw new Error(`Firecrawl API error: ${crawlResponse.status} - ${errorText}`);
     }
     
     const crawlData = await crawlResponse.json();
-    console.log(`Firecrawl data: ${JSON.stringify(crawlData)}`);
+    const jobs = crawlData.data?.job_listings?.map(job => ({
+      id: `firecrawl-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      title: job.title,
+      company: job.company || 'Unknown',
+      location: job.location || 'Not specified',
+      description: job.description || 'No description',
+      salary: job.salary || 'Not specified',
+      url: job.link,
+      source: 'firecrawl'
+    })).filter(job => {
+      const matchesSearch = !filters.search || 
+        job.title.toLowerCase().includes(filters.search.toLowerCase()) || 
+        job.description.toLowerCase().includes(filters.search.toLowerCase());
+      
+      const matchesLocation = !filters.location || 
+        job.location.toLowerCase().includes(filters.location.toLowerCase());
+      
+      return matchesSearch && matchesLocation;
+    });
     
-    // Extract job listings from crawl results
-    const jobs = [];
-    
-    if (crawlData.data && crawlData.data.jobListings) {
-      for (const item of crawlData.data.jobListings) {
-        // Skip items that don't have at least a title
-        if (!item.title) continue;
-        
-        // Filter based on search term if provided
-        if (filters.search && !item.title.toLowerCase().includes(filters.search.toLowerCase()) &&
-            !item.description?.toLowerCase().includes(filters.search.toLowerCase())) {
-          continue;
-        }
-        
-        jobs.push({
-          id: `firecrawl-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-          title: item.title,
-          company: item.company || 'Unknown Company',
-          location: item.location || 'Not specified',
-          type: determineJobType(item.title, item.description),
-          salary: item.salary || 'Not specified',
-          postedDate: 'Recently',
-          description: item.description || 'No description provided',
-          category: determineJobCategory(item.title, item.description),
-          url: item.link ? new URL(item.link, targetSite).href : targetSite,
-          remote: isRemoteJob(item.title, item.description, item.location),
-          source: 'firecrawl'
-        });
-      }
+    return { 
+      jobs, 
+      total: jobs.length 
+    };
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      console.error('Firecrawl API request timed out');
+      throw new Error('Firecrawl API request timed out');
     }
-    
-    console.log(`Successfully extracted ${jobs.length} jobs from Firecrawl`);
-    return { jobs, total: jobs.length };
-  } catch (fetchError) {
-    if (fetchError.name === 'AbortError') {
-      console.error('Firecrawl API request timed out after 10 seconds');
-      throw new Error('Firecrawl API request timed out. Please try again later.');
-    }
-    throw fetchError;
+    throw error;
   }
 }
 
-// Helper function to format posted date
 function formatPostedDate(dateString) {
   try {
     const postedDate = new Date(dateString);
@@ -331,7 +292,6 @@ function formatPostedDate(dateString) {
   }
 }
 
-// Helper function to determine job type based on title and description
 function determineJobType(title: string, description?: string): string {
   const titleLower = title?.toLowerCase() || '';
   const descLower = description?.toLowerCase() || '';
@@ -354,7 +314,6 @@ function determineJobType(title: string, description?: string): string {
   return 'Full-time';
 }
 
-// Helper function to determine job category based on title and description
 function determineJobCategory(title: string, description?: string): string {
   const titleLower = title?.toLowerCase() || '';
   const descLower = description?.toLowerCase() || '';
@@ -391,7 +350,6 @@ function determineJobCategory(title: string, description?: string): string {
   return 'General';
 }
 
-// Helper function to determine if job is remote
 function isRemoteJob(title: string, description?: string, location?: string): boolean {
   const titleLower = title?.toLowerCase() || '';
   const descLower = description?.toLowerCase() || '';
@@ -403,7 +361,6 @@ function isRemoteJob(title: string, description?: string, location?: string): bo
          locationLower === 'anywhere';
 }
 
-// Mock data for testing when API fails
 const featuredJobs = [
   {
     id: "1",
