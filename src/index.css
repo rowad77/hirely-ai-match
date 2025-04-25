@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,155 +5,85 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-
+    --foreground: 240 10% 3.9%;
+    
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-
+    --card-foreground: 240 10% 3.9%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-
-    --primary: 191 100% 48%;
+    --popover-foreground: 240 10% 3.9%;
+    
+    --primary: 240 5.9% 10%;
     --primary-foreground: 0 0% 98%;
-
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-
+    
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5% 64.9%;
     --radius: 0.5rem;
   }
 
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 191 100% 48%;
-    --primary-foreground: 0 0% 9%;
-
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-  }
-
-  /* Custom color for the Hirely website */
-  .bg-hirely {
-    @apply bg-[#0094FF];
-  }
-
-  .bg-hirely-dark {
-    @apply bg-[#0077cc];
-  }
-
-  .text-hirely {
-    @apply text-[#0094FF];
-  }
-}
-
-@layer base {
   * {
-    @apply border-border;
+    @apply border-border selection:bg-apple-blue/20;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-apple-gray-50 text-apple-gray-600 antialiased;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+  }
+
+  html[dir="rtl"] {
+    text-align: right;
+  }
+
+  [dir="rtl"] .rtl-flip {
+    @apply transform -scale-x-100;
+  }
+
+  [dir="rtl"] .rtl-rotate-180 {
+    @apply transform rotate-180;
   }
 }
 
-/* RTL Support */
-html[dir="rtl"] {
-  text-align: right;
+@layer components {
+  .apple-card {
+    @apply bg-white/80 backdrop-blur-xl border border-apple-gray-200/50 rounded-2xl shadow-sm transition-all duration-300 hover:shadow-md;
+  }
+
+  .apple-button {
+    @apply bg-apple-blue text-white rounded-full px-7 py-3 text-sm font-semibold transition-all duration-300 hover:bg-apple-blue-dark active:scale-95;
+  }
+
+  .apple-link {
+    @apply text-apple-blue hover:text-apple-blue-dark transition-colors duration-200;
+  }
+
+  .apple-input {
+    @apply rounded-lg border border-apple-gray-200 bg-white/80 px-4 py-2 text-apple-gray-600 focus:border-apple-blue focus:ring-1 focus:ring-apple-blue/20 transition-all duration-200;
+  }
 }
 
-html[dir="rtl"] .input-rtl,
-html[dir="rtl"] input,
-html[dir="rtl"] textarea {
-  text-align: right;
-}
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 
-html[dir="rtl"] .ltr-icon {
-  transform: scaleX(-1);
-}
+  .rtl-space-reverse {
+    --space-reverse: 1;
+  }
 
-/* Arabic font styling */
-.font-arabic {
-  font-family: 'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-html[dir="rtl"] .rtl-flip-icon {
-  transform: scaleX(-1);
-}
-
-/* For tables in RTL mode */
-html[dir="rtl"] table thead tr th {
-  text-align: right;
-}
-
-html[dir="rtl"] table tbody tr td {
-  text-align: right;
-}
-
-/* Adjust Dropdown positioning in RTL */
-html[dir="rtl"] .dropdown-rtl-fix {
-  left: auto;
-  right: 0;
-}
-
-html[dir="rtl"] .margin-r {
-  margin-right: 0;
-  margin-left: 0.5rem;
-}
-
-html[dir="rtl"] .margin-l {
-  margin-left: 0;
-  margin-right: 0.5rem;
-}
-
-html[dir="rtl"] .pl-custom {
-  padding-left: 0;
-  padding-right: 2.5rem;
-}
-
-html[dir="rtl"] .pr-custom {
-  padding-right: 0;
-  padding-left: 2.5rem;
-}
-
-/* Fix for icons in input fields */
-html[dir="rtl"] .input-icon-left {
-  left: auto;
-  right: 0.75rem;
-}
-
-html[dir="rtl"] .input-icon-right {
-  right: auto;
-  left: 0.75rem;
+  [dir="rtl"] .rtl-mirror {
+    transform: scaleX(-1);
+  }
 }

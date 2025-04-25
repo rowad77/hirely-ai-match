@@ -1,168 +1,265 @@
 
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Calendar } from '@/components/ui/calendar';
-import { useLanguage } from '@/context/LanguageContext';
+import { 
+  Calendar as CalendarIcon, 
+  Clock, 
+  Video, 
+  Phone, 
+  User, 
+  MapPin, 
+  Check, 
+  X
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useRtlTextAlign, useRtlDirection } from '@/lib/rtl-utils';
-import { CalendarIcon, Clock, Video, Phone, MapPin, Eye, ArrowRightLeft, Check, X } from 'lucide-react';
-import { ar, enUS } from 'date-fns/locale';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { toast } from 'sonner';
 
 // Mock interview data
 const mockInterviews = [
   {
     id: 1,
-    candidateName: 'Alex Johnson',
-    position: 'Frontend Developer',
-    time: '09:00 AM',
-    duration: '45 min',
+    candidate: 'John Smith',
+    position: 'Senior Frontend Developer',
+    date: new Date(2025, 3, 5, 10, 0),
     type: 'video',
-    interviewer: 'Sarah Williams'
+    duration: 60,
+    status: 'scheduled',
   },
   {
     id: 2,
-    candidateName: 'Maria Garcia',
+    candidate: 'Emily Johnson',
     position: 'UX Designer',
-    time: '10:30 AM',
-    duration: '60 min',
+    date: new Date(2025, 3, 6, 14, 30),
     type: 'in-person',
-    interviewer: 'Michael Brown'
+    duration: 90,
+    status: 'scheduled',
   },
   {
     id: 3,
-    candidateName: 'James Wilson',
-    position: 'Backend Developer',
-    time: '01:15 PM',
-    duration: '45 min',
+    candidate: 'Michael Williams',
+    position: 'DevOps Engineer',
+    date: new Date(2025, 3, 8, 11, 0),
     type: 'phone',
-    interviewer: 'Sarah Williams'
-  },
-  {
-    id: 4,
-    candidateName: 'Emily Chen',
-    position: 'Product Manager',
-    time: '03:00 PM',
-    duration: '60 min',
-    type: 'video',
-    interviewer: 'David Rodriguez'
+    duration: 45,
+    status: 'scheduled',
   }
 ];
 
 const InterviewSchedule = () => {
-  const { t, language } = useLanguage();
-  const rtlAlign = useRtlTextAlign();
-  const rtlDirection = useRtlDirection();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  
-  const getInterviewTypeIcon = (type: string) => {
-    switch(type) {
-      case 'video': return <Video className="h-4 w-4" />;
-      case 'phone': return <Phone className="h-4 w-4" />;
-      case 'in-person': return <MapPin className="h-4 w-4" />;
-      default: return <Video className="h-4 w-4" />;
+  const [interviews, setInterviews] = useState(mockInterviews);
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+
+  const getInterviewIcon = (type: string) => {
+    switch (type) {
+      case 'video': return Video;
+      case 'phone': return Phone;
+      case 'in-person': return User;
+      default: return Video;
     }
   };
 
-  const getInterviewTypeText = (type: string) => {
-    switch(type) {
-      case 'video': return t('video_link');
-      case 'phone': return t('phone_interview');
-      case 'in-person': return t('in_person');
-      default: return t('video_link');
-    }
+  const handleUpdateStatus = (id: number, status: string) => {
+    setInterviews(interviews.map(interview => 
+      interview.id === id ? { ...interview, status } : interview
+    ));
+    toast.success(`Interview status updated to ${status}`);
   };
-  
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* Calendar */}
-      <Card className="md:col-span-1">
-        <CardContent className="p-4">
-          <div className={`flex items-center mb-4 ${rtlDirection}`}>
-            <CalendarIcon className="h-5 w-5 text-gray-500 mr-2" />
-            <h3 className="font-medium">{t('pick_date')}</h3>
-          </div>
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={(date) => date && setSelectedDate(date)}
-            className="rounded-md border"
-            locale={language === 'ar' ? ar : enUS}
-          />
-        </CardContent>
-      </Card>
-      
-      {/* Interview List */}
-      <Card className="md:col-span-2">
-        <CardContent className="p-4">
-          <h3 className={`font-medium mb-4 ${rtlAlign}`}>{t('interviews_today')}</h3>
-          
-          {mockInterviews.length > 0 ? (
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-4 justify-between items-center">
+        <h2 className="text-xl font-bold">Interview Schedule</h2>
+        <div className="flex gap-2">
+          <Select value={viewMode} onValueChange={(value: 'calendar' | 'list') => setViewMode(value)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="View mode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="calendar">Calendar View</SelectItem>
+              <SelectItem value="list">List View</SelectItem>
+            </SelectContent>
+          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                {date ? format(date, 'PPP') : 'Pick a date'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
+      <div className={`${viewMode === 'calendar' ? 'block' : 'hidden'}`}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{date ? format(date, 'EEEE, MMMM d, yyyy') : 'Select a date'}</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-4">
-              {mockInterviews.map(interview => (
-                <Card key={interview.id} className="overflow-hidden">
-                  <CardContent className="p-0">
-                    {/* Header */}
-                    <div className="bg-blue-50 p-3 border-b">
-                      <div className={`flex justify-between items-center ${rtlDirection}`}>
-                        <div className={`flex items-center ${rtlDirection} gap-2`}>
-                          <Clock className={language === 'ar' ? 'rtl-flip-icon' : ''} />
-                          <span className="font-medium">{interview.time} ({interview.duration})</span>
-                        </div>
-                        <div className={`flex items-center ${rtlDirection} gap-1`}>
-                          {getInterviewTypeIcon(interview.type)}
-                          <span className="text-sm">{getInterviewTypeText(interview.type)}</span>
-                        </div>
+              <div className="grid grid-cols-12 gap-2">
+                {Array.from({ length: 12 }).map((_, index) => (
+                  <div key={index} className="col-span-1 text-center text-sm text-gray-500">
+                    {`${index + 8}:00`}
+                  </div>
+                ))}
+              </div>
+              
+              <div className="relative h-40 border rounded-lg">
+                {/* Interview slots would appear here, positioned absolutely */}
+                {interviews.filter(interview => 
+                  date && interview.date.toDateString() === date.toDateString()
+                ).map(interview => {
+                  // Calculate position based on time
+                  const hour = interview.date.getHours();
+                  const minute = interview.date.getMinutes();
+                  const startPercent = ((hour - 8) * 60 + minute) / (12 * 60) * 100;
+                  const widthPercent = (interview.duration / (12 * 60)) * 100;
+                  const Icon = getInterviewIcon(interview.type);
+                  
+                  return (
+                    <div 
+                      key={interview.id}
+                      className="absolute bg-blue-100 border border-blue-300 rounded p-2 text-xs"
+                      style={{ 
+                        left: `${startPercent}%`, 
+                        width: `${widthPercent}%`,
+                        top: '10px',
+                        height: 'calc(100% - 20px)',
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        <Icon className="h-3 w-3 text-blue-600" />
+                        <span className="font-medium">{interview.candidate}</span>
+                      </div>
+                      <div className="text-gray-600 mt-1">{interview.position}</div>
+                      <div className="text-gray-500 mt-1">
+                        {format(interview.date, 'h:mm a')} - {format(new Date(interview.date.getTime() + interview.duration * 60000), 'h:mm a')}
                       </div>
                     </div>
-                    
-                    {/* Content */}
-                    <div className="p-3">
-                      <div className={`grid grid-cols-1 md:grid-cols-2 gap-y-2 ${rtlAlign}`}>
-                        <div>
-                          <div className="text-sm text-gray-500">{t('candidate')}</div>
-                          <div className="font-medium">{interview.candidateName}</div>
+                  );
+                })}
+              </div>
+              
+              {interviews.filter(interview => 
+                date && interview.date.toDateString() === date.toDateString()
+              ).length === 0 && (
+                <div className="text-center py-6 text-gray-500">
+                  No interviews scheduled for this day.
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <div className={`${viewMode === 'list' ? 'block' : 'hidden'}`}>
+        <div className="space-y-4">
+          {interviews.map(interview => {
+            const Icon = getInterviewIcon(interview.type);
+            
+            return (
+              <Card key={interview.id}>
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap justify-between items-start gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                          <Icon className="h-5 w-5" />
                         </div>
                         <div>
-                          <div className="text-sm text-gray-500">{t('position')}</div>
-                          <div>{interview.position}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-500">{t('interviewer')}</div>
-                          <div>{interview.interviewer}</div>
+                          <h3 className="font-medium">{interview.candidate}</h3>
+                          <p className="text-sm text-gray-500">{interview.position}</p>
                         </div>
                       </div>
                       
-                      {/* Actions */}
-                      <div className={`mt-4 flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
-                        <Button variant="outline" size="sm" className="flex gap-1">
-                          <Eye className="h-4 w-4" />
-                          <span>{t('view_notes')}</span>
-                        </Button>
-                        <Button variant="outline" size="sm" className="flex gap-1">
-                          <ArrowRightLeft className="h-4 w-4" />
-                          <span>{t('reschedule')}</span>
-                        </Button>
-                        <Button variant="outline" size="sm" className="flex gap-1 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800">
-                          <Check className="h-4 w-4" />
-                          <span>{t('complete')}</span>
-                        </Button>
-                        <Button variant="outline" size="sm" className="flex gap-1 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800">
-                          <X className="h-4 w-4" />
-                          <span>{t('cancel')}</span>
-                        </Button>
+                      <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <CalendarIcon className="h-4 w-4" />
+                          <span>{format(interview.date, 'EEEE, MMMM d, yyyy')}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Clock className="h-4 w-4" />
+                          <span>
+                            {format(interview.date, 'h:mm a')} - {format(new Date(interview.date.getTime() + interview.duration * 60000), 'h:mm a')}
+                          </span>
+                        </div>
+                        {interview.type === 'in-person' && (
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <MapPin className="h-4 w-4" />
+                            <span>Office - Meeting Room 3</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              {t('no_interviews')}
+                    
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge variant="outline" className={
+                        interview.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' : 
+                        interview.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-200' : 
+                        'bg-blue-50 text-blue-700 border-blue-200'
+                      }>
+                        {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
+                      </Badge>
+                      
+                      <div className="flex gap-2 mt-2">
+                        {interview.status === 'scheduled' && (
+                          <>
+                            <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(interview.id, 'completed')} className="flex items-center gap-1">
+                              <Check className="h-3.5 w-3.5" />
+                              <span>Complete</span>
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(interview.id, 'cancelled')} className="flex items-center gap-1 border-red-300 text-red-600 hover:bg-red-50">
+                              <X className="h-3.5 w-3.5" />
+                              <span>Cancel</span>
+                            </Button>
+                          </>
+                        )}
+                        {interview.status === 'completed' && (
+                          <Button size="sm" variant="outline">View Notes</Button>
+                        )}
+                        {interview.status === 'cancelled' && (
+                          <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(interview.id, 'scheduled')}>Reschedule</Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+          
+          {interviews.length === 0 && (
+            <div className="text-center py-6 text-gray-500">
+              No interviews scheduled.
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };

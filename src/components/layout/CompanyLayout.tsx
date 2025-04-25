@@ -4,7 +4,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { Building, Briefcase, Users, Settings, LogOut, Home, BarChart3, Search, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
-import { useLanguage } from '@/context/LanguageContext';
 import Navbar from './Navbar';
 import CompanyMobileSidebar from './CompanyMobileSidebar';
 
@@ -16,7 +15,6 @@ type CompanyLayoutProps = {
 const CompanyLayout = ({ children, title }: CompanyLayoutProps) => {
   const location = useLocation();
   const { logout } = useAuth();
-  const { t } = useLanguage();
   
   const isActiveRoute = (path: string) => {
     // For exact matches
@@ -39,13 +37,13 @@ const CompanyLayout = ({ children, title }: CompanyLayoutProps) => {
   };
 
   const navItems = [
-    { name: t('dashboard'), path: '/company/dashboard', icon: Home },
-    { name: t('jobs'), path: '/company/jobs', icon: Briefcase },
-    { name: t('my_applications'), path: '/company/applications', icon: Users },
-    { name: t('interview_management'), path: '/company/interviews', icon: Calendar },
-    { name: t('company_profile'), path: '/company/analytics', icon: BarChart3 },
-    { name: t('candidate_pipeline'), path: '/company/candidates', icon: Search },
-    { name: t('company_settings'), path: '/company/settings', icon: Settings },
+    { name: 'Dashboard', path: '/company', icon: Home },
+    { name: 'Jobs', path: '/company/jobs', icon: Briefcase },
+    { name: 'Applications', path: '/company/applications', icon: Users },
+    { name: 'Interviews', path: '/company/interviews', icon: Calendar },
+    { name: 'Analytics', path: '/company/analytics', icon: BarChart3 },
+    { name: 'Candidate Search', path: '/company/candidates', icon: Search },
+    { name: 'Company Settings', path: '/company/settings', icon: Settings },
   ];
 
   const handleLogout = () => {
@@ -61,7 +59,7 @@ const CompanyLayout = ({ children, title }: CompanyLayoutProps) => {
           <div className="flex flex-col flex-grow border-r border-gray-200 bg-white pt-5 pb-4 overflow-y-auto">
             <div className="flex items-center flex-shrink-0 px-4 mb-5">
               <Building className="h-6 w-6 text-hirely mr-2" />
-              <span className="text-xl font-medium text-gray-900">{t('company_portal')}</span>
+              <span className="text-xl font-medium text-gray-900">Company Portal</span>
             </div>
             <div className="mt-5 flex-grow flex flex-col">
               <nav className="flex-1 px-2 space-y-1">
@@ -95,7 +93,7 @@ const CompanyLayout = ({ children, title }: CompanyLayoutProps) => {
                     onClick={handleLogout}
                   >
                     <LogOut className="mr-3 flex-shrink-0 h-5 w-5 text-red-400" />
-                    {t('sign_out')}
+                    Sign Out
                   </button>
                 </div>
               </nav>

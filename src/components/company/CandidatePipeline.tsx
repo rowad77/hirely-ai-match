@@ -1,225 +1,250 @@
 
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { useLanguage } from '@/context/LanguageContext';
-import { useRtlTextAlign, useRtlDirection } from '@/lib/rtl-utils';
-import { User, Calendar, ChevronRight, ChevronLeft, BarChart2 } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { toast } from 'sonner';
 
-// Mock candidate data
-const mockCandidates = [
+// Define types
+type CandidateStatus = 'new' | 'screening' | 'interview' | 'assessment' | 'offer' | 'hired' | 'rejected';
+
+interface Candidate {
+  id: string;
+  name: string;
+  position: string;
+  status: CandidateStatus;
+  avatarFallback: string;
+  matchScore: number;
+}
+
+interface StatusColumn {
+  id: CandidateStatus;
+  title: string;
+  candidates: Candidate[];
+}
+
+// Mock data
+const initialColumns: StatusColumn[] = [
   {
-    id: 1,
-    name: 'Alex Johnson',
-    position: 'Frontend Developer',
-    stage: 'interview',
-    progress: 66,
-    matchScore: 92,
-    interviewDate: '2025-05-01',
-    status: 'scheduled'
+    id: 'new',
+    title: 'New Applications',
+    candidates: [
+      {
+        id: 'c1',
+        name: 'John Smith',
+        position: 'Senior Frontend Developer',
+        status: 'new',
+        avatarFallback: 'JS',
+        matchScore: 92
+      },
+      {
+        id: 'c2',
+        name: 'Emily Johnson',
+        position: 'UX Designer',
+        status: 'new',
+        avatarFallback: 'EJ',
+        matchScore: 86
+      }
+    ]
   },
   {
-    id: 2,
-    name: 'Maria Garcia',
-    position: 'UX Designer',
-    stage: 'final',
-    progress: 90,
-    matchScore: 88,
-    interviewDate: '2025-04-28',
-    status: 'completed'
+    id: 'screening',
+    title: 'Phone Screening',
+    candidates: [
+      {
+        id: 'c3',
+        name: 'Michael Brown',
+        position: 'Backend Developer',
+        status: 'screening',
+        avatarFallback: 'MB',
+        matchScore: 78
+      }
+    ]
   },
   {
-    id: 3,
-    name: 'James Wilson',
-    position: 'Backend Developer',
-    stage: 'screening',
-    progress: 33,
-    matchScore: 76,
-    interviewDate: null,
-    status: 'pending'
+    id: 'interview',
+    title: 'Interview',
+    candidates: [
+      {
+        id: 'c4',
+        name: 'Sarah Wilson',
+        position: 'Product Manager',
+        status: 'interview',
+        avatarFallback: 'SW',
+        matchScore: 89
+      }
+    ]
   },
   {
-    id: 4,
-    name: 'Emily Chen',
-    position: 'Product Manager',
-    stage: 'rejected',
-    progress: 100,
-    matchScore: 65,
-    interviewDate: '2025-04-20',
-    status: 'rejected'
+    id: 'assessment',
+    title: 'Assessment',
+    candidates: []
   },
   {
-    id: 5,
-    name: 'David Rodriguez',
-    position: 'DevOps Engineer',
-    stage: 'applied',
-    progress: 10,
-    matchScore: 82,
-    interviewDate: null,
-    status: 'pending'
+    id: 'offer',
+    title: 'Offer',
+    candidates: [
+      {
+        id: 'c5',
+        name: 'David Thompson',
+        position: 'DevOps Engineer',
+        status: 'offer',
+        avatarFallback: 'DT',
+        matchScore: 94
+      }
+    ]
+  },
+  {
+    id: 'hired',
+    title: 'Hired',
+    candidates: []
+  },
+  {
+    id: 'rejected',
+    title: 'Rejected',
+    candidates: []
   }
 ];
 
 const CandidatePipeline = () => {
-  const { t, language } = useLanguage();
-  const rtlAlign = useRtlTextAlign();
-  const rtlDirection = useRtlDirection();
-  const [activeFilter, setActiveFilter] = useState('all');
-  
-  const filterCandidates = (filter: string) => {
-    if (filter === 'all') return mockCandidates;
-    return mockCandidates.filter(candidate => candidate.stage === filter);
-  };
+  const [columns, setColumns] = useState<StatusColumn[]>(initialColumns);
 
-  const displayedCandidates = filterCandidates(activeFilter);
-  
-  const getStageBadge = (stage: string) => {
-    const stageStyles = {
-      applied: "bg-blue-50 text-blue-700 border-blue-200",
-      screening: "bg-yellow-50 text-yellow-700 border-yellow-200",
-      interview: "bg-purple-50 text-purple-700 border-purple-200",
-      final: "bg-green-50 text-green-700 border-green-200",
-      rejected: "bg-red-50 text-red-700 border-red-200"
-    };
+  const handleDragEnd = (result: any) => {
+    const { destination, source, draggableId } = result;
 
-    const stageTranslations = {
-      applied: t('applied'),
-      screening: t('screening'),
-      interview: t('interview'),
-      final: t('final'),
-      rejected: t('rejected')
-    };
+    // If dropped outside a droppable area
+    if (!destination) return;
 
-    return (
-      <Badge variant="outline" className={stageStyles[stage] || ''}>
-        {stageTranslations[stage] || stage}
-      </Badge>
-    );
+    // If dropped in the same position
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    // Find the source and destination columns
+    const sourceColumn = columns.find(col => col.id === source.droppableId);
+    const destColumn = columns.find(col => col.id === destination.droppableId);
+
+    if (!sourceColumn || !destColumn) return;
+
+    // Create a copy of the source column candidates
+    const sourceItems = [...sourceColumn.candidates];
+    // Remove the item from the source column
+    const [removed] = sourceItems.splice(source.index, 1);
+    // Update the candidate's status
+    const updatedCandidate = { ...removed, status: destination.droppableId as CandidateStatus };
+
+    // If moving within the same column
+    if (source.droppableId === destination.droppableId) {
+      sourceItems.splice(destination.index, 0, updatedCandidate);
+      
+      const newColumns = columns.map(col => {
+        if (col.id === source.droppableId) {
+          return { ...col, candidates: sourceItems };
+        }
+        return col;
+      });
+      
+      setColumns(newColumns);
+    } else {
+      // Moving to a different column
+      // Create a copy of the destination column candidates
+      const destItems = [...destColumn.candidates];
+      // Insert the item at the destination
+      destItems.splice(destination.index, 0, updatedCandidate);
+      
+      const newColumns = columns.map(col => {
+        if (col.id === source.droppableId) {
+          return { ...col, candidates: sourceItems };
+        }
+        if (col.id === destination.droppableId) {
+          return { ...col, candidates: destItems };
+        }
+        return col;
+      });
+      
+      setColumns(newColumns);
+      toast.success(`${updatedCandidate.name} moved to ${destColumn.title} stage`);
+    }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className={`flex flex-wrap gap-2 ${rtlDirection}`}>
-            <Button 
-              variant={activeFilter === 'all' ? 'default' : 'outline'} 
-              size="sm"
-              onClick={() => setActiveFilter('all')}
-              className={activeFilter === 'all' ? 'bg-hirely hover:bg-hirely-dark' : ''}
-            >
-              {t('all')}
-            </Button>
-            <Button 
-              variant={activeFilter === 'applied' ? 'default' : 'outline'} 
-              size="sm"
-              onClick={() => setActiveFilter('applied')}
-              className={activeFilter === 'applied' ? 'bg-hirely hover:bg-hirely-dark' : ''}
-            >
-              {t('applied')}
-            </Button>
-            <Button 
-              variant={activeFilter === 'screening' ? 'default' : 'outline'} 
-              size="sm"
-              onClick={() => setActiveFilter('screening')}
-              className={activeFilter === 'screening' ? 'bg-hirely hover:bg-hirely-dark' : ''}
-            >
-              {t('screening')}
-            </Button>
-            <Button 
-              variant={activeFilter === 'interview' ? 'default' : 'outline'} 
-              size="sm"
-              onClick={() => setActiveFilter('interview')}
-              className={activeFilter === 'interview' ? 'bg-hirely hover:bg-hirely-dark' : ''}
-            >
-              {t('interview')}
-            </Button>
-            <Button 
-              variant={activeFilter === 'final' ? 'default' : 'outline'} 
-              size="sm"
-              onClick={() => setActiveFilter('final')}
-              className={activeFilter === 'final' ? 'bg-hirely hover:bg-hirely-dark' : ''}
-            >
-              {t('final')}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Candidates */}
-      <div className="grid grid-cols-1 gap-4">
-        {displayedCandidates.map(candidate => (
-          <Card key={candidate.id} className="overflow-hidden">
-            <CardContent className="p-0">
-              <div className="p-4">
-                <div className={`flex flex-wrap justify-between ${rtlDirection} items-start`}>
-                  <div>
-                    <div className={`flex items-center ${rtlDirection} gap-2 mb-1`}>
-                      <User className="h-4 w-4 text-gray-400" />
-                      <h3 className="font-medium">{candidate.name}</h3>
-                      {getStageBadge(candidate.stage)}
-                    </div>
-                    <p className={rtlAlign}>{candidate.position}</p>
+    <div className="space-y-4">
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-4 overflow-x-auto">
+          {columns.map(column => (
+            <div key={column.id} className="min-w-[250px]">
+              <Card className="h-full">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-sm font-medium">{column.title}</CardTitle>
+                    <Badge variant="outline" className="text-xs">
+                      {column.candidates.length}
+                    </Badge>
                   </div>
-                  
-                  <div className={rtlAlign}>
-                    <div className={`flex items-center ${rtlDirection} gap-1 text-sm text-gray-500`}>
-                      <BarChart2 className="h-4 w-4" />
-                      <span className="font-medium">{t('match_score')}: {candidate.matchScore}%</span>
-                    </div>
-                    
-                    {candidate.interviewDate && (
-                      <div className={`flex items-center ${rtlDirection} gap-1 text-sm text-gray-500 mt-1`}>
-                        <Calendar className="h-4 w-4" />
-                        <span>{new Date(candidate.interviewDate).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}</span>
+                </CardHeader>
+                <CardContent className="p-2">
+                  <Droppable droppableId={column.id}>
+                    {(provided, snapshot) => (
+                      <div
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className={`min-h-[400px] rounded-md p-2 space-y-2 ${
+                          snapshot.isDraggingOver ? 'bg-gray-50' : ''
+                        }`}
+                      >
+                        {column.candidates.map((candidate, index) => (
+                          <Draggable
+                            key={candidate.id}
+                            draggableId={candidate.id}
+                            index={index}
+                          >
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`p-3 bg-white border rounded-md shadow-sm ${
+                                  snapshot.isDragging ? 'shadow-md' : ''
+                                }`}
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback className="bg-hirely text-white text-xs">
+                                      {candidate.avatarFallback}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="overflow-hidden">
+                                    <p className="font-medium text-sm truncate">{candidate.name}</p>
+                                    <p className="text-xs text-gray-500 truncate">{candidate.position}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 mt-2">
+                                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                    <div 
+                                      className="bg-hirely h-1.5 rounded-full" 
+                                      style={{ width: `${candidate.matchScore}%` }}
+                                    ></div>
+                                  </div>
+                                  <span className="text-xs font-medium ml-1">{candidate.matchScore}%</span>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
                       </div>
                     )}
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <div className={`flex justify-between ${rtlDirection} text-sm text-gray-500 mb-1`}>
-                    <span>{t('hiring_progress')}</span>
-                    <span>{candidate.progress}%</span>
-                  </div>
-                  <Progress value={candidate.progress} className="h-2" />
-                </div>
-
-                <div className={`mt-4 flex ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={`flex items-center ${rtlDirection}`}
-                  >
-                    {language === 'ar' ? (
-                      <>
-                        <ChevronLeft className="h-4 w-4" />
-                        <span className="mx-1">{t('view_details')}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="mx-1">{t('view_details')}</span>
-                        <ChevronRight className="h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {displayedCandidates.length === 0 && (
-          <Card>
-            <CardContent className="p-8 text-center text-gray-500">
-              {t('no_candidates')}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                  </Droppable>
+                </CardContent>
+              </Card>
+            </div>
+          ))}
+        </div>
+      </DragDropContext>
     </div>
   );
 };
