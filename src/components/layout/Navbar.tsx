@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
@@ -7,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import MobileNav from './MobileNav';
+import { LanguageToggle } from "@/components/LanguageToggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
