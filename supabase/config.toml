@@ -11,4 +11,6 @@ url = "https://lckyfjxdnmwhmruvgpwn.supabase.co"
 [functions.fetch-jobs-multi]
 [functions.import-linkedin-jobs]
   verify_jwt = false
+[functions.import-jobspy-jobs]
+  verify_jwt = false
 

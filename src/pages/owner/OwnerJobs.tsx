@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,6 +24,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { featuredJobs } from '@/data/jobs';
+import { JobImportConfig } from '@/components/owner/JobImportConfig';
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@radix-ui/react-dialog';
 
 // Type definitions for job data
 interface Job {
@@ -98,8 +99,12 @@ const OwnerJobs = () => {
     toast.success('Jobs data exported successfully');
     // In a real app, this would generate a CSV or Excel file
   };
-  
-  // Filter jobs based on search term
+
+  const handleImportComplete = () => {
+    // Refresh the jobs list after import
+    setJobs([...jobs]); // This will trigger a re-render
+  };
+
   const filteredJobs = jobs.filter(job => 
     job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -120,8 +125,26 @@ const OwnerJobs = () => {
             />
           </div>
           <div className="flex space-x-2">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Import Jobs
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[400px]">
+                <SheetHeader>
+                  <SheetTitle>Import Jobs</SheetTitle>
+                  <SheetDescription>
+                    Configure and run job imports from various sources
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="mt-6">
+                  <JobImportConfig onImportComplete={handleImportComplete} />
+                </div>
+              </SheetContent>
+            </Sheet>
             <Button 
-              className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+              className="bg-purple-600 hover:bg-purple-700"
               onClick={handleExportJobs}
             >
               <Download className="h-4 w-4" />

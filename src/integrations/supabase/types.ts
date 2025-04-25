@@ -211,54 +211,220 @@ export type Database = {
           },
         ]
       }
+      job_import_configs: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          parameters: Json
+          source_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          parameters?: Json
+          source_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          parameters?: Json
+          source_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_import_configs_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "job_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_imports: {
+        Row: {
+          completed_at: string | null
+          config_id: string | null
+          created_by: string | null
+          errors: Json | null
+          id: string
+          jobs_imported: number | null
+          jobs_processed: number | null
+          metadata: Json | null
+          source: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          config_id?: string | null
+          created_by?: string | null
+          errors?: Json | null
+          id?: string
+          jobs_imported?: number | null
+          jobs_processed?: number | null
+          metadata?: Json | null
+          source: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          config_id?: string | null
+          created_by?: string | null
+          errors?: Json | null
+          id?: string
+          jobs_imported?: number | null
+          jobs_processed?: number | null
+          metadata?: Json | null
+          source?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_imports_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "job_import_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_sources: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
+          ai_benefits: string | null
+          ai_experience_level: string | null
+          ai_key_skills: string | null
+          ai_salary_data: Json | null
+          ai_work_arrangement: string | null
+          api_job_id: string | null
+          api_source: string | null
           category: string | null
+          company_followers: number | null
+          company_headquarters: string | null
           company_id: string
+          company_industry: string | null
+          company_size: string | null
           description: string
           id: string
+          import_id: string | null
           is_approved: boolean
           is_featured: boolean
           location: string | null
           posted_by: string
           posted_date: string
+          recruiter_name: string | null
+          recruiter_title: string | null
+          recruiter_url: string | null
           salary: string | null
+          source_id: string | null
           status: Database["public"]["Enums"]["job_status"]
           title: string
           type: Database["public"]["Enums"]["job_type"]
           updated_at: string
+          url: string | null
         }
         Insert: {
+          ai_benefits?: string | null
+          ai_experience_level?: string | null
+          ai_key_skills?: string | null
+          ai_salary_data?: Json | null
+          ai_work_arrangement?: string | null
+          api_job_id?: string | null
+          api_source?: string | null
           category?: string | null
+          company_followers?: number | null
+          company_headquarters?: string | null
           company_id: string
+          company_industry?: string | null
+          company_size?: string | null
           description: string
           id?: string
+          import_id?: string | null
           is_approved?: boolean
           is_featured?: boolean
           location?: string | null
           posted_by: string
           posted_date?: string
+          recruiter_name?: string | null
+          recruiter_title?: string | null
+          recruiter_url?: string | null
           salary?: string | null
+          source_id?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           title: string
           type?: Database["public"]["Enums"]["job_type"]
           updated_at?: string
+          url?: string | null
         }
         Update: {
+          ai_benefits?: string | null
+          ai_experience_level?: string | null
+          ai_key_skills?: string | null
+          ai_salary_data?: Json | null
+          ai_work_arrangement?: string | null
+          api_job_id?: string | null
+          api_source?: string | null
           category?: string | null
+          company_followers?: number | null
+          company_headquarters?: string | null
           company_id?: string
+          company_industry?: string | null
+          company_size?: string | null
           description?: string
           id?: string
+          import_id?: string | null
           is_approved?: boolean
           is_featured?: boolean
           location?: string | null
           posted_by?: string
           posted_date?: string
+          recruiter_name?: string | null
+          recruiter_title?: string | null
+          recruiter_url?: string | null
           salary?: string | null
+          source_id?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           title?: string
           type?: Database["public"]["Enums"]["job_type"]
           updated_at?: string
+          url?: string | null
         }
         Relationships: [
           {
@@ -266,6 +432,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "job_imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "job_sources"
             referencedColumns: ["id"]
           },
         ]
