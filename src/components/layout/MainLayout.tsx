@@ -22,7 +22,7 @@ const MainLayout = ({ children, withFooter = true, fullWidth = false }: MainLayo
           </div>
         </div>
       </div>
-      <main className={`flex-grow ${fullWidth ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'} rtl:space-reverse`}>
+      <main className={`flex-grow ${fullWidth ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'}`}>
         {children}
       </main>
       {withFooter && <Footer />}

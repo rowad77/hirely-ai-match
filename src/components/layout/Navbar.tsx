@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
@@ -23,7 +24,6 @@ import {
   LogOut
 } from 'lucide-react';
 import { Tables } from '@/integrations/supabase/types';
-import { LanguageToggle } from './LanguageToggle';
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
@@ -63,13 +63,13 @@ const Navbar = () => {
   return (
     <nav className="bg-background border-b">
       <div className="flex h-16 items-center px-4">
-        <Link to="/" className="font-bold text-2xl text-hirely rtl:ml-auto">
+        <Link to="/" className="font-bold text-2xl text-hirely">
           Hirely
         </Link>
 
-        <div className="rtl:mr-auto ltr:ml-auto flex items-center space-x-4 rtl:space-x-reverse">
+        <div className="ml-auto flex items-center space-x-4">
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-6 rtl:gap-reverse">
+          <div className="hidden md:flex items-center gap-6">
             {primaryNavItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -158,7 +158,6 @@ const Navbar = () => {
               </Link>
             </>
           )}
-          <LanguageToggle />
           <Button variant="ghost" size="sm" onClick={toggleTheme}>
             {theme === "dark" ? (
               <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
