@@ -14,6 +14,7 @@ import SearchHeader from '@/components/jobs/SearchHeader';
 import ActiveFilters from '@/components/jobs/ActiveFilters';
 import JobsGrid from '@/components/jobs/JobsGrid';
 import { useToast } from '@/components/ui/use-toast';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -29,21 +30,34 @@ const Jobs = () => {
   });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [favoriteJobs, setFavoriteJobs] = useState<string[]>([]);
+  const [isUsingFallback, setIsUsingFallback] = useState(false);
 
   // Fetch jobs from the API with fixed useQuery configuration
-  const { data: jobs = [], isLoading, error } = useQuery({
+  const { data: jobs = [], isLoading, error, refetch } = useQuery({
     queryKey: ['jobs', currentPage, filters, searchTerm],
-    queryFn: () => fetchJobs(currentPage, {
-      ...filters,
-      search: searchTerm
-    }),
-    onSettled: (data, error) => {
-      if (error) {
+    queryFn: async () => {
+      const result = await fetchJobs(currentPage, {
+        ...filters,
+        search: searchTerm
+      });
+      
+      // Check if we're using fallback data
+      if (result.length > 0 && result.length <= 6) {
+        setIsUsingFallback(true);
+      } else {
+        setIsUsingFallback(false);
+      }
+      
+      return result;
+    },
+    meta: {
+      onError: (error: Error) => {
         toast({
           title: "Error fetching jobs",
           description: "There was an issue loading jobs. Using fallback data instead.",
           variant: "destructive"
         });
+        setIsUsingFallback(true);
       }
     }
   });
@@ -108,6 +122,23 @@ const Jobs = () => {
           setSearchTerm(value);
           setCurrentPage(1);
         }} />
+        
+        {isUsingFallback && (
+          <Alert className="mb-6 bg-yellow-50 border-yellow-200">
+            <AlertTitle className="text-yellow-800">Using Demo Data</AlertTitle>
+            <AlertDescription className="text-yellow-700">
+              We're currently showing demo job listings because the job API is unavailable. 
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="ml-4 bg-white" 
+                onClick={() => refetch()}
+              >
+                Try Again
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
         
         <div className="flex flex-col md:flex-row gap-4 items-center mb-8">
           <div className="flex gap-2 ml-auto">
@@ -183,7 +214,7 @@ const Jobs = () => {
             <Button 
               variant="outline" 
               className="mt-4"
-              onClick={() => window.location.reload()}
+              onClick={() => refetch()}
             >
               Retry
             </Button>

@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
@@ -34,49 +35,66 @@ serve(async (req) => {
       )
     });
     
-    console.log(`API Request: ${BASE_URL}/job_postings?${queryParams}`);
+    const requestUrl = `${BASE_URL}/job_postings?${queryParams}`;
+    console.log(`API Request: ${requestUrl}`);
     
-    const response = await fetch(`${BASE_URL}/job_postings?${queryParams}`, {
-      headers: {
-        'Authorization': `Bearer ${theirStackApiKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Add timeout to the fetch request to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    try {
+      const response = await fetch(requestUrl, {
+        headers: {
+          'Authorization': `Bearer ${theirStackApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`TheirStack API error: ${response.status} ${response.statusText}`);
-      console.error(`Error details: ${errorText}`);
-      throw new Error(`TheirStack API error: Status ${response.status} - ${errorText || response.statusText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`TheirStack API error: ${response.status} ${response.statusText}`);
+        console.error(`Error details: ${errorText}`);
+        throw new Error(`TheirStack API error: Status ${response.status} - ${errorText || response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Format the response to match our frontend expectations
+      const formattedJobs = data.jobs.map(job => ({
+        id: job.id,
+        title: job.title,
+        company: job.company_name,
+        location: job.location,
+        type: job.job_type || (job.remote ? 'Remote' : 'On-site'),
+        salary: job.salary_range || 'Not specified',
+        postedDate: job.posted_at ? formatPostedDate(job.posted_at) : 'Recently',
+        description: job.description,
+        category: job.category || 'General',
+        url: job.apply_url,
+        remote: !!job.remote,
+      }));
+      
+      console.log(`Successfully fetched ${formattedJobs.length} jobs from TheirStack API`);
+      
+      return new Response(JSON.stringify({
+        jobs: formattedJobs,
+        total: data.total || formattedJobs.length,
+        page: data.page || page,
+        total_pages: data.total_pages || 1,
+        source: 'api'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (fetchError) {
+      if (fetchError.name === 'AbortError') {
+        console.error('API request timed out after 10 seconds');
+        throw new Error('API request timed out. Please try again later.');
+      }
+      throw fetchError;
     }
-
-    const data = await response.json();
-    
-    // Format the response to match our frontend expectations
-    const formattedJobs = data.jobs.map(job => ({
-      id: job.id,
-      title: job.title,
-      company: job.company_name,
-      location: job.location,
-      type: job.job_type || (job.remote ? 'Remote' : 'On-site'),
-      salary: job.salary_range || 'Not specified',
-      postedDate: job.posted_at ? formatPostedDate(job.posted_at) : 'Recently',
-      description: job.description,
-      category: job.category || 'General',
-      url: job.apply_url,
-      remote: !!job.remote,
-    }));
-    
-    console.log(`Successfully fetched ${formattedJobs.length} jobs from TheirStack API`);
-    
-    return new Response(JSON.stringify({
-      jobs: formattedJobs,
-      total: data.total || formattedJobs.length,
-      page: data.page || page,
-      total_pages: data.total_pages || 1,
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
   } catch (error) {
     console.error('Error fetching jobs:', error);
     
@@ -87,6 +105,8 @@ serve(async (req) => {
         total: featuredJobs.length,
         page: 1,
         total_pages: 1,
+        source: 'fallback',
+        error: error.message
       }),
       { 
         status: 200, // Return 200 with mock data

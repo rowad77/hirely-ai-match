@@ -11,7 +11,16 @@ export interface JobFilter {
   [key: string]: any;
 }
 
-export async function fetchJobs(page = 1, filters: JobFilter = {}) {
+export interface JobResponse {
+  jobs: any[];
+  total: number;
+  page: number;
+  total_pages: number;
+  source: 'api' | 'fallback';
+  error?: string;
+}
+
+export async function fetchJobs(page = 1, filters: JobFilter = {}): Promise<any[]> {
   try {
     console.log('Fetching jobs with filters:', filters);
     
@@ -20,7 +29,7 @@ export async function fetchJobs(page = 1, filters: JobFilter = {}) {
     
     // Map frontend filters to API-compatible format
     if (filters.locations?.length) {
-      apiFilters.location = filters.locations[0]; // Use first location for now
+      apiFilters.location = filters.locations.join(','); // Support multiple locations
     }
     
     if (filters.jobTypes?.includes('Remote')) {
@@ -32,10 +41,10 @@ export async function fetchJobs(page = 1, filters: JobFilter = {}) {
     }
     
     if (filters.categories?.length) {
-      apiFilters.category = filters.categories[0]; // Use first category
+      apiFilters.category = filters.categories.join(','); // Support multiple categories
     }
     
-    // Call the Supabase edge function
+    // Call the Supabase edge function with a timeout
     const { data, error } = await supabase.functions.invoke('fetch-jobs', {
       body: { 
         page, 
@@ -51,7 +60,12 @@ export async function fetchJobs(page = 1, filters: JobFilter = {}) {
       throw error;
     }
     
-    console.log(`Received ${data?.jobs?.length || 0} jobs from API`);
+    console.log(`Received response from API:`, data);
+    
+    if (data?.source === 'fallback') {
+      console.warn('Using fallback data due to API issue:', data?.error);
+    }
+    
     return data?.jobs || [];
   } catch (error) {
     console.error('Error fetching jobs:', error);
