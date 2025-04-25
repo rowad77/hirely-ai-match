@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -28,6 +28,7 @@ import { Tables } from '@/integrations/supabase/types';
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut, userRole } = useAuth();
+  const { t } = useLanguage();
   const [profile, setProfile] = useState<Partial<Tables<'profiles'>> | null>(null);
 
   useEffect(() => {
@@ -51,13 +52,13 @@ const Navbar = () => {
   }, [user]);
 
   const primaryNavItems = [
-    { to: '/', label: 'Home' },
-    { to: '/jobs', label: 'Find Jobs' },
+    { to: '/', label: t('home') },
+    { to: '/jobs', label: t('jobs') },
   ];
 
   const conditionalNavItems = [
-    userRole === 'company' && { to: '/company/dashboard', label: 'Company Portal' },
-    userRole === 'owner' && { to: '/owner/dashboard', label: 'Admin Panel' },
+    userRole === 'company' && { to: '/company/dashboard', label: t('company_portal') },
+    userRole === 'owner' && { to: '/owner/dashboard', label: t('admin_panel') },
   ].filter(Boolean);
 
   return (
@@ -150,14 +151,15 @@ const Navbar = () => {
             <>
               <Link to="/login">
                 <Button variant="outline" size="sm">
-                  Log in
+                  {t('log_in')}
                 </Button>
               </Link>
               <Link to="/signup">
-                <Button size="sm">Sign up</Button>
+                <Button size="sm">{t('sign_up')}</Button>
               </Link>
             </>
           )}
+          <LanguageToggle />
           <Button variant="ghost" size="sm" onClick={toggleTheme}>
             {theme === "dark" ? (
               <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
