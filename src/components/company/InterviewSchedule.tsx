@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { 
   Calendar as CalendarIcon, 
@@ -8,10 +7,12 @@ import {
   User, 
   MapPin, 
   Check, 
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { useTranslation } from '@/translations';
 import {
   Popover,
   PopoverContent,
@@ -29,7 +30,6 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 
-// Mock interview data
 const mockInterviews = [
   {
     id: 1,
@@ -81,10 +81,12 @@ const InterviewSchedule = () => {
     toast.success(`Interview status updated to ${status}`);
   };
 
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-4 justify-between items-center">
-        <h2 className="text-xl font-bold">Interview Schedule</h2>
+        <h2 className="text-xl font-bold">{t('interviews.tabs.schedule')}</h2>
         <div className="flex gap-2">
           <Select value={viewMode} onValueChange={(value: 'calendar' | 'list') => setViewMode(value)}>
             <SelectTrigger className="w-[160px]">
@@ -130,11 +132,9 @@ const InterviewSchedule = () => {
               </div>
               
               <div className="relative h-40 border rounded-lg">
-                {/* Interview slots would appear here, positioned absolutely */}
                 {interviews.filter(interview => 
                   date && interview.date.toDateString() === date.toDateString()
                 ).map(interview => {
-                  // Calculate position based on time
                   const hour = interview.date.getHours();
                   const minute = interview.date.getMinutes();
                   const startPercent = ((hour - 8) * 60 + minute) / (12 * 60) * 100;
@@ -169,7 +169,7 @@ const InterviewSchedule = () => {
                 date && interview.date.toDateString() === date.toDateString()
               ).length === 0 && (
                 <div className="text-center py-6 text-gray-500">
-                  No interviews scheduled for this day.
+                  {t('interviews.noInterviews')}
                 </div>
               )}
             </div>
@@ -231,19 +231,23 @@ const InterviewSchedule = () => {
                           <>
                             <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(interview.id, 'completed')} className="flex items-center gap-1">
                               <Check className="h-3.5 w-3.5" />
-                              <span>Complete</span>
+                              <span>{t('interviews.actions.complete')}</span>
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(interview.id, 'cancelled')} className="flex items-center gap-1 border-red-300 text-red-600 hover:bg-red-50">
                               <X className="h-3.5 w-3.5" />
-                              <span>Cancel</span>
+                              <span>{t('interviews.actions.cancel')}</span>
                             </Button>
                           </>
                         )}
                         {interview.status === 'completed' && (
-                          <Button size="sm" variant="outline">View Notes</Button>
+                          <Button size="sm" variant="outline">
+                            {t('interviews.actions.viewNotes')}
+                          </Button>
                         )}
                         {interview.status === 'cancelled' && (
-                          <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(interview.id, 'scheduled')}>Reschedule</Button>
+                          <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(interview.id, 'scheduled')}>
+                            {t('interviews.actions.reschedule')}
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -255,7 +259,7 @@ const InterviewSchedule = () => {
           
           {interviews.length === 0 && (
             <div className="text-center py-6 text-gray-500">
-              No interviews scheduled.
+              {t('interviews.noInterviews')}
             </div>
           )}
         </div>
