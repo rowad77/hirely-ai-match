@@ -9,3 +9,5 @@ url = "https://lckyfjxdnmwhmruvgpwn.supabase.co"
 [functions.analyze-resume]
 [functions.fetch-jobs]
 [functions.fetch-jobs-multi]
+[functions.import-linkedin-jobs]
+  verify_jwt = false
