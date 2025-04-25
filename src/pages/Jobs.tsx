@@ -1,11 +1,10 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Filter, Briefcase, SearchX, Loader, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import MainLayout from '../components/layout/MainLayout';
 import JobFilters, { JobFilters as JobFiltersType } from '@/components/JobFilters';
@@ -21,6 +20,7 @@ import RecentlyViewed from '@/components/jobs/RecentlyViewed';
 import ViewModeToggle from '@/components/jobs/ViewModeToggle';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorDisplay } from '@/components/ui/error-display';
+import JobRecommendations from '@/components/jobs/JobRecommendations';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -38,6 +38,35 @@ const Jobs = () => {
   const [favoriteJobs, setFavoriteJobs] = useState<string[]>([]);
   const [isUsingFallback, setIsUsingFallback] = useState(false);
   const [dataSources, setDataSources] = useState<string[]>(['theirstack', 'firecrawl']);
+  const [popularSearches, setPopularSearches] = useState<string[]>([
+    'Software Engineer', 'Product Manager', 'Data Scientist', 
+    'UX Designer', 'Marketing Manager', 'Sales Representative'
+  ]);
+  const [filterCounts, setFilterCounts] = useState<{[key: string]: number}>({});
+  const [userInterests, setUserInterests] = useState<string[]>(['Engineering', 'Technology']);
+
+  // Load user preferences
+  useEffect(() => {
+    // Load favorites from localStorage
+    const savedFavorites = localStorage.getItem('favoriteJobs');
+    if (savedFavorites) {
+      try {
+        setFavoriteJobs(JSON.parse(savedFavorites));
+      } catch (e) {
+        console.error('Failed to parse favorite jobs', e);
+      }
+    }
+    
+    // In a real app, user interests would come from the user profile
+    // For now, we'll simulate them
+    const mockInterests = ['Engineering', 'Technology', 'Remote Work'];
+    setUserInterests(mockInterests);
+  }, []);
+
+  // Save favorites to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('favoriteJobs', JSON.stringify(favoriteJobs));
+  }, [favoriteJobs]);
 
   const { data: jobs = [], isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['jobs', currentPage, filters, searchTerm, dataSources],
@@ -71,6 +100,28 @@ const Jobs = () => {
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: 2
   });
+
+  // Calculate filter counts for smart filter suggestions
+  useEffect(() => {
+    if (!jobs.length) return;
+    
+    const counts: {[key: string]: number} = {};
+    
+    // Count jobs by type
+    jobs.forEach(job => {
+      const type = job.type.toLowerCase();
+      counts[type] = (counts[type] || 0) + 1;
+      
+      const category = job.category.toLowerCase();
+      counts[category] = (counts[category] || 0) + 1;
+      
+      if (job.remote || job.type.toLowerCase().includes('remote')) {
+        counts['remote'] = (counts['remote'] || 0) + 1;
+      }
+    });
+    
+    setFilterCounts(counts);
+  }, [jobs]);
 
   const filteredJobs = useMemo(() => {
     return jobs.filter(job => {
@@ -173,16 +224,31 @@ const Jobs = () => {
       }
     }
     
+    // Suggest popular searches
+    if (popularSearches.length > 0) {
+      suggestions.push("Try one of our popular searches");
+    }
+    
     return suggestions.length > 0 ? suggestions : ["Try different search terms"];
   };
 
   return (
     <MainLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <SearchHeader searchTerm={searchTerm} onSearchChange={(value) => {
-          setSearchTerm(value);
-          setCurrentPage(1);
-        }} />
+        <SearchHeader 
+          searchTerm={searchTerm} 
+          onSearchChange={(value) => {
+            setSearchTerm(value);
+            setCurrentPage(1);
+          }}
+          popularSearches={popularSearches}
+          filterCounts={filterCounts}
+        />
+        
+        {/* Personalized job recommendations */}
+        {!searchTerm && filters.jobTypes.length === 0 && filters.categories.length === 0 && (
+          <JobRecommendations userInterests={userInterests} limit={3} />
+        )}
         
         <RecentlyViewed />
         
@@ -220,6 +286,12 @@ const Jobs = () => {
                 <Button variant="outline" className="flex items-center">
                   <Filter className="h-4 w-4 mr-2" />
                   Filters
+                  {Object.values(filters).some(f => Array.isArray(f) && f.length > 0) && (
+                    <span className="ml-2 bg-hirely text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
+                      {Object.values(filters)
+                        .reduce((count, filterArray) => count + (Array.isArray(filterArray) ? filterArray.length : 0), 0)}
+                    </span>
+                  )}
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
@@ -230,7 +302,12 @@ const Jobs = () => {
                   </SheetDescription>
                 </SheetHeader>
                 <div className="py-4">
-                  <JobFilters onFilterChange={handleFilterChange} inModal={true} />
+                  <JobFilters 
+                    onFilterChange={handleFilterChange} 
+                    inModal={true} 
+                    initialFilters={filters}
+                    filterCounts={filterCounts}
+                  />
                 </div>
               </SheetContent>
             </Sheet>
@@ -349,6 +426,14 @@ const Jobs = () => {
                   },
                 }
               : undefined
+          }
+          secondaryAction={
+            popularSearches.length > 0 ? {
+              label: "View popular searches",
+              onClick: () => {
+                setSearchTerm(popularSearches[Math.floor(Math.random() * popularSearches.length)]);
+              }
+            } : undefined
           }
         >
           <div className="mt-4 text-sm text-gray-500">
