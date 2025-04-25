@@ -81,30 +81,38 @@ export const useCompanyAnalytics = (dateRange: '7d' | '30d' | '90d' = '30d') => 
         const sourceStats = new Map();
         sourcesData.forEach(activity => {
           if (activity.activity_data && typeof activity.activity_data === 'object') {
-            const source = activity.activity_data.source;
-            if (source) {
-              sourceStats.set(source, (sourceStats.get(source) || 0) + 1);
+            // Check if activity_data is an object and has a source property
+            const activityData = activity.activity_data as Record<string, any>;
+            if (activityData.source) {
+              sourceStats.set(activityData.source, (sourceStats.get(activityData.source) || 0) + 1);
             }
           }
         });
 
         // Fetch candidate skills
-        const { data: skillsData, error: skillsError } = await supabase
+        // First, get applications related to the company
+        const { data: applicationsForSkills, error: applicationsForSkillsError } = await supabase
           .from('applications')
-          .select(`
-            candidate_id(
-              profiles(skills)
-            )
-          `)
+          .select('candidate_id')
           .eq('jobs.company_id', companyId)
           .gte('created_at', startDate.toISOString());
+
+        if (applicationsForSkillsError) throw applicationsForSkillsError;
+
+        // Then get the skills from those candidates' profiles
+        const candidateIds = applicationsForSkills.map(app => app.candidate_id);
+        
+        const { data: skillsData, error: skillsError } = await supabase
+          .from('profiles')
+          .select('skills')
+          .in('id', candidateIds);
 
         if (skillsError) throw skillsError;
 
         const skillStats = new Map();
-        skillsData.forEach(app => {
-          if (app.candidate_id && app.candidate_id.profiles && app.candidate_id.profiles.skills) {
-            app.candidate_id.profiles.skills.forEach((skill: string) => {
+        skillsData.forEach(profile => {
+          if (profile.skills && Array.isArray(profile.skills)) {
+            profile.skills.forEach((skill: string) => {
               skillStats.set(skill, (skillStats.get(skill) || 0) + 1);
             });
           }
@@ -119,14 +127,14 @@ export const useCompanyAnalytics = (dateRange: '7d' | '30d' | '90d' = '30d') => 
           })),
           sources: Array.from(sourceStats.entries()).map(([name, value]) => ({
             name,
-            value
+            value: value as number
           })),
           skills: Array.from(skillStats.entries())
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5)
             .map(([name, count]) => ({
               name,
-              count
+              count: count as number
             }))
         });
 
