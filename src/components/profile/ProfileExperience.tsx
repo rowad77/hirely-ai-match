@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,8 +20,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 
 interface ProfileExperienceProps {
-  profile: Partial<Tables<'profiles'>> | null;
-  setProfile: (profile: Partial<Tables<'profiles'>> | null) => void;
+  experiences: Tables<'work_experiences'>[];
+  setExperiences: (experiences: Tables<'work_experiences'>[]) => void;
 }
 
 type Experience = {
@@ -35,10 +34,9 @@ type Experience = {
   description?: string;
 };
 
-const ProfileExperience = ({ profile }: ProfileExperienceProps) => {
+const ProfileExperience = ({ experiences, setExperiences }: ProfileExperienceProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [experiences, setExperiences] = useState<Experience[]>([]);
   const [currentExperience, setCurrentExperience] = useState<Experience>({
     company_name: '',
     job_title: '',
@@ -78,15 +76,12 @@ const ProfileExperience = ({ profile }: ProfileExperienceProps) => {
   };
 
   const handleDeleteExperience = async (id: string) => {
-    if (!profile?.id) return;
-
     try {
       setIsLoading(true);
       const { error } = await supabase
         .from('work_experiences')
         .delete()
-        .eq('id', id)
-        .eq('profile_id', profile.id);
+        .eq('id', id);
 
       if (error) throw error;
       
@@ -101,8 +96,6 @@ const ProfileExperience = ({ profile }: ProfileExperienceProps) => {
   };
 
   const handleSubmit = async () => {
-    if (!profile?.id) return;
-    
     if (!currentExperience.company_name || !currentExperience.job_title || !currentExperience.start_date) {
       toast.error('Please fill in all required fields');
       return;
@@ -128,7 +121,7 @@ const ProfileExperience = ({ profile }: ProfileExperienceProps) => {
         if (error) throw error;
         
         setExperiences(prev => 
-          prev.map(exp => (exp.id === currentExperience.id ? currentExperience : exp))
+          prev.map(exp => (exp.id === currentExperience.id ? currentExperience as Tables<'work_experiences'> : exp))
         );
         
         toast.success('Experience updated successfully');
@@ -137,7 +130,6 @@ const ProfileExperience = ({ profile }: ProfileExperienceProps) => {
         const { data, error } = await supabase
           .from('work_experiences')
           .insert({
-            profile_id: profile.id,
             company_name: currentExperience.company_name,
             job_title: currentExperience.job_title,
             start_date: currentExperience.start_date,
@@ -150,7 +142,7 @@ const ProfileExperience = ({ profile }: ProfileExperienceProps) => {
           
         if (error) throw error;
         
-        setExperiences(prev => [...prev, data as Experience]);
+        setExperiences(prev => [...prev, data as Tables<'work_experiences'>]);
         toast.success('Experience added successfully');
       }
       

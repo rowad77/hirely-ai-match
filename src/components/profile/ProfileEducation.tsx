@@ -21,8 +21,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 
 interface ProfileEducationProps {
-  profile: Partial<Tables<'profiles'>> | null;
-  setProfile: (profile: Partial<Tables<'profiles'>> | null) => void;
+  education: Tables<'education'>[];
+  setEducation: (education: Tables<'education'>[]) => void;
 }
 
 type Education = {
@@ -36,10 +36,9 @@ type Education = {
   description?: string;
 };
 
-const ProfileEducation = ({ profile }: ProfileEducationProps) => {
+const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [education, setEducation] = useState<Education[]>([]);
   const [currentEducation, setCurrentEducation] = useState<Education>({
     institution: '',
     degree: '',
@@ -79,15 +78,12 @@ const ProfileEducation = ({ profile }: ProfileEducationProps) => {
   };
 
   const handleDeleteEducation = async (id: string) => {
-    if (!profile?.id) return;
-
     try {
       setIsLoading(true);
       const { error } = await supabase
         .from('education')
         .delete()
-        .eq('id', id)
-        .eq('profile_id', profile.id);
+        .eq('id', id);
 
       if (error) throw error;
       
@@ -102,8 +98,6 @@ const ProfileEducation = ({ profile }: ProfileEducationProps) => {
   };
 
   const handleSubmit = async () => {
-    if (!profile?.id) return;
-    
     if (!currentEducation.institution || !currentEducation.degree || !currentEducation.start_date) {
       toast.error('Please fill in all required fields');
       return;
@@ -130,7 +124,7 @@ const ProfileEducation = ({ profile }: ProfileEducationProps) => {
         if (error) throw error;
         
         setEducation(prev => 
-          prev.map(edu => (edu.id === currentEducation.id ? currentEducation : edu))
+          prev.map(edu => (edu.id === currentEducation.id ? currentEducation as Tables<'education'> : edu))
         );
         
         toast.success('Education updated successfully');
@@ -139,7 +133,6 @@ const ProfileEducation = ({ profile }: ProfileEducationProps) => {
         const { data, error } = await supabase
           .from('education')
           .insert({
-            profile_id: profile.id,
             institution: currentEducation.institution,
             degree: currentEducation.degree,
             field_of_study: currentEducation.field_of_study,
@@ -153,7 +146,7 @@ const ProfileEducation = ({ profile }: ProfileEducationProps) => {
           
         if (error) throw error;
         
-        setEducation(prev => [...prev, data as Education]);
+        setEducation(prev => [...prev, data as Tables<'education'>]);
         toast.success('Education added successfully');
       }
       
