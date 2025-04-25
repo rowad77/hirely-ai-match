@@ -16,6 +16,8 @@ import JobsGrid from '@/components/jobs/JobsGrid';
 import JobSourceSelector from '@/components/jobs/JobSourceSelector';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import RecentlyViewed from '@/components/jobs/RecentlyViewed';
+import ViewModeToggle from '@/components/jobs/ViewModeToggle';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -34,7 +36,6 @@ const Jobs = () => {
   const [isUsingFallback, setIsUsingFallback] = useState(false);
   const [dataSources, setDataSources] = useState<string[]>(['theirstack', 'firecrawl']);
 
-  // Fetch jobs from the API with fixed useQuery configuration
   const { data: jobs = [], isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['jobs', currentPage, filters, searchTerm, dataSources],
     queryFn: async () => {
@@ -44,7 +45,6 @@ const Jobs = () => {
         sources: dataSources
       });
       
-      // Check if we're using fallback data
       if (result.length > 0 && result.some(job => job.source === 'fallback')) {
         setIsUsingFallback(true);
       } else {
@@ -65,7 +65,6 @@ const Jobs = () => {
     }
   });
 
-  // Filter jobs on the frontend as well for immediate feedback
   const filteredJobs = useMemo(() => {
     return jobs.filter(job => {
       const matchesSearch = searchTerm === '' || 
@@ -99,7 +98,6 @@ const Jobs = () => {
 
   const totalPages = Math.ceil(filteredJobs.length / ITEMS_PER_PAGE);
 
-  // Paginate the filtered jobs
   const currentJobs = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredJobs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
@@ -126,7 +124,6 @@ const Jobs = () => {
     });
   };
 
-  // Group jobs by source for the tabs
   const jobsBySource = useMemo(() => {
     const grouped = {
       all: filteredJobs,
@@ -151,6 +148,8 @@ const Jobs = () => {
           setSearchTerm(value);
           setCurrentPage(1);
         }} />
+        
+        <RecentlyViewed />
         
         {isUsingFallback && (
           <Alert className="mb-6 bg-yellow-50 border-yellow-200">
@@ -201,24 +200,10 @@ const Jobs = () => {
               </SheetContent>
             </Sheet>
             
-            <div className="flex border rounded-md overflow-hidden">
-              <Button 
-                variant={viewMode === 'grid' ? 'default' : 'outline'} 
-                className={`rounded-none ${viewMode === 'grid' ? 'bg-hirely hover:bg-hirely-dark' : ''}`}
-                onClick={() => setViewMode('grid')}
-                size="sm"
-              >
-                Grid
-              </Button>
-              <Button 
-                variant={viewMode === 'list' ? 'default' : 'outline'} 
-                className={`rounded-none ${viewMode === 'list' ? 'bg-hirely hover:bg-hirely-dark' : ''}`}
-                onClick={() => setViewMode('list')}
-                size="sm"
-              >
-                List
-              </Button>
-            </div>
+            <ViewModeToggle 
+              viewMode={viewMode} 
+              onViewModeChange={setViewMode} 
+            />
           </div>
         </div>
         
