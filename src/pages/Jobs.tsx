@@ -13,6 +13,7 @@ import JobListItem from '@/components/JobListItem';
 import SearchHeader from '@/components/jobs/SearchHeader';
 import ActiveFilters from '@/components/jobs/ActiveFilters';
 import JobsGrid from '@/components/jobs/JobsGrid';
+import JobSourceSelector from '@/components/jobs/JobSourceSelector';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
@@ -31,18 +32,20 @@ const Jobs = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [favoriteJobs, setFavoriteJobs] = useState<string[]>([]);
   const [isUsingFallback, setIsUsingFallback] = useState(false);
+  const [dataSources, setDataSources] = useState<string[]>(['theirstack', 'firecrawl']);
 
   // Fetch jobs from the API with fixed useQuery configuration
-  const { data: jobs = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['jobs', currentPage, filters, searchTerm],
+  const { data: jobs = [], isLoading, error, refetch, isRefetching } = useQuery({
+    queryKey: ['jobs', currentPage, filters, searchTerm, dataSources],
     queryFn: async () => {
       const result = await fetchJobs(currentPage, {
         ...filters,
-        search: searchTerm
+        search: searchTerm,
+        sources: dataSources
       });
       
       // Check if we're using fallback data
-      if (result.length > 0 && result.length <= 6) {
+      if (result.length > 0 && result.some(job => job.source === 'fallback')) {
         setIsUsingFallback(true);
       } else {
         setIsUsingFallback(false);
@@ -115,6 +118,32 @@ const Jobs = () => {
     );
   };
 
+  const handleRefetch = () => {
+    refetch();
+    toast({
+      title: "Refreshing jobs",
+      description: "Fetching the latest job listings..."
+    });
+  };
+
+  // Group jobs by source for the tabs
+  const jobsBySource = useMemo(() => {
+    const grouped = {
+      all: filteredJobs,
+      recent: filteredJobs.filter(job => {
+        const date = job.postedDate?.toLowerCase();
+        return date?.includes('today') || date?.includes('yesterday') || date?.includes('day ago');
+      }),
+      remote: filteredJobs.filter(job => job.remote === true || job.type?.toLowerCase().includes('remote')),
+      featured: filteredJobs.filter(job => job.category === 'Engineering' || job.category === 'Design'),
+      theirstack: filteredJobs.filter(job => job.source === 'theirstack'),
+      firecrawl: filteredJobs.filter(job => job.source === 'firecrawl'),
+      fallback: filteredJobs.filter(job => job.source === 'fallback'),
+      favorites: filteredJobs.filter(job => favoriteJobs.includes(job.id))
+    };
+    return grouped;
+  }, [filteredJobs, favoriteJobs]);
+
   return (
     <MainLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -141,6 +170,16 @@ const Jobs = () => {
         )}
         
         <div className="flex flex-col md:flex-row gap-4 items-center mb-8">
+          <JobSourceSelector 
+            selectedSources={dataSources}
+            onSourceChange={(sources) => {
+              setDataSources(sources);
+              refetch();
+            }}
+            onRefresh={handleRefetch}
+            isRefreshing={isRefetching}
+          />
+          
           <div className="flex gap-2 ml-auto">
             <Sheet>
               <SheetTrigger asChild>
@@ -227,94 +266,140 @@ const Jobs = () => {
                 <TabsTrigger value="recent">Recently Added</TabsTrigger>
                 <TabsTrigger value="remote">Remote Jobs</TabsTrigger>
                 <TabsTrigger value="featured">Featured</TabsTrigger>
+                {jobsBySource.theirstack.length > 0 && (
+                  <TabsTrigger value="theirstack">API Jobs</TabsTrigger>
+                )}
+                {jobsBySource.firecrawl.length > 0 && (
+                  <TabsTrigger value="firecrawl">Web Scraped</TabsTrigger>
+                )}
                 {favoriteJobs.length > 0 && (
                   <TabsTrigger value="favorites">Saved Jobs ({favoriteJobs.length})</TabsTrigger>
                 )}
               </TabsList>
+              
+              <TabsContent value="all">
+                {renderJobList(jobsBySource.all)}
+              </TabsContent>
+              <TabsContent value="recent">
+                {renderJobList(jobsBySource.recent)}
+              </TabsContent>
+              <TabsContent value="remote">
+                {renderJobList(jobsBySource.remote)}
+              </TabsContent>
+              <TabsContent value="featured">
+                {renderJobList(jobsBySource.featured)}
+              </TabsContent>
+              {jobsBySource.theirstack.length > 0 && (
+                <TabsContent value="theirstack">
+                  {renderJobList(jobsBySource.theirstack)}
+                </TabsContent>
+              )}
+              {jobsBySource.firecrawl.length > 0 && (
+                <TabsContent value="firecrawl">
+                  {renderJobList(jobsBySource.firecrawl)}
+                </TabsContent>
+              )}
+              {favoriteJobs.length > 0 && (
+                <TabsContent value="favorites">
+                  {renderJobList(jobsBySource.favorites)}
+                </TabsContent>
+              )}
             </Tabs>
-            
-            {currentJobs.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-lg">
-                <Briefcase className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-4 text-xl font-medium text-gray-900">No jobs found</h3>
-                <p className="mt-2 text-gray-600">Try adjusting your search or filters</p>
-              </div>
-            ) : viewMode === 'grid' ? (
-              <JobsGrid 
-                jobs={currentJobs}
-                favoriteJobs={favoriteJobs}
-                onFavorite={toggleFavorite}
-              />
-            ) : (
-              <div className="space-y-4">
-                {currentJobs.map(job => (
-                  <JobListItem 
-                    key={job.id} 
-                    job={job} 
-                    onFavorite={toggleFavorite}
-                    isFavorite={favoriteJobs.includes(job.id)} 
-                  />
-                ))}
-              </div>
-            )}
-            
-            {totalPages > 1 && (
-              <Pagination className="mt-8">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious 
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                  
-                  {Array.from({ length: totalPages }).map((_, index) => {
-                    const pageNumber = index + 1;
-                    if (
-                      pageNumber === 1 || 
-                      pageNumber === totalPages || 
-                      (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
-                    ) {
-                      return (
-                        <PaginationItem key={pageNumber}>
-                          <PaginationLink 
-                            onClick={() => setCurrentPage(pageNumber)}
-                            isActive={currentPage === pageNumber}
-                          >
-                            {pageNumber}
-                          </PaginationLink>
-                        </PaginationItem>
-                      );
-                    }
-                    
-                    if (
-                      (pageNumber === 2 && currentPage > 3) ||
-                      (pageNumber === totalPages - 1 && currentPage < totalPages - 2)
-                    ) {
-                      return (
-                        <PaginationItem key={pageNumber}>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      );
-                    }
-                    
-                    return null;
-                  })}
-                  
-                  <PaginationItem>
-                    <PaginationNext 
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            )}
           </>
         )}
       </div>
     </MainLayout>
   );
+  
+  function renderJobList(jobs: any[]) {
+    if (jobs.length === 0) {
+      return (
+        <div className="text-center py-12 bg-gray-50 rounded-lg">
+          <Briefcase className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-4 text-xl font-medium text-gray-900">No jobs found</h3>
+          <p className="mt-2 text-gray-600">Try adjusting your search or filters</p>
+        </div>
+      );
+    }
+    
+    const displayJobs = jobs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    
+    return (
+      <>
+        {viewMode === 'grid' ? (
+          <JobsGrid 
+            jobs={displayJobs}
+            favoriteJobs={favoriteJobs}
+            onFavorite={toggleFavorite}
+          />
+        ) : (
+          <div className="space-y-4">
+            {displayJobs.map(job => (
+              <JobListItem 
+                key={job.id} 
+                job={job} 
+                onFavorite={toggleFavorite}
+                isFavorite={favoriteJobs.includes(job.id)} 
+              />
+            ))}
+          </div>
+        )}
+        
+        {Math.ceil(jobs.length / ITEMS_PER_PAGE) > 1 && (
+          <Pagination className="mt-8">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              
+              {Array.from({ length: Math.ceil(jobs.length / ITEMS_PER_PAGE) }).map((_, index) => {
+                const pageNumber = index + 1;
+                if (
+                  pageNumber === 1 || 
+                  pageNumber === Math.ceil(jobs.length / ITEMS_PER_PAGE) || 
+                  (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                ) {
+                  return (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationLink 
+                        onClick={() => setCurrentPage(pageNumber)}
+                        isActive={currentPage === pageNumber}
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                }
+                
+                if (
+                  (pageNumber === 2 && currentPage > 3) ||
+                  (pageNumber === Math.ceil(jobs.length / ITEMS_PER_PAGE) - 1 && currentPage < Math.ceil(jobs.length / ITEMS_PER_PAGE) - 2)
+                ) {
+                  return (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  );
+                }
+                
+                return null;
+              })}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(jobs.length / ITEMS_PER_PAGE)))}
+                  className={currentPage >= Math.ceil(jobs.length / ITEMS_PER_PAGE) ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
+      </>
+    );
+  }
 };
 
 export default Jobs;

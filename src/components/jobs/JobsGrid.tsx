@@ -1,6 +1,6 @@
 
 import { Link } from 'react-router-dom';
-import { Heart, Building, MapPin, Clock, DollarSign } from 'lucide-react';
+import { Heart, Building, MapPin, Clock, DollarSign, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,8 @@ interface Job {
   category: string;
   postedDate: string;
   description: string;
+  source?: string;
+  url?: string;
 }
 
 interface JobsGridProps {
@@ -64,16 +66,48 @@ const JobsGrid = ({ jobs, favoriteJobs, onFavorite }: JobsGridProps) => {
                 <DollarSign className="h-4 w-4 mr-2" />
                 <span>{job.salary}</span>
               </div>
-              <Badge className="w-fit mt-2">{job.category}</Badge>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Badge className="w-fit">{job.category}</Badge>
+                {job.source && (
+                  <Badge 
+                    variant="outline" 
+                    className={`w-fit ${
+                      job.source === 'theirstack' 
+                        ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                        : job.source === 'firecrawl' 
+                          ? 'bg-green-50 text-green-700 border-green-200' 
+                          : 'bg-gray-50 text-gray-700 border-gray-200'
+                    }`}
+                  >
+                    {job.source === 'theirstack' 
+                      ? 'API' 
+                      : job.source === 'firecrawl' 
+                        ? 'Web Scraped' 
+                        : 'Demo'}
+                  </Badge>
+                )}
+              </div>
               <p className="mt-4 text-gray-600 line-clamp-3">{job.description}</p>
             </div>
           </CardContent>
-          <CardFooter>
-            <Link to={`/job/${job.id}`} className="w-full">
+          <CardFooter className="flex flex-wrap gap-2 justify-between">
+            <Link to={`/job/${job.id}`} className="flex-1">
               <Button className="w-full bg-hirely hover:bg-hirely-dark">
                 View Details
               </Button>
             </Link>
+            
+            {job.url && (
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => window.open(job.url, '_blank')}
+                className="ml-2"
+                title="Visit original job posting"
+              >
+                <Globe className="h-4 w-4" />
+              </Button>
+            )}
           </CardFooter>
         </Card>
       ))}

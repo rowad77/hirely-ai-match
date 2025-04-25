@@ -7,3 +7,5 @@ url = "https://lckyfjxdnmwhmruvgpwn.supabase.co"
 
 [functions]
 [functions.analyze-resume]
+[functions.fetch-jobs]
+[functions.fetch-jobs-multi]

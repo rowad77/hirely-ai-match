@@ -8,6 +8,7 @@ export interface JobFilter {
   categories?: string[];
   remote?: boolean;
   search?: string;
+  sources?: string[];
   [key: string]: any;
 }
 
@@ -17,12 +18,16 @@ export interface JobResponse {
   page: number;
   total_pages: number;
   source: 'api' | 'fallback';
+  errors?: any[];
   error?: string;
 }
 
 export async function fetchJobs(page = 1, filters: JobFilter = {}): Promise<any[]> {
   try {
     console.log('Fetching jobs with filters:', filters);
+    
+    // Determine which sources to use, default to all available
+    const sources = filters.sources || ['theirstack', 'firecrawl'];
     
     // Prepare filter parameters for the API
     const apiFilters: Record<string, any> = {};
@@ -44,14 +49,15 @@ export async function fetchJobs(page = 1, filters: JobFilter = {}): Promise<any[
       apiFilters.category = filters.categories.join(','); // Support multiple categories
     }
     
-    // Call the Supabase edge function with a timeout
-    const { data, error } = await supabase.functions.invoke('fetch-jobs', {
+    // Call the Supabase edge function for multi-source job fetching
+    const { data, error } = await supabase.functions.invoke('fetch-jobs-multi', {
       body: { 
         page, 
         filters: {
           ...apiFilters,
           ...filters // Include original filters as well
-        }
+        },
+        sources
       }
     });
 
@@ -64,6 +70,9 @@ export async function fetchJobs(page = 1, filters: JobFilter = {}): Promise<any[
     
     if (data?.source === 'fallback') {
       console.warn('Using fallback data due to API issue:', data?.error);
+      if (data?.errors) {
+        console.warn('API errors:', data.errors);
+      }
     }
     
     return data?.jobs || [];
