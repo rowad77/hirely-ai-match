@@ -7,71 +7,64 @@ import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import ApplicantProfile from '@/components/company/application/ApplicantProfile';
 import ApplicationTabs from '@/components/company/application/ApplicationTabs';
+import { useApplicationStatus } from '@/hooks/use-application-status';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const CompanyApplicationDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [applicationStatus, setApplicationStatus] = useState('New');
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false);
   
-  // Mock application data for the selected application id
-  const application = {
-    id: parseInt(id || '1'),
-    applicant: 'John Smith',
-    email: 'john.smith@example.com',
-    phone: '(555) 123-4567',
-    jobTitle: 'Senior Frontend Developer',
-    company: 'TechCorp',
-    salary: '$120,000 - $150,000',
-    appliedDate: '2023-04-02',
-    status: applicationStatus,
-    resumeUrl: '/placeholder.svg',
-    coverLetter: 'I am excited to apply for the Senior Frontend Developer position at TechCorp. With over 5 years of experience in React, TypeScript, and modern frontend frameworks, I believe I have the skills and expertise to contribute to your team and help build exceptional user experiences.',
-    score: 92,
-    skills: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS', 'GraphQL', 'Node.js'],
-    education: 'Bachelor of Science in Computer Science, Stanford University',
-    experience: [
-      {
-        role: 'Frontend Developer',
-        company: 'Tech Solutions Inc.',
-        period: 'Jan 2020 - Present',
-        description: 'Lead frontend development for multiple client projects, focusing on React, TypeScript, and state management solutions.'
-      },
-      {
-        role: 'Junior Developer',
-        company: 'WebApps Co.',
-        period: 'Jun 2018 - Dec 2019',
-        description: 'Contributed to the development of responsive web applications using React and JavaScript.'
-      }
-    ],
-    videoAnswers: [
-      {
-        question: 'Tell us about yourself and your experience with similar roles.',
-        videoUrl: '#'
-      },
-      {
-        question: 'What are your strengths and how would they contribute to this position?',
-        videoUrl: '#'
-      },
-      {
-        question: 'Describe a challenging situation you faced at work and how you handled it.',
-        videoUrl: '#'
-      }
-    ],
-    aiInsights: [
-      'Strong problem-solving skills demonstrated in past projects',
-      'Excellent communication skills evident in video interviews',
-      'Experience with required tech stack is above average',
-      'Candidate shows leadership potential based on past roles',
-      'Cultural fit score: 88%'
-    ]
+  const { data: application, isLoading } = useQuery({
+    queryKey: ['application', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('applications')
+        .select(`
+          *,
+          candidate:candidate_id(
+            id,
+            email,
+            full_name,
+            avatar_url,
+            phone_text
+          )
+        `)
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { mutate: updateStatus } = useApplicationStatus();
+  
+  const handleUpdateStatus = (newStatus: string) => {
+    if (!id) return;
+    updateStatus({ applicationId: id, status: newStatus });
   };
   
   const handleSendInterviewInvite = (e: React.FormEvent) => {
     e.preventDefault();
     setIsInterviewDialogOpen(false);
-    toast.success('Interview invitation sent successfully!');
+    if (!id) return;
+    
+    updateStatus({ 
+      applicationId: id, 
+      status: 'interview_scheduled',
+      interviewRequirements: 'Interview scheduled' // You might want to make this dynamic
+    });
   };
+
+  if (isLoading) {
+    return <CompanyLayout title="Loading...">Loading...</CompanyLayout>;
+  }
+
+  if (!application) {
+    return <CompanyLayout title="Not Found">Application not found</CompanyLayout>;
+  }
 
   return (
     <CompanyLayout title="Application Review">
@@ -86,15 +79,15 @@ const CompanyApplicationDetail = () => {
             Back
           </Button>
           <h1 className="text-2xl font-bold text-gray-900">
-            Application: {application.jobTitle}
+            Application Review
           </h1>
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <ApplicantProfile 
             application={application}
-            applicationStatus={applicationStatus}
-            setApplicationStatus={setApplicationStatus}
+            applicationStatus={application.status}
+            setApplicationStatus={handleUpdateStatus}
             isInterviewDialogOpen={isInterviewDialogOpen}
             setIsInterviewDialogOpen={setIsInterviewDialogOpen}
             handleSendInterviewInvite={handleSendInterviewInvite}

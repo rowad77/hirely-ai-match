@@ -9,12 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      application_notifications: {
+        Row: {
+          application_id: string | null
+          created_at: string | null
+          id: string
+          message: string
+          notification_type: string
+          read: boolean | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          application_id?: string | null
+          created_at?: string | null
+          id?: string
+          message: string
+          notification_type: string
+          read?: boolean | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          application_id?: string | null
+          created_at?: string | null
+          id?: string
+          message?: string
+          notification_type?: string
+          read?: boolean | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_notifications_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           candidate_id: string
           cover_letter: string | null
           created_at: string
           id: string
+          interview_requirements: string | null
           job_id: string
           resume_url: string | null
           status: string
@@ -28,6 +70,7 @@ export type Database = {
           cover_letter?: string | null
           created_at?: string
           id?: string
+          interview_requirements?: string | null
           job_id: string
           resume_url?: string | null
           status?: string
@@ -41,6 +84,7 @@ export type Database = {
           cover_letter?: string | null
           created_at?: string
           id?: string
+          interview_requirements?: string | null
           job_id?: string
           resume_url?: string | null
           status?: string
