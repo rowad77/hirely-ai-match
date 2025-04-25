@@ -903,6 +903,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_dashboard_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       track_activity: {
         Args: {
           p_user_id: string
