@@ -1,74 +1,62 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import { Building, Briefcase, Users, LineChart, Upload } from 'lucide-react';
-import { featuredJobs } from '@/data/jobs';
-import { useState, useEffect } from 'react';
+import { LoadingState } from '@/components/ui/loading-state';
 import { supabase } from '@/integrations/supabase/client';
 
 const OwnerDashboard = () => {
   const [stats, setStats] = useState({
-    companies: 15,
-    jobs: featuredJobs.length,
-    users: 120,
-    applications: 354,
+    companies: 0,
+    jobs: 0,
+    users: 0,
+    applications: 0,
     recentUploads: 0
   });
   
+  const [loading, setLoading] = useState(true);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
-  
+
   useEffect(() => {
-    const fetchRecentActivity = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const { data: resumeUploads, error: uploadsError } = await supabase
-          .from('user_activity')
-          .select('*')
-          .eq('activity_type', 'resume_upload')
-          .order('timestamp', { ascending: false })
-          .limit(5);
-          
-        if (uploadsError) throw uploadsError;
-        
-        const { count, error: countError } = await supabase
-          .from('user_activity')
-          .select('*', { count: 'exact', head: true })
-          .eq('activity_type', 'resume_upload');
-          
-        if (countError) throw countError;
-        
-        if (count !== null) {
-          setStats(prev => ({
-            ...prev,
-            recentUploads: count
-          }));
-        }
-        
-        if (resumeUploads) {
-          const formattedActivity = await Promise.all(resumeUploads.map(async (activity) => {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('full_name')
-              .eq('id', activity.user_id)
-              .single();
-              
-            return {
-              id: activity.id,
-              type: 'resume_upload',
-              userName: profileData?.full_name || 'Anonymous User',
-              details: activity.activity_data,
-              timestamp: activity.timestamp
-            };
-          }));
-          
-          setRecentActivity(formattedActivity);
-        }
+        const [
+          { count: companiesCount },
+          { count: jobsCount },
+          { count: usersCount },
+          { count: applicationsCount }
+        ] = await Promise.all([
+          supabase.from('companies').select('*', { count: 'exact', head: true }),
+          supabase.from('jobs').select('*', { count: 'exact', head: true }),
+          supabase.from('profiles').select('*', { count: 'exact', head: true }),
+          supabase.from('applications').select('*', { count: 'exact', head: true })
+        ]);
+
+        setStats({
+          companies: companiesCount || 0,
+          jobs: jobsCount || 0,
+          users: usersCount || 0,
+          applications: applicationsCount || 0,
+          recentUploads: 0
+        });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
       }
     };
-    
-    fetchRecentActivity();
+
+    fetchDashboardData();
   }, []);
-  
+
+  if (loading) {
+    return (
+      <OwnerLayout title="Owner Dashboard">
+        <LoadingState message="Loading dashboard data..." />
+      </OwnerLayout>
+    );
+  }
+
   const getRelativeTime = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
