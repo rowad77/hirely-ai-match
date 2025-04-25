@@ -1,10 +1,10 @@
-
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { JobsFilterProvider } from '@/context/JobsFilterContext';
+import RTLWrapper from '@/components/layout/RTLWrapper';
 
 import Index from '@/pages/Index';
 import Login from '@/pages/Login';
@@ -37,46 +37,48 @@ import CompanyJobCreate from '@/pages/company/CompanyJobCreate';
 function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="vite-react-theme">
-      <BrowserRouter>
-        <AuthProvider>
-          <JobsFilterProvider>
-            <Toaster position="bottom-center" richColors closeButton />
-            <ShadcnToaster />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/jobs" element={<Jobs />} />
-              <Route path="/jobs/:id" element={<JobDetails />} />
-              <Route path="/jobs/:id/apply" element={<JobApplication />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/application-history" element={<ApplicationHistory />} />
-              <Route path="/profile" element={<UserProfile />} />
-              <Route path="*" element={<NotFound />} />
+      <RTLWrapper>
+        <BrowserRouter>
+          <AuthProvider>
+            <JobsFilterProvider>
+              <Toaster position="bottom-center" richColors closeButton className="font-sans" />
+              <ShadcnToaster />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/jobs" element={<Jobs />} />
+                <Route path="/jobs/:id" element={<JobDetails />} />
+                <Route path="/jobs/:id/apply" element={<JobApplication />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/application-history" element={<ApplicationHistory />} />
+                <Route path="/profile" element={<UserProfile />} />
+                <Route path="*" element={<NotFound />} />
 
-              {/* Company Routes */}
-              <Route path="/company/dashboard" element={<CompanyDashboard />} />
-              <Route path="/company/jobs" element={<CompanyJobs />} />
-              <Route path="/company/jobs/create" element={<CompanyJobCreate />} />
-              <Route path="/company/candidates" element={<CompanyCandidates />} />
-              <Route path="/company/applications" element={<CompanyApplications />} />
-              <Route path="/company/applications/:id" element={<CompanyApplicationDetail />} />
-              <Route path="/company/interviews" element={<CompanyInterviews />} />
-              <Route path="/company/analytics" element={<CompanyAnalytics />} />
-              <Route path="/company/settings" element={<CompanySettings />} />
+                {/* Company Routes */}
+                <Route path="/company/dashboard" element={<CompanyDashboard />} />
+                <Route path="/company/jobs" element={<CompanyJobs />} />
+                <Route path="/company/jobs/create" element={<CompanyJobCreate />} />
+                <Route path="/company/candidates" element={<CompanyCandidates />} />
+                <Route path="/company/applications" element={<CompanyApplications />} />
+                <Route path="/company/applications/:id" element={<CompanyApplicationDetail />} />
+                <Route path="/company/interviews" element={<CompanyInterviews />} />
+                <Route path="/company/analytics" element={<CompanyAnalytics />} />
+                <Route path="/company/settings" element={<CompanySettings />} />
 
-              {/* Owner Routes */}
-              <Route path="/owner" element={<Navigate to="/owner/dashboard" replace />} />
-              <Route path="/owner/dashboard" element={<OwnerDashboard />} />
-              <Route path="/owner/jobs" element={<OwnerJobs />} />
-              <Route path="/owner/analytics" element={<OwnerAnalytics />} />
-              <Route path="/owner/users" element={<OwnerUsers />} />
-              <Route path="/owner/companies" element={<OwnerCompanies />} />
-              <Route path="/owner/settings" element={<OwnerSettings />} />
-            </Routes>
-          </JobsFilterProvider>
-        </AuthProvider>
-      </BrowserRouter>
+                {/* Owner Routes */}
+                <Route path="/owner" element={<Navigate to="/owner/dashboard" replace />} />
+                <Route path="/owner/dashboard" element={<OwnerDashboard />} />
+                <Route path="/owner/jobs" element={<OwnerJobs />} />
+                <Route path="/owner/analytics" element={<OwnerAnalytics />} />
+                <Route path="/owner/users" element={<OwnerUsers />} />
+                <Route path="/owner/companies" element={<OwnerCompanies />} />
+                <Route path="/owner/settings" element={<OwnerSettings />} />
+              </Routes>
+            </JobsFilterProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </RTLWrapper>
     </ThemeProvider>
   );
 }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
@@ -63,13 +62,13 @@ const Navbar = () => {
   return (
     <nav className="bg-background border-b">
       <div className="flex h-16 items-center px-4">
-        <Link to="/" className="font-bold text-2xl text-hirely">
+        <Link to="/" className="font-bold text-2xl text-hirely rtl:ml-auto">
           Hirely
         </Link>
 
-        <div className="ml-auto flex items-center space-x-4">
+        <div className="rtl:mr-auto ltr:ml-auto flex items-center space-x-4 rtl:space-x-reverse">
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-6 rtl:gap-reverse">
             {primaryNavItems.map((item) => (
               <NavLink
                 key={item.to}
