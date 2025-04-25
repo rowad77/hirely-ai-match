@@ -18,10 +18,6 @@ export default {
       },
     },
     extend: {
-      fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Helvetica Neue', 'sans-serif'],
-        display: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Helvetica Neue', 'sans-serif'],
-      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
@@ -142,8 +138,20 @@ export default {
         'accordion-up': 'accordion-up 0.2s ease-out',
         'fade-up': 'fadeUp 0.5s ease-out',
         'fade-down': 'fadeDown 0.3s ease-out',
-      }
+      },
+      direction: {
+        'rtl': 'rtl',
+        'ltr': 'ltr'
+      },
+      
+      fontFamily: {
+        sans: ['IBM Plex Sans Arabic', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Helvetica Neue', 'sans-serif'],
+        display: ['IBM Plex Sans Arabic', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Helvetica Neue', 'sans-serif'],
+      },
     }
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    require('tailwindcss-flip'),
+  ],
 } satisfies Config;
