@@ -67,6 +67,16 @@ const translations = {
     'error': 'Error',
     'warning': 'Warning',
     'info': 'Info',
+    'all': 'All',
+    'applied': 'Applied',
+    'screening': 'Screening',
+    'interview': 'Interview',
+    'final': 'Final',
+    'rejected': 'Rejected',
+    'match_score': 'Match Score',
+    'hiring_progress': 'Hiring Progress',
+    'view_details': 'View Details',
+    'no_candidates': 'No candidates found with the selected filter.',
     
     // Auth
     'welcome_back': 'Welcome Back!',
@@ -191,7 +201,9 @@ const translations = {
     'view_notes': 'View Notes',
     'reschedule': 'Reschedule',
     'complete': 'Complete',
-    'cancel': 'Cancel',
+    
+    // Removed duplicate 'cancel' key as it appears in General section
+    
     'time': 'Time',
     'candidate': 'Candidate',
     'position': 'Position',
@@ -212,7 +224,9 @@ const translations = {
     'analytics': 'Analytics',
     'performance_overview': 'Performance Overview',
     'track_metrics': 'Track your company\'s metrics, hiring funnel, and candidate engagement.',
-    'applications': 'Applications',
+    
+    // Removed duplicate 'applications' key as it appears in Application section
+    
     'hiring': 'Hiring Funnel',
     'engagement': 'Candidate Engagement',
     'last_month': 'Last Month',
@@ -272,6 +286,16 @@ const translations = {
     'error': 'خطأ',
     'warning': 'تحذير',
     'info': 'معلومات',
+    'all': 'الكل',
+    'applied': 'تم التقديم',
+    'screening': 'فحص',
+    'interview': 'مقابلة',
+    'final': 'نهائي',
+    'rejected': 'مرفوض',
+    'match_score': 'نسبة التطابق',
+    'hiring_progress': 'تقدم التوظيف',
+    'view_details': 'عرض التفاصيل',
+    'no_candidates': 'لم يتم العثور على مرشحين بالفلتر المحدد.',
     
     // Auth
     'welcome_back': 'مرحبا بعودتك!',
@@ -396,7 +420,9 @@ const translations = {
     'view_notes': 'عرض الملاحظات',
     'reschedule': 'إعادة جدولة',
     'complete': 'اكتمل',
-    'cancel': 'إلغاء',
+    
+    // Removed duplicate 'cancel' key as it appears in General section
+    
     'time': 'الوقت',
     'candidate': 'المرشح',
     'position': 'المنصب',
@@ -417,7 +443,9 @@ const translations = {
     'analytics': 'التحليلات',
     'performance_overview': 'نظرة عامة على الأداء',
     'track_metrics': 'تتبع مقاييس شركتك، ومسار التوظيف، ومشاركة المرشحين.',
-    'applications': 'الطلبات',
+    
+    // Removed duplicate 'applications' key as it appears in Application section
+    
     'hiring': 'مسار التوظيف',
     'engagement': 'مشاركة المرشحين',
     'last_month': 'الشهر الماضي',
