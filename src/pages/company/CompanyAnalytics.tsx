@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import CompanyLayout from '@/components/layout/CompanyLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Analytics from '@/components/company/Analytics';
 import { LoadingState } from '@/components/ui/loading-state';
-import { useCompanyAnalytics } from '@/hooks/useCompanyAnalytics';
+import { useCompanyAnalytics } from '@/hooks/use-company-analytics';
 
 const CompanyAnalytics = () => {
   const [activeTab, setActiveTab] = useState('applications');

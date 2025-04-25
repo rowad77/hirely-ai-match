@@ -5,6 +5,7 @@ import { CalendarIcon, Download, TrendingUp, TrendingDown, Info } from "lucide-r
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export interface AnalyticsProps {
   dataType?: 'applications' | 'hiring' | 'engagement';

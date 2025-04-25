@@ -28,15 +28,16 @@ export const useCompanyAnalytics = (dateRange: '7d' | '30d' | '90d' = '30d') => 
     const fetchAnalytics = async () => {
       try {
         setLoading(true);
-        const { data: companyId } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('company_id')
-          .eq('id', supabase.auth.getUser().id)
           .single();
 
-        if (!companyId) {
+        if (profileError || !profileData) {
           throw new Error('Company not found');
         }
+
+        const companyId = profileData.company_id;
 
         // Get date range
         const startDate = new Date();
@@ -49,7 +50,7 @@ export const useCompanyAnalytics = (dateRange: '7d' | '30d' | '90d' = '30d') => 
             id,
             created_at,
             status,
-            job:jobs(company_id)
+            jobs(company_id)
           `)
           .gte('created_at', startDate.toISOString())
           .eq('jobs.company_id', companyId);
@@ -79,16 +80,20 @@ export const useCompanyAnalytics = (dateRange: '7d' | '30d' | '90d' = '30d') => 
 
         const sourceStats = new Map();
         sourcesData.forEach(activity => {
-          const source = activity.activity_data.source;
-          sourceStats.set(source, (sourceStats.get(source) || 0) + 1);
+          if (activity.activity_data && typeof activity.activity_data === 'object') {
+            const source = activity.activity_data.source;
+            if (source) {
+              sourceStats.set(source, (sourceStats.get(source) || 0) + 1);
+            }
+          }
         });
 
         // Fetch candidate skills
         const { data: skillsData, error: skillsError } = await supabase
           .from('applications')
           .select(`
-            candidate:candidate_id(
-              profile:profiles(skills)
+            candidate_id(
+              profiles(skills)
             )
           `)
           .eq('jobs.company_id', companyId)
@@ -98,8 +103,8 @@ export const useCompanyAnalytics = (dateRange: '7d' | '30d' | '90d' = '30d') => 
 
         const skillStats = new Map();
         skillsData.forEach(app => {
-          if (app.candidate?.profile?.skills) {
-            app.candidate.profile.skills.forEach((skill: string) => {
+          if (app.candidate_id && app.candidate_id.profiles && app.candidate_id.profiles.skills) {
+            app.candidate_id.profiles.skills.forEach((skill: string) => {
               skillStats.set(skill, (skillStats.get(skill) || 0) + 1);
             });
           }
@@ -125,7 +130,7 @@ export const useCompanyAnalytics = (dateRange: '7d' | '30d' | '90d' = '30d') => 
             }))
         });
 
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching analytics:', err);
         setError(err.message);
         toast.error('Failed to load analytics data');
