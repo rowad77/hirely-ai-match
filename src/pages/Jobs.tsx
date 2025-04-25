@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Filter, Briefcase, SearchX, Loader, AlertTriangle } from 'lucide-react';
@@ -15,7 +14,6 @@ import ActiveFilters from '@/components/jobs/ActiveFilters';
 import JobsGrid from '@/components/jobs/JobsGrid';
 import JobSourceSelector from '@/components/jobs/JobSourceSelector';
 import { useToast } from '@/components/ui/use-toast';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import RecentlyViewed from '@/components/jobs/RecentlyViewed';
 import ViewModeToggle from '@/components/jobs/ViewModeToggle';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -45,9 +43,7 @@ const Jobs = () => {
   const [filterCounts, setFilterCounts] = useState<{[key: string]: number}>({});
   const [userInterests, setUserInterests] = useState<string[]>(['Engineering', 'Technology']);
 
-  // Load user preferences
   useEffect(() => {
-    // Load favorites from localStorage
     const savedFavorites = localStorage.getItem('favoriteJobs');
     if (savedFavorites) {
       try {
@@ -57,13 +53,10 @@ const Jobs = () => {
       }
     }
     
-    // In a real app, user interests would come from the user profile
-    // For now, we'll simulate them
     const mockInterests = ['Engineering', 'Technology', 'Remote Work'];
     setUserInterests(mockInterests);
   }, []);
 
-  // Save favorites to localStorage when they change
   useEffect(() => {
     localStorage.setItem('favoriteJobs', JSON.stringify(favoriteJobs));
   }, [favoriteJobs]);
@@ -93,21 +86,18 @@ const Jobs = () => {
             description: "There was an issue loading jobs. Using fallback data instead.",
             variant: "destructive"
           });
-          setIsUsingFallback(true);
         }
       }
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
     retry: 2
   });
 
-  // Calculate filter counts for smart filter suggestions
   useEffect(() => {
     if (!jobs.length) return;
     
     const counts: {[key: string]: number} = {};
     
-    // Count jobs by type
     jobs.forEach(job => {
       const type = job.type.toLowerCase();
       counts[type] = (counts[type] || 0) + 1;
@@ -173,7 +163,6 @@ const Jobs = () => {
         : [...prev, jobId]
     );
 
-    // Show appropriate toast message
     const isFavorited = !favoriteJobs.includes(jobId);
     toast({
       title: isFavorited ? "Job saved" : "Job removed",
@@ -207,9 +196,7 @@ const Jobs = () => {
     return grouped;
   }, [filteredJobs, favoriteJobs]);
 
-  // Function to suggest search terms for empty results
   const getSuggestedSearches = () => {
-    // Based on filtered conditions, suggest more generic terms
     const suggestions = [];
     
     if (filters.jobTypes.length > 0 || filters.locations.length > 0) {
@@ -218,13 +205,11 @@ const Jobs = () => {
     
     if (searchTerm) {
       suggestions.push("Try using more general keywords");
-      // Suggest similar terms or corrections
       if (searchTerm.toLowerCase().includes('develop')) {
         suggestions.push("Try searching for 'engineer' instead");
       }
     }
     
-    // Suggest popular searches
     if (popularSearches.length > 0) {
       suggestions.push("Try one of our popular searches");
     }
@@ -245,33 +230,15 @@ const Jobs = () => {
           filterCounts={filterCounts}
         />
         
-        {/* Personalized job recommendations - fixed by adding currentJobId */}
         {!searchTerm && filters.jobTypes.length === 0 && filters.categories.length === 0 && (
           <JobRecommendations 
             userInterests={userInterests} 
             limit={3}
-            currentJobId="0" // Providing a default value since we're on the jobs listing page
+            currentJobId="0"
           />
         )}
         
         <RecentlyViewed />
-        
-        {isUsingFallback && (
-          <Alert className="mb-6 bg-yellow-50 border-yellow-200">
-            <AlertTitle className="text-yellow-800">Using Demo Data</AlertTitle>
-            <AlertDescription className="text-yellow-700">
-              We're currently showing demo job listings because the job API is unavailable. 
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="ml-4 bg-white" 
-                onClick={() => refetch()}
-              >
-                Try Again
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
         
         <div className="flex flex-col md:flex-row gap-4 items-center mb-8">
           <JobSourceSelector 
