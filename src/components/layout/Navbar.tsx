@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,24 +48,52 @@ const Navbar = () => {
     fetchProfile();
   }, [user]);
 
+  const primaryNavItems = [
+    { to: '/', label: 'Home' },
+    { to: '/jobs', label: 'Find Jobs' },
+  ];
+
+  const conditionalNavItems = [
+    userRole === 'company' && { to: '/company/dashboard', label: 'Company Portal' },
+    userRole === 'owner' && { to: '/owner/dashboard', label: 'Admin Panel' },
+  ].filter(Boolean);
+
   return (
     <nav className="bg-background border-b sticky top-0 z-50">
       <div className="flex h-16 items-center px-4">
-        <Link to="/" className="font-bold text-2xl">
+        <Link to="/" className="font-bold text-2xl text-hirely">
           Hirely
         </Link>
 
         <div className="ml-auto flex items-center space-x-4">
-          {/* Navigation Links */}
-          <div className="flex items-center gap-4 lg:gap-6">
-            <NavLink to="/">Home</NavLink>
-            <NavLink to="/jobs">Find Jobs</NavLink>
-            {userRole === 'company' && (
-              <NavLink to="/company/dashboard">Company Portal</NavLink>
-            )}
-            {userRole === 'owner' && (
-              <NavLink to="/owner/dashboard">Admin Panel</NavLink>
-            )}
+          {/* Primary Navigation */}
+          <div className="flex items-center gap-6">
+            {primaryNavItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `text-sm font-medium transition-colors hover:text-hirely
+                  ${isActive ? 'text-hirely font-semibold' : 'text-muted-foreground'}`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
+            
+            {/* Conditional Navigation Items */}
+            {conditionalNavItems.map((item: any) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `text-sm font-medium transition-colors hover:text-hirely-dark
+                  ${isActive ? 'text-hirely-dark font-semibold' : 'text-muted-foreground'}`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
           </div>
         </div>
 
