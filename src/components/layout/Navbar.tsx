@@ -23,6 +23,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { Tables } from '@/integrations/supabase/types';
+import { LanguageToggle } from './LanguageToggle';
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
@@ -157,6 +158,7 @@ const Navbar = () => {
               </Link>
             </>
           )}
+          <LanguageToggle />
           <Button variant="ghost" size="sm" onClick={toggleTheme}>
             {theme === "dark" ? (
               <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
