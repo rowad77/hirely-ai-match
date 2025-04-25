@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -9,28 +8,41 @@ import { ChevronDown, ChevronUp, Filter } from 'lucide-react';
 type JobFilterProps = {
   onFilterChange: (filters: JobFilters) => void;
   inModal?: boolean;
+  initialFilters?: JobFilters;
+  filterCounts?: {[key: string]: number};
 };
 
 export type JobFilters = {
   jobTypes: string[];
   locations: string[];
   salaryRanges: string[];
-  categories: string[]; // Added categories
+  categories: string[];
 };
 
-const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
+const JobFilters = ({ 
+  onFilterChange, 
+  inModal = false, 
+  initialFilters,
+  filterCounts = {} 
+}: JobFilterProps) => {
   const [isOpen, setIsOpen] = useState(inModal ? true : false);
   const [filters, setFilters] = useState<JobFilters>({
     jobTypes: [],
     locations: [],
     salaryRanges: [],
-    categories: [], // Initialize categories array
+    categories: [],
   });
+
+  useEffect(() => {
+    if (initialFilters) {
+      setFilters(initialFilters);
+    }
+  }, [initialFilters]);
 
   const jobTypes = ["Full-time", "Part-time", "Contract", "Remote"];
   const locations = ["San Francisco, CA", "New York, NY", "Chicago, IL", "Seattle, WA", "Remote"];
   const salaryRanges = ["Under $50k", "$50k - $100k", "$100k - $150k", "$150k+"];
-  const categories = ["Engineering", "Design", "Data", "Product", "Marketing"]; // Added categories array
+  const categories = ["Engineering", "Design", "Data", "Product", "Marketing"];
 
   const handleFilterChange = (
     category: keyof JobFilters,
@@ -56,7 +68,7 @@ const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
       jobTypes: [],
       locations: [],
       salaryRanges: [],
-      categories: [], // Clear categories as well
+      categories: [],
     };
     setFilters(emptyFilters);
     onFilterChange(emptyFilters);
@@ -66,10 +78,20 @@ const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
     return filters.jobTypes.length > 0 || 
            filters.locations.length > 0 || 
            filters.salaryRanges.length > 0 ||
-           filters.categories.length > 0; // Include categories in check
+           filters.categories.length > 0;
   };
 
-  // If in modal mode, always show the content without the collapsible wrapper
+  const renderCount = (key: string) => {
+    const count = filterCounts[key.toLowerCase()];
+    if (!count) return null;
+    
+    return (
+      <span className="ml-auto text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+        {count}
+      </span>
+    );
+  };
+
   if (inModal) {
     return (
       <div className="md:block mb-8">
@@ -129,7 +151,6 @@ const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
               </div>
             </div>
             
-            {/* Add Categories filter */}
             <div>
               <h3 className="font-medium mb-2">Categories</h3>
               <div className="space-y-2">
@@ -164,7 +185,6 @@ const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
     );
   }
 
-  // Regular collapsible filter for normal page view
   return (
     <div className="md:block mb-8">
       <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
@@ -241,7 +261,6 @@ const JobFilters = ({ onFilterChange, inModal = false }: JobFilterProps) => {
               </div>
             </div>
             
-            {/* Add Categories filter */}
             <div>
               <h3 className="font-medium mb-2">Categories</h3>
               <div className="space-y-2">
