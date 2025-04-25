@@ -59,15 +59,15 @@ const Navbar = () => {
   ].filter(Boolean);
 
   return (
-    <nav className="bg-background border-b sticky top-0 z-50">
+    <nav className="bg-background border-b">
       <div className="flex h-16 items-center px-4">
         <Link to="/" className="font-bold text-2xl text-hirely">
           Hirely
         </Link>
 
         <div className="ml-auto flex items-center space-x-4">
-          {/* Primary Navigation */}
-          <div className="flex items-center gap-6">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-6">
             {primaryNavItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -81,7 +81,6 @@ const Navbar = () => {
               </NavLink>
             ))}
             
-            {/* Conditional Navigation Items */}
             {conditionalNavItems.map((item: any) => (
               <NavLink
                 key={item.to}
@@ -95,10 +94,13 @@ const Navbar = () => {
               </NavLink>
             ))}
           </div>
-        </div>
 
-        {/* Right side: Auth buttons or user account */}
-        <div className="flex items-center space-x-4">
+          {/* Mobile Navigation */}
+          <div className="md:hidden">
+            <MobileNav />
+          </div>
+
+          {/* User Account / Auth Buttons */}
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
