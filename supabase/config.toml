@@ -13,4 +13,3 @@ url = "https://lckyfjxdnmwhmruvgpwn.supabase.co"
   verify_jwt = false
 [functions.import-jobspy-jobs]
   verify_jwt = false
-

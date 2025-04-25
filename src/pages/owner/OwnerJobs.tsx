@@ -25,7 +25,14 @@ import {
 import { toast } from 'sonner';
 import { featuredJobs } from '@/data/jobs';
 import { JobImportConfig } from '@/components/owner/JobImportConfig';
-import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@radix-ui/react-dialog';
+import { 
+  Sheet, 
+  SheetTrigger, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetDescription 
+} from '@/components/ui/sheet';
 
 // Type definitions for job data
 interface Job {
