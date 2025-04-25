@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
@@ -56,6 +57,7 @@ function App() {
                 <Route path="*" element={<NotFound />} />
 
                 {/* Company Routes */}
+                <Route path="/company" element={<Navigate to="/company/dashboard" replace />} />
                 <Route path="/company/dashboard" element={<CompanyDashboard />} />
                 <Route path="/company/jobs" element={<CompanyJobs />} />
                 <Route path="/company/jobs/create" element={<CompanyJobCreate />} />

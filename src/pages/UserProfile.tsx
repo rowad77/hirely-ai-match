@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, UserRound, BookText, Briefcase, GraduationCap } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import ProfileBasicInfo from '@/components/profile/ProfileBasicInfo';
@@ -18,6 +19,7 @@ import { Tables } from '@/integrations/supabase/types';
 
 const UserProfile = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Partial<Tables<'profiles'>> | null>(null);
@@ -87,7 +89,7 @@ const UserProfile = () => {
     return (
       <div className="flex items-center justify-center h-[80vh]">
         <Loader2 className="h-8 w-8 animate-spin text-hirely" />
-        <span className="ml-2 text-lg">Loading profile...</span>
+        <span className="ml-2 text-lg">{t('loading_profile')}</span>
       </div>
     );
   }
@@ -96,7 +98,7 @@ const UserProfile = () => {
     return (
       <Alert variant="destructive">
         <AlertDescription>
-          Profile not found. Please contact support.
+          {t('profile_not_found')}
         </AlertDescription>
       </Alert>
     );
@@ -104,37 +106,37 @@ const UserProfile = () => {
 
   return (
     <div className="container max-w-5xl py-8">
-      <h1 className="text-3xl font-bold mb-6">My Profile</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('profile')}</h1>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-5 mb-8">
           <TabsTrigger value="basic" className="flex items-center">
             <UserRound className="mr-2 h-4 w-4" />
-            <span className="hidden md:inline">Basic Info</span>
+            <span className="hidden md:inline">{t('basic_info')}</span>
           </TabsTrigger>
           <TabsTrigger value="skills" className="flex items-center">
             <BookText className="mr-2 h-4 w-4" />
-            <span className="hidden md:inline">Skills</span>
+            <span className="hidden md:inline">{t('skills')}</span>
           </TabsTrigger>
           <TabsTrigger value="experience" className="flex items-center">
             <Briefcase className="mr-2 h-4 w-4" />
-            <span className="hidden md:inline">Experience</span>
+            <span className="hidden md:inline">{t('work_experience')}</span>
           </TabsTrigger>
           <TabsTrigger value="education" className="flex items-center">
             <GraduationCap className="mr-2 h-4 w-4" />
-            <span className="hidden md:inline">Education</span>
+            <span className="hidden md:inline">{t('education')}</span>
           </TabsTrigger>
           <TabsTrigger value="resume" className="flex items-center">
             <BookText className="mr-2 h-4 w-4" />
-            <span className="hidden md:inline">Resume</span>
+            <span className="hidden md:inline">{t('resume')}</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic">
           <Card>
             <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-              <CardDescription>Update your personal details</CardDescription>
+              <CardTitle>{t('personal_information')}</CardTitle>
+              <CardDescription>{t('update_personal_details')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ProfileBasicInfo profile={profile} setProfile={setProfile} />
@@ -145,8 +147,8 @@ const UserProfile = () => {
         <TabsContent value="skills">
           <Card>
             <CardHeader>
-              <CardTitle>Skills</CardTitle>
-              <CardDescription>Manage your skills and proficiency levels</CardDescription>
+              <CardTitle>{t('skills')}</CardTitle>
+              <CardDescription>{t('manage_skills')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ProfileSkills profile={profile} setProfile={setProfile} />
@@ -157,8 +159,8 @@ const UserProfile = () => {
         <TabsContent value="experience">
           <Card>
             <CardHeader>
-              <CardTitle>Work Experience</CardTitle>
-              <CardDescription>Manage your professional experience</CardDescription>
+              <CardTitle>{t('work_experience')}</CardTitle>
+              <CardDescription>{t('manage_experience')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ProfileExperience 
@@ -172,8 +174,8 @@ const UserProfile = () => {
         <TabsContent value="education">
           <Card>
             <CardHeader>
-              <CardTitle>Education</CardTitle>
-              <CardDescription>Manage your educational background</CardDescription>
+              <CardTitle>{t('education')}</CardTitle>
+              <CardDescription>{t('manage_education')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ProfileEducation 
@@ -187,8 +189,8 @@ const UserProfile = () => {
         <TabsContent value="resume">
           <Card>
             <CardHeader>
-              <CardTitle>Resume</CardTitle>
-              <CardDescription>Upload and analyze your resume</CardDescription>
+              <CardTitle>{t('resume')}</CardTitle>
+              <CardDescription>{t('analyze_resume')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ProfileResume userId={user.id} />

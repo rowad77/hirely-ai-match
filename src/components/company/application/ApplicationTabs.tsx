@@ -5,18 +5,21 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Video } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface ApplicationTabsProps {
   application: any; // Replace with proper type
 }
 
 const ApplicationTabs = ({ application }: ApplicationTabsProps) => {
+  const { t } = useLanguage();
+  
   return (
     <div className="col-span-1 lg:col-span-2">
       <Tabs defaultValue="overview">
         <TabsList className="w-full">
           <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
-          <TabsTrigger value="resume" className="flex-1">Resume</TabsTrigger>
+          <TabsTrigger value="resume" className="flex-1">{t('resume')}</TabsTrigger>
           <TabsTrigger value="video" className="flex-1">Video Interview</TabsTrigger>
           <TabsTrigger value="insights" className="flex-1">AI Insights</TabsTrigger>
         </TabsList>
