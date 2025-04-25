@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -23,10 +22,9 @@ interface JobListItemProps {
   isLoading?: boolean;
 }
 
-// Skeleton loader component for JobListItem
 export const JobListItemSkeleton = () => (
   <Card className="animate-pulse">
-    <div className="p-4 flex flex-col gap-4">
+    <div className="p-6 flex flex-col gap-4">
       <div className="flex justify-between items-start gap-2">
         <div className="flex-1">
           <Skeleton className="h-6 w-3/4 mb-2" />
@@ -60,8 +58,8 @@ const JobListItem = ({ job, onFavorite, isFavorite, isLoading = false }: JobList
   
   return (
     <Card className="hover:shadow-md transition-shadow">
-      <div className="p-4 flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+      <div className="p-6 flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-medium truncate">{job.title}</h3>
             <div className="flex flex-wrap items-center gap-2 text-gray-500 mt-1">
@@ -97,24 +95,24 @@ const JobListItem = ({ job, onFavorite, isFavorite, isLoading = false }: JobList
           </Button>
         </div>
 
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex flex-wrap gap-3 items-center">
           <Badge variant="outline" className="whitespace-nowrap">{job.type}</Badge>
-          <Badge className="whitespace-nowrap">{job.category}</Badge>
+          <Badge className="whitespace-nowrap bg-hirely text-white">{job.category}</Badge>
           <div className="flex items-center ml-auto">
-            <DollarSign className="h-4 w-4 mr-1 text-gray-400" />
+            <DollarSign className="h-4 w-4 mr-2 text-hirely-gray-400" />
             <span className="text-hirely font-medium">{job.salary}</span>
           </div>
         </div>
 
         {job.description && (
-          <p className="text-sm text-gray-600 line-clamp-2 hidden sm:block">
+          <p className="text-sm text-hirely-gray-600 line-clamp-2 hidden sm:block">
             {job.description}
           </p>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-2 mt-2">
-          <div className="sm:hidden flex items-center text-gray-500">
-            <MapPin className="h-4 w-4 mr-1" />
+        <div className="flex flex-col sm:flex-row gap-3 mt-2">
+          <div className="sm:hidden flex items-center text-hirely-gray-500">
+            <MapPin className="h-4 w-4 mr-2" />
             <span>{job.location}</span>
           </div>
           <Link to={`/job/${job.id}`} className="w-full sm:w-auto">

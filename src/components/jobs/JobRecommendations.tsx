@@ -1,152 +1,88 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Sparkles, ThumbsUp, Clock } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Building, MapPin } from 'lucide-react';
 import { featuredJobs } from '@/data/jobs';
 
-interface JobRecommendationsProps {
-  currentJobId?: string;
-  userInterests?: string[];
-  limit?: number;
-}
+const JobRecommendations = ({ userId, currentJobId }: { userId?: string; currentJobId: string }) => {
+  const [recommendedJobs, setRecommendedJobs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const JobRecommendations = ({ 
-  currentJobId, 
-  userInterests = [], 
-  limit = 4
-}: JobRecommendationsProps) => {
-  const [viewedJobs, setViewedJobs] = useState<string[]>([]);
-  
-  // Load viewed jobs from localStorage
   useEffect(() => {
-    const savedViewedJobs = localStorage.getItem('viewedJobs');
-    if (savedViewedJobs) {
-      try {
-        setViewedJobs(JSON.parse(savedViewedJobs));
-      } catch (e) {
-        console.error('Failed to parse viewed jobs', e);
-      }
-    }
-  }, []);
-  
-  // Simulate fetching recommended jobs
-  const { data: recommendedJobs, isLoading } = useQuery({
-    queryKey: ['jobRecommendations', currentJobId, userInterests, viewedJobs],
-    queryFn: async () => {
-      // In a real app, this would fetch from an API based on user behavior
-      // For now, we'll simulate recommendations based on the dummy data
-      
-      // Filter out current job and recently viewed jobs
-      let filtered = featuredJobs.filter(job => job.id !== currentJobId);
-      
-      if (viewedJobs.length > 0) {
-        filtered = filtered.filter(job => !viewedJobs.includes(job.id));
-      }
-      
-      // Prioritize jobs matching user interests if any
-      if (userInterests && userInterests.length > 0) {
-        filtered.sort((a, b) => {
-          const aMatches = userInterests.some(interest => 
-            a.title.toLowerCase().includes(interest.toLowerCase()) || 
-            a.category.toLowerCase().includes(interest.toLowerCase())
-          );
-          const bMatches = userInterests.some(interest => 
-            b.title.toLowerCase().includes(interest.toLowerCase()) || 
-            b.category.toLowerCase().includes(interest.toLowerCase())
-          );
-          
-          if (aMatches && !bMatches) return -1;
-          if (!aMatches && bMatches) return 1;
-          return 0;
-        });
-      }
-      
-      return filtered.slice(0, limit);
-    },
-    staleTime: 1000 * 60 * 5 // 5 minutes
-  });
+    const fetchRecommendations = async () => {
+      setIsLoading(true);
+      setError(null);
 
-  // Loading state
+      try {
+        // Simulate fetching recommended jobs based on user or current job
+        // In a real app, this would be an API call
+        const recommendations = featuredJobs.filter(job => job.category === 'Engineering');
+        setRecommendedJobs(filterRecommendations(recommendations));
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch job recommendations');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRecommendations();
+  }, [userId, currentJobId]);
+
+  const filterRecommendations = (jobs: any[]) => {
+    return jobs
+      .filter(job => job.id.toString() !== currentJobId.toString()) // Fix type comparison
+      .slice(0, 3);
+  };
+
+  const handleFavorite = (jobId: string) => {  // Ensure jobId is treated as string
+    console.log(`Job ${jobId} favorited`);
+    // Implement your favorite logic here
+  };
+
   if (isLoading) {
-    return (
-      <div className="space-y-4">
-        {Array.from({ length: limit }).map((_, i) => (
-          <Card key={i}>
+    return <p>Loading job recommendations...</p>;
+  }
+
+  if (error) {
+    return <p>Error: {error}</p>;
+  }
+
+  if (recommendedJobs.length === 0) {
+    return <p>No job recommendations found.</p>;
+  }
+
+  return (
+    <div>
+      <h3 className="text-lg font-semibold mb-4">Recommended Jobs</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {recommendedJobs.map(job => (
+          <Card key={job.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
-              <Skeleton className="h-6 w-3/4 mb-2" />
-              <Skeleton className="h-4 w-1/2 mb-4" />
-              <div className="flex gap-2">
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-8 w-20" />
+              <div className="flex flex-col h-full">
+                <h4 className="text-md font-medium mb-2">{job.title}</h4>
+                <div className="text-gray-500 flex-grow">
+                  <div className="flex items-center mb-1">
+                    <Building className="h-4 w-4 mr-1" />
+                    <span>{job.company}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    <span>{job.location}</span>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <Link to={`/job/${job.id}`}>
+                    <Button className="bg-hirely hover:bg-hirely-dark w-full">View Details</Button>
+                  </Link>
+                </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
-    );
-  }
-  
-  // No recommendations available
-  if (!recommendedJobs || recommendedJobs.length === 0) {
-    return null;
-  }
-
-  return (
-    <Card className="mb-8">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center text-lg">
-          <Sparkles className="h-5 w-5 mr-2 text-yellow-500" />
-          Recommended for You
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {recommendedJobs.map((job) => (
-            <div 
-              key={job.id} 
-              className="border rounded-md p-3 hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-medium text-gray-900">{job.title}</h3>
-                  <p className="text-sm text-gray-500">{job.company}</p>
-                </div>
-                <Badge>{job.category}</Badge>
-              </div>
-              
-              <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 mr-1" />
-                  {job.postedDate}
-                </div>
-                <div>
-                  {job.location}
-                </div>
-              </div>
-              
-              <div className="flex mt-3">
-                <Link to={`/job/${job.id}`} className="flex-1">
-                  <Button variant="outline" className="w-full">View Job</Button>
-                </Link>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="ml-2"
-                  title="This matches your profile"
-                >
-                  <ThumbsUp className="h-4 w-4 text-hirely" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 };
 

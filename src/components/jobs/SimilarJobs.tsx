@@ -1,89 +1,71 @@
-
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, MapPin, Building } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Building, MapPin, DollarSign } from 'lucide-react';
 import { featuredJobs } from '@/data/jobs';
-
-interface SimilarJobsProps {
-  currentJobId: string;
-  currentJobTitle?: string;
-  currentJobCategory?: string;
-  limit?: number;
-}
 
 const SimilarJobs = ({ 
   currentJobId, 
-  currentJobTitle = '', 
-  currentJobCategory = '', 
-  limit = 5 
-}: SimilarJobsProps) => {
-  // In a real app, this would be a API call with parameters
-  // For now, let's simulate similar jobs
-  const similarJobs = featuredJobs
-    .filter(job => job.id !== currentJobId)
-    .filter(job => {
-      // Match by category or title keywords
-      const titleWords = currentJobTitle.toLowerCase().split(/\s+/);
-      const matchesTitle = titleWords.some(word => 
-        word.length > 3 && job.title.toLowerCase().includes(word)
-      );
-      
-      const matchesCategory = job.category === currentJobCategory;
-      
-      return matchesTitle || matchesCategory;
-    })
-    .slice(0, limit);
+  currentJobTitle, 
+  currentJobCategory 
+}: { 
+  currentJobId: string;
+  currentJobTitle: string;
+  currentJobCategory: string;
+}) => {
+  const [similarJobs, setSimilarJobs] = useState([]);
 
-  if (similarJobs.length === 0) {
-    return null;
+  useEffect(() => {
+    // Simulate fetching similar jobs based on category
+    // In a real app, this would be an API call
+    const fetchedJobs = featuredJobs.filter(job => job.category === currentJobCategory);
+    setSimilarJobs(filterJobs(fetchedJobs));
+  }, [currentJobCategory, currentJobId]);
+
+  const filterJobs = (jobs: any[]) => {
+    return jobs
+      .filter(job => job.id.toString() !== currentJobId.toString())
+      .slice(0, 3);
+  };
+
+  if (!similarJobs.length) {
+    return <p>No similar jobs found.</p>;
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Similar Jobs</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[400px] pr-4">
-          <div className="space-y-4">
-            {similarJobs.map(job => (
-              <div key={job.id} className="border rounded-md p-3 hover:bg-gray-50 transition-colors">
-                <h3 className="font-medium text-gray-900">{job.title}</h3>
-                <div className="flex items-center text-gray-500 text-sm mt-1">
-                  <Building className="h-3.5 w-3.5 mr-1" />
-                  <span>{job.company}</span>
-                </div>
-                
-                <div className="flex flex-wrap gap-y-1 gap-x-3 items-center mt-2 text-sm text-gray-500">
-                  <div className="flex items-center">
-                    <MapPin className="h-3.5 w-3.5 mr-1" />
-                    {job.location}
-                  </div>
-                  <div className="flex items-center">
-                    <Clock className="h-3.5 w-3.5 mr-1" />
-                    {job.postedDate}
-                  </div>
-                </div>
-                
-                <div className="flex gap-2 mt-2">
-                  <Badge variant="outline" className="text-xs">{job.type}</Badge>
-                  <Badge className="text-xs">{job.category}</Badge>
-                </div>
-                
-                <Link to={`/job/${job.id}`} className="block mt-3">
-                  <Button variant="outline" size="sm" className="w-full">
-                    View Details
-                  </Button>
-                </Link>
+    <div>
+      <h3 className="text-lg font-semibold mb-4">Similar Jobs</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {similarJobs.map((job) => (
+          <Card key={job.id} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <h4 className="text-md font-medium mb-2">{job.title}</h4>
+              <div className="flex items-center text-gray-500 mb-2">
+                <Building className="h-4 w-4 mr-1" />
+                <span>{job.company}</span>
               </div>
-            ))}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+              <div className="flex items-center text-gray-500 mb-2">
+                <MapPin className="h-4 w-4 mr-1" />
+                <span>{job.location}</span>
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline">{job.type}</Badge>
+                <Badge>{job.category}</Badge>
+              </div>
+              <div className="flex items-center">
+                <DollarSign className="h-4 w-4 mr-1 text-gray-400" />
+                <span className="text-hirely font-medium">{job.salary}</span>
+              </div>
+              <Link to={`/job/${job.id}`}>
+                <Button className="w-full mt-4 bg-hirely hover:bg-hirely-dark">View Details</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 };
 
