@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,9 +10,14 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { AlertCircle, CheckCircle, Save, Shield, Mail, Globe, Database, Key } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
+import { useRtlDirection, useRtlTextAlign } from '@/lib/rtl-utils';
 
 const OwnerSettings = () => {
   const [activeTab, setActiveTab] = useState('general');
+  const { t, language } = useLanguage();
+  const rtlDirection = useRtlDirection();
+  const rtlTextAlign = useRtlTextAlign();
   
   // Mock settings data
   const [settings, setSettings] = useState({
@@ -59,7 +63,7 @@ const OwnerSettings = () => {
 
   const handleSaveSettings = () => {
     // In a real app, this would save the settings to the database
-    toast.success('Settings saved successfully');
+    toast.success(t('success'));
   };
 
   const handleChange = (section: string, field: string, value: string | boolean | number) => {
@@ -72,80 +76,100 @@ const OwnerSettings = () => {
     });
   };
 
+  // Translation mapping for settings sections
+  const tabTranslations = {
+    general: { title: t('general'), description: t('platform_overview') },
+    security: { title: t('security'), description: t('security_settings') },
+    features: { title: t('features'), description: t('platform_features') },
+    email: { title: t('email_address'), description: t('email_settings') },
+    api: { title: 'API', description: t('api_settings') },
+  };
+
+  // These translations may not be in the current translation object but should be
+  const getTranslationWithFallback = (key: string, fallback: string) => {
+    const translation = t(key);
+    return translation === key ? fallback : translation;
+  };
+
   return (
-    <OwnerLayout title="Platform Settings">
+    <OwnerLayout title={t('platform_settings') || 'Platform Settings'}>
       <div className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-5 mb-8">
+          <TabsList className={`grid grid-cols-5 mb-8 ${rtlDirection}`}>
             <TabsTrigger value="general" className="flex items-center gap-2">
-              <Globe className="h-4 w-4" /> General
+              <Globe className="h-4 w-4" /> {tabTranslations.general.title}
             </TabsTrigger>
             <TabsTrigger value="security" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" /> Security
+              <Shield className="h-4 w-4" /> {tabTranslations.security.title}
             </TabsTrigger>
             <TabsTrigger value="features" className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" /> Features
+              <CheckCircle className="h-4 w-4" /> {tabTranslations.features.title}
             </TabsTrigger>
             <TabsTrigger value="email" className="flex items-center gap-2">
-              <Mail className="h-4 w-4" /> Email
+              <Mail className="h-4 w-4" /> {tabTranslations.email.title}
             </TabsTrigger>
             <TabsTrigger value="api" className="flex items-center gap-2">
-              <Key className="h-4 w-4" /> API
+              <Key className="h-4 w-4" /> {tabTranslations.api.title}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="general">
             <Card>
               <CardHeader>
-                <CardTitle>General Settings</CardTitle>
-                <CardDescription>Configure basic platform settings</CardDescription>
+                <CardTitle>{t('general_settings') || 'General Settings'}</CardTitle>
+                <CardDescription>{getTranslationWithFallback('configure_basic', 'Configure basic platform settings')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="siteName">Site Name</Label>
+                <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${rtlDirection}`}>
+                  <div className={`space-y-2 ${rtlTextAlign}`}>
+                    <Label htmlFor="siteName">{t('site_name') || 'Site Name'}</Label>
                     <Input 
                       id="siteName" 
                       value={settings.general.siteName}
                       onChange={(e) => handleChange('general', 'siteName', e.target.value)}
+                      className={rtlTextAlign}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="supportEmail">Support Email</Label>
+                  <div className={`space-y-2 ${rtlTextAlign}`}>
+                    <Label htmlFor="supportEmail">{t('support_email') || 'Support Email'}</Label>
                     <Input 
                       id="supportEmail" 
                       type="email"
                       value={settings.general.supportEmail}
                       onChange={(e) => handleChange('general', 'supportEmail', e.target.value)}
+                      className={rtlTextAlign}
                     />
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="siteDescription">Site Description</Label>
+                <div className={`space-y-2 ${rtlTextAlign}`}>
+                  <Label htmlFor="siteDescription">{t('site_description') || 'Site Description'}</Label>
                   <Textarea 
                     id="siteDescription"
                     rows={3}
                     value={settings.general.siteDescription}
                     onChange={(e) => handleChange('general', 'siteDescription', e.target.value)}
+                    className={rtlTextAlign}
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="contactPhone">Contact Phone</Label>
+                <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${rtlDirection}`}>
+                  <div className={`space-y-2 ${rtlTextAlign}`}>
+                    <Label htmlFor="contactPhone">{t('contact_phone') || 'Contact Phone'}</Label>
                     <Input 
                       id="contactPhone" 
                       value={settings.general.contactPhone}
                       onChange={(e) => handleChange('general', 'contactPhone', e.target.value)}
+                      className={rtlTextAlign}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="logoUrl">Logo URL</Label>
+                  <div className={`space-y-2 ${rtlTextAlign}`}>
+                    <Label htmlFor="logoUrl">{t('logo_url') || 'Logo URL'}</Label>
                     <Input 
                       id="logoUrl" 
                       value={settings.general.logoUrl}
                       onChange={(e) => handleChange('general', 'logoUrl', e.target.value)}
+                      className={rtlTextAlign}
                     />
                   </div>
                 </div>
@@ -156,14 +180,14 @@ const OwnerSettings = () => {
           <TabsContent value="security">
             <Card>
               <CardHeader>
-                <CardTitle>Security Settings</CardTitle>
-                <CardDescription>Configure platform security options</CardDescription>
+                <CardTitle>{t('security_settings') || 'Security Settings'}</CardTitle>
+                <CardDescription>{getTranslationWithFallback('configure_security', 'Configure platform security options')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Email Verification</p>
-                    <p className="text-sm text-gray-500">Require email verification for new accounts</p>
+                <div className={`flex items-center justify-between ${rtlDirection}`}>
+                  <div className={rtlTextAlign}>
+                    <p className="font-medium">{t('email_verification') || 'Email Verification'}</p>
+                    <p className="text-sm text-gray-500">{getTranslationWithFallback('require_email_verification', 'Require email verification for new accounts')}</p>
                   </div>
                   <Switch 
                     checked={settings.security.requireEmailVerification}
@@ -173,10 +197,10 @@ const OwnerSettings = () => {
                 
                 <Separator />
                 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Two-Factor Authentication</p>
-                    <p className="text-sm text-gray-500">Enable two-factor authentication for admin accounts</p>
+                <div className={`flex items-center justify-between ${rtlDirection}`}>
+                  <div className={rtlTextAlign}>
+                    <p className="font-medium">{getTranslationWithFallback('two_factor_auth', 'Two-Factor Authentication')}</p>
+                    <p className="text-sm text-gray-500">{getTranslationWithFallback('enable_two_factor', 'Enable two-factor authentication for admin accounts')}</p>
                   </div>
                   <Switch 
                     checked={settings.security.twoFactorAuth}
@@ -252,8 +276,8 @@ const OwnerSettings = () => {
           <TabsContent value="features">
             <Card>
               <CardHeader>
-                <CardTitle>Feature Settings</CardTitle>
-                <CardDescription>Enable or disable platform features</CardDescription>
+                <CardTitle>{getTranslationWithFallback('feature_settings', 'Feature Settings')}</CardTitle>
+                <CardDescription>{getTranslationWithFallback('enable_disable_features', 'Enable or disable platform features')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -349,8 +373,8 @@ const OwnerSettings = () => {
           <TabsContent value="email">
             <Card>
               <CardHeader>
-                <CardTitle>Email Settings</CardTitle>
-                <CardDescription>Configure email server settings</CardDescription>
+                <CardTitle>{t('email_settings') || 'Email Settings'}</CardTitle>
+                <CardDescription>{getTranslationWithFallback('configure_email', 'Configure email server settings')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -430,8 +454,8 @@ const OwnerSettings = () => {
           <TabsContent value="api">
             <Card>
               <CardHeader>
-                <CardTitle>API Settings</CardTitle>
-                <CardDescription>Configure API access and integrations</CardDescription>
+                <CardTitle>{getTranslationWithFallback('api_settings', 'API Settings')}</CardTitle>
+                <CardDescription>{getTranslationWithFallback('configure_api', 'Configure API access and integrations')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -484,13 +508,13 @@ const OwnerSettings = () => {
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end">
+        <div className={`flex ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
           <Button 
             onClick={handleSaveSettings} 
             className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2"
           >
             <Save className="h-4 w-4" />
-            Save Settings
+            {t('save_changes') || 'Save Settings'}
           </Button>
         </div>
       </div>

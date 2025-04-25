@@ -35,3 +35,44 @@ export const useRtlArray = <T>(array: T[]): T[] => {
   const { language } = useLanguage();
   return language === 'ar' ? [...array].reverse() : array;
 };
+
+/**
+ * Utility function to get margin classes based on language direction
+ * @param ltrMargin margin class for LTR (e.g. "mr-2")
+ * @param rtlMargin margin class for RTL (e.g. "ml-2")
+ */
+export const useRtlMargin = (ltrMargin: string, rtlMargin: string): string => {
+  const { language } = useLanguage();
+  return language === 'ar' ? rtlMargin : ltrMargin;
+};
+
+/**
+ * Utility function to get appropriate justify content based on language
+ */
+export const useRtlJustify = (ltrJustify: string, rtlJustify: string): string => {
+  const { language } = useLanguage();
+  return language === 'ar' ? rtlJustify : ltrJustify;
+};
+
+/**
+ * Utility to transform RTL specific styles for components
+ */
+export const getRtlClassNames = (baseClasses: string, language: string): string => {
+  if (language === 'ar') {
+    // Replace left/right specific classes for RTL
+    return baseClasses
+      .replace(/mr-(\d+)/g, 'ml-$1-temp')
+      .replace(/ml-(\d+)/g, 'mr-$1')
+      .replace(/ml-(\d+)-temp/g, 'ml-$1')
+      .replace(/pr-(\d+)/g, 'pl-$1-temp')
+      .replace(/pl-(\d+)/g, 'pr-$1')
+      .replace(/pl-(\d+)-temp/g, 'pl-$1')
+      .replace(/text-left/g, 'text-right')
+      .replace(/text-right/g, 'text-right')
+      .replace(/right-(\d+)/g, 'left-$1-temp')
+      .replace(/left-(\d+)/g, 'right-$1')
+      .replace(/left-(\d+)-temp/g, 'left-$1');
+  }
+  
+  return baseClasses;
+};
