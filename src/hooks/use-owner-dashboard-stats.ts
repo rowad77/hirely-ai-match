@@ -62,17 +62,20 @@ export const useOwnerDashboardStats = () => {
         });
       } else {
         // Use data from the function
+        // Need to cast the dashboardStats to any to access properties
+        const typedStats = dashboardStats as any;
+        
         setStats({
-          companies: dashboardStats?.companies_count || 0,
-          jobs: dashboardStats?.jobs_count || 0,
-          users: dashboardStats?.users_count || 0,
-          applications: dashboardStats?.applications_count || 0,
+          companies: typedStats?.companies_count || 0,
+          jobs: typedStats?.jobs_count || 0,
+          users: typedStats?.users_count || 0,
+          applications: typedStats?.applications_count || 0,
           recentUploads: 0
         });
 
         // Set recent activity from the dashboard stats
-        if (dashboardStats?.recent_activity) {
-          setRecentActivity(dashboardStats.recent_activity);
+        if (typedStats?.recent_activity) {
+          setRecentActivity(typedStats.recent_activity);
         }
       }
       
