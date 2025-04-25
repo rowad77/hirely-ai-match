@@ -21,7 +21,7 @@ import { Tables } from '@/integrations/supabase/types';
 
 interface ProfileExperienceProps {
   experiences: Tables<'work_experiences'>[];
-  setExperiences: (experiences: Tables<'work_experiences'>[]) => void;
+  setExperiences: (experiences: Tables<'work_experiences'>[] | ((prev: Tables<'work_experiences'>[]) => Tables<'work_experiences'>[])) => void;
 }
 
 type Experience = {
@@ -85,7 +85,7 @@ const ProfileExperience = ({ experiences, setExperiences }: ProfileExperiencePro
 
       if (error) throw error;
       
-      setExperiences(prev => prev.filter(exp => exp.id !== id));
+      setExperiences((prev: Tables<'work_experiences'>[]) => prev.filter(exp => exp.id !== id));
       toast.success('Experience deleted successfully');
     } catch (error) {
       console.error('Error deleting experience:', error);
@@ -113,8 +113,11 @@ const ProfileExperience = ({ experiences, setExperiences }: ProfileExperiencePro
 
         if (error) throw error;
 
-        setExperiences(prev => 
-          prev.map(exp => exp.id === currentExperience.id ? currentExperience : exp)
+        setExperiences((prev: Tables<'work_experiences'>[]) => 
+          prev.map(exp => exp.id === currentExperience.id 
+            ? { ...exp, ...currentExperience } as Tables<'work_experiences'> 
+            : exp
+          )
         );
         
         toast.success('Experience updated successfully');
@@ -134,7 +137,7 @@ const ProfileExperience = ({ experiences, setExperiences }: ProfileExperiencePro
 
         if (error) throw error;
 
-        setExperiences(prev => [...prev, data]);
+        setExperiences((prev: Tables<'work_experiences'>[]) => [...prev, data as Tables<'work_experiences'>]);
         toast.success('Experience added successfully');
       }
 
@@ -157,7 +160,7 @@ const ProfileExperience = ({ experiences, setExperiences }: ProfileExperiencePro
 
       if (error) throw error;
       
-      setExperiences(prev => prev.filter(exp => exp.id !== id));
+      setExperiences((prev: Tables<'work_experiences'>[]) => prev.filter(exp => exp.id !== id));
       toast.success('Experience deleted successfully');
     } catch (error) {
       console.error('Error deleting experience:', error);

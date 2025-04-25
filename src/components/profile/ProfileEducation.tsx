@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +14,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 interface ProfileEducationProps {
   education: Tables<'education'>[];
-  setEducation: (education: Tables<'education'>[]) => void;
+  setEducation: (education: Tables<'education'>[] | ((prev: Tables<'education'>[]) => Tables<'education'>[])) => void;
 }
 
 type Education = {
@@ -85,8 +86,11 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
 
         if (error) throw error;
 
-        setEducation(prev => 
-          prev.map(edu => edu.id === currentEducation.id ? currentEducation : edu)
+        setEducation((prev: Tables<'education'>[]) => 
+          prev.map(edu => edu.id === currentEducation.id 
+            ? { ...edu, ...currentEducation } as Tables<'education'> 
+            : edu
+          )
         );
         
         toast.success('Education updated successfully');
@@ -107,7 +111,7 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
 
         if (error) throw error;
 
-        setEducation(prev => [...prev, data]);
+        setEducation((prev: Tables<'education'>[]) => [...prev, data as Tables<'education'>]);
         toast.success('Education added successfully');
       }
 
@@ -130,7 +134,7 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
 
       if (error) throw error;
       
-      setEducation(prev => prev.filter(edu => edu.id !== id));
+      setEducation((prev: Tables<'education'>[]) => prev.filter(edu => edu.id !== id));
       toast.success('Education deleted successfully');
     } catch (error) {
       console.error('Error deleting education:', error);
