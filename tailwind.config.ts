@@ -18,6 +18,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Helvetica Neue', 'sans-serif'],
+        display: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Helvetica Neue', 'sans-serif'],
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
@@ -69,6 +73,22 @@ export default {
             800: '#1F2937',
             900: '#111827',
           }
+        },
+        apple: {
+          gray: {
+            50: '#fbfbfd',
+            100: '#f5f5f7',
+            200: '#e8e8ed',
+            300: '#d2d2d7',
+            400: '#86868b',
+            500: '#6e6e73',
+            600: '#1d1d1f',
+          },
+          blue: {
+            DEFAULT: '#0066cc',
+            dark: '#0055b3',
+            light: '#147ce5',
+          }
         }
       },
       spacing: {
@@ -79,6 +99,12 @@ export default {
         xl: '2rem',      // 32px
         '2xl': '2.5rem', // 40px
         '3xl': '3rem',   // 48px
+        '4.5': '1.125rem',
+        '7.5': '1.875rem',
+        '13': '3.25rem',
+        '15': '3.75rem',
+        '128': '32rem',
+        '144': '36rem',
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -101,11 +127,21 @@ export default {
           to: {
             height: '0'
           }
+        },
+        fadeUp: {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        fadeDown: {
+          '0%': { opacity: '0', transform: 'translateY(-10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
-        'accordion-up': 'accordion-up 0.2s ease-out'
+        'accordion-up': 'accordion-up 0.2s ease-out',
+        'fade-up': 'fadeUp 0.5s ease-out',
+        'fade-down': 'fadeDown 0.3s ease-out',
       }
     }
   },

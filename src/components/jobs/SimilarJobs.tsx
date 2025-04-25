@@ -18,8 +18,6 @@ const SimilarJobs = ({
   const [similarJobs, setSimilarJobs] = useState([]);
 
   useEffect(() => {
-    // Simulate fetching similar jobs based on category
-    // In a real app, this would be an API call
     const fetchedJobs = featuredJobs.filter(job => job.category === currentJobCategory);
     setSimilarJobs(filterJobs(fetchedJobs));
   }, [currentJobCategory, currentJobId]);
@@ -31,36 +29,38 @@ const SimilarJobs = ({
   };
 
   if (!similarJobs.length) {
-    return <p>No similar jobs found.</p>;
+    return (
+      <div className="text-center py-8 text-apple-gray-400">
+        No similar jobs found.
+      </div>
+    );
   }
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">Similar Jobs</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <h3 className="text-2xl font-display font-semibold text-apple-gray-600 mb-6">Similar Jobs</h3>
+      <div className="grid grid-cols-1 gap-4">
         {similarJobs.map((job) => (
-          <Card key={job.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <h4 className="text-md font-medium mb-2">{job.title}</h4>
-              <div className="flex items-center text-gray-500 mb-2">
-                <Building className="h-4 w-4 mr-1" />
-                <span>{job.company}</span>
+          <Card key={job.id} className="apple-card group">
+            <CardContent className="p-6">
+              <h4 className="text-xl font-medium mb-3 text-apple-gray-600">{job.title}</h4>
+              <div className="flex flex-wrap items-center gap-4 text-apple-gray-500">
+                <div className="flex items-center">
+                  <Building className="h-4 w-4 mr-2" />
+                  <span>{job.company}</span>
+                </div>
+                <div className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  <span>{job.location}</span>
+                </div>
               </div>
-              <div className="flex items-center text-gray-500 mb-2">
-                <MapPin className="h-4 w-4 mr-1" />
-                <span>{job.location}</span>
+              <div className="mt-4">
+                <Link to={`/job/${job.id}`}>
+                  <Button className="apple-button w-full group-hover:bg-apple-blue-dark">
+                    View Details
+                  </Button>
+                </Link>
               </div>
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline">{job.type}</Badge>
-                <Badge>{job.category}</Badge>
-              </div>
-              <div className="flex items-center">
-                <DollarSign className="h-4 w-4 mr-1 text-gray-400" />
-                <span className="text-hirely font-medium">{job.salary}</span>
-              </div>
-              <Link to={`/job/${job.id}`}>
-                <Button className="w-full mt-4 bg-hirely hover:bg-hirely-dark">View Details</Button>
-              </Link>
             </CardContent>
           </Card>
         ))}
