@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import { Building, Briefcase, Users, LineChart, Upload } from 'lucide-react';
 import { LoadingState } from '@/components/ui/loading-state';
