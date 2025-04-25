@@ -1,53 +1,39 @@
 
-import CompanyLayout from "@/components/layout/CompanyLayout";
-import Analytics from "@/components/company/Analytics";
+import { useState } from 'react';
+import CompanyLayout from '@/components/layout/CompanyLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
-import { useEffect, useState } from "react";
+import Analytics from '@/components/company/Analytics';
 
 const CompanyAnalytics = () => {
-  const [activeTab, setActiveTab] = useState<string>("applications");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  useEffect(() => {
-    // Simulate data loading
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, [activeTab]);
+  const [activeTab, setActiveTab] = useState('applications');
+  const [isLoading, setIsLoading] = useState(false);
 
   return (
-    <CompanyLayout title="Analytics Dashboard">
-      <div className="space-y-6">
-        <p className="text-gray-600">
-          Track your company's performance metrics, application trends, and hiring efficiency.
-        </p>
+    <CompanyLayout title="Company Analytics">
+      <Tabs 
+        defaultValue="applications" 
+        value={activeTab} 
+        onValueChange={setActiveTab} 
+        className="space-y-4"
+      >
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="applications">Applications</TabsTrigger>
+          <TabsTrigger value="hiring">Hiring Funnel</TabsTrigger>
+          <TabsTrigger value="engagement">Candidate Engagement</TabsTrigger>
+        </TabsList>
         
-        <Card className="p-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="applications">Applications</TabsTrigger>
-              <TabsTrigger value="hiring">Hiring Funnel</TabsTrigger>
-              <TabsTrigger value="engagement">Candidate Engagement</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="applications" className="space-y-4">
-              <Analytics isLoading={isLoading} />
-            </TabsContent>
-            
-            <TabsContent value="hiring" className="space-y-4">
-              <Analytics isLoading={isLoading} dataType="hiring" />
-            </TabsContent>
-            
-            <TabsContent value="engagement" className="space-y-4">
-              <Analytics isLoading={isLoading} dataType="engagement" />
-            </TabsContent>
-          </Tabs>
-        </Card>
-      </div>
+        <TabsContent value="applications">
+          <Analytics isLoading={isLoading} />
+        </TabsContent>
+        
+        <TabsContent value="hiring">
+          <Analytics isLoading={isLoading} dataType="hiring" />
+        </TabsContent>
+        
+        <TabsContent value="engagement">
+          <Analytics isLoading={isLoading} dataType="engagement" />
+        </TabsContent>
+      </Tabs>
     </CompanyLayout>
   );
 };

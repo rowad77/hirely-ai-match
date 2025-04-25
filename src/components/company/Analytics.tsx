@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon, Download, TrendingUp, TrendingDown, Info } from "lucide-react";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
-interface AnalyticsProps {
+export interface AnalyticsProps {
   isLoading?: boolean;
   dataType?: 'applications' | 'hiring' | 'engagement';
 }

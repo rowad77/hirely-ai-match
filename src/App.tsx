@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/context/ThemeContext';
@@ -65,6 +66,7 @@ function App() {
               <Route path="/company/settings" element={<CompanySettings />} />
 
               {/* Owner Routes */}
+              <Route path="/owner" element={<Navigate to="/owner/dashboard" replace />} />
               <Route path="/owner/dashboard" element={<OwnerDashboard />} />
               <Route path="/owner/jobs" element={<OwnerJobs />} />
               <Route path="/owner/analytics" element={<OwnerAnalytics />} />
