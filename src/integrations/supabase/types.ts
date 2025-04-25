@@ -18,6 +18,9 @@ export type Database = {
           job_id: string
           resume_url: string | null
           status: string
+          status_history: Json[] | null
+          status_updated_at: string | null
+          status_updated_by: string | null
           updated_at: string
         }
         Insert: {
@@ -28,6 +31,9 @@ export type Database = {
           job_id: string
           resume_url?: string | null
           status?: string
+          status_history?: Json[] | null
+          status_updated_at?: string | null
+          status_updated_by?: string | null
           updated_at?: string
         }
         Update: {
@@ -38,6 +44,9 @@ export type Database = {
           job_id?: string
           resume_url?: string | null
           status?: string
+          status_history?: Json[] | null
+          status_updated_at?: string | null
+          status_updated_by?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -449,6 +458,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profile_skills: {
         Row: {

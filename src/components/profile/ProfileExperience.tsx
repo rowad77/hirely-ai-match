@@ -86,7 +86,7 @@ const ProfileExperience = ({ experiences, setExperiences }: ProfileExperiencePro
       if (error) throw error;
       
       setExperiences(prev => prev.filter(exp => exp.id !== id));
-      toast.success('Experience deleted');
+      toast.success('Experience deleted successfully');
     } catch (error) {
       console.error('Error deleting experience:', error);
       toast.error('Failed to delete experience');
@@ -95,17 +95,10 @@ const ProfileExperience = ({ experiences, setExperiences }: ProfileExperiencePro
     }
   };
 
-  const handleSubmit = async () => {
-    if (!currentExperience.company_name || !currentExperience.job_title || !currentExperience.start_date) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-    
-    setIsLoading(true);
-    
+  const handleSave = async () => {
     try {
+      setIsLoading(true);
       if (isEditing && currentExperience.id) {
-        // Update existing experience
         const { error } = await supabase
           .from('work_experiences')
           .update({
@@ -117,16 +110,15 @@ const ProfileExperience = ({ experiences, setExperiences }: ProfileExperiencePro
             description: currentExperience.description
           })
           .eq('id', currentExperience.id);
-          
+
         if (error) throw error;
-        
+
         setExperiences(prev => 
-          prev.map(exp => (exp.id === currentExperience.id ? currentExperience as Tables<'work_experiences'> : exp))
+          prev.map(exp => exp.id === currentExperience.id ? currentExperience : exp)
         );
         
         toast.success('Experience updated successfully');
       } else {
-        // Create new experience
         const { data, error } = await supabase
           .from('work_experiences')
           .insert({
@@ -134,22 +126,42 @@ const ProfileExperience = ({ experiences, setExperiences }: ProfileExperiencePro
             job_title: currentExperience.job_title,
             start_date: currentExperience.start_date,
             end_date: currentExperience.end_date,
-            is_current: currentExperience.is_current || false,
+            is_current: currentExperience.is_current,
             description: currentExperience.description
           })
           .select()
           .single();
-          
+
         if (error) throw error;
-        
-        setExperiences(prev => [...prev, data as Tables<'work_experiences'>]);
+
+        setExperiences(prev => [...prev, data]);
         toast.success('Experience added successfully');
       }
-      
+
       setIsDialogOpen(false);
     } catch (error) {
       console.error('Error saving experience:', error);
       toast.error('Failed to save experience');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase
+        .from('work_experiences')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setExperiences(prev => prev.filter(exp => exp.id !== id));
+      toast.success('Experience deleted successfully');
+    } catch (error) {
+      console.error('Error deleting experience:', error);
+      toast.error('Failed to delete experience');
     } finally {
       setIsLoading(false);
     }
@@ -310,7 +322,7 @@ const ProfileExperience = ({ experiences, setExperiences }: ProfileExperiencePro
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={isLoading}>
+            <Button onClick={handleSave} disabled={isLoading}>
               {isLoading ? 'Saving...' : 'Save'}
             </Button>
           </DialogFooter>

@@ -1,24 +1,15 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 interface ProfileEducationProps {
   education: Tables<'education'>[];
@@ -30,7 +21,7 @@ type Education = {
   institution: string;
   degree: string;
   field_of_study?: string;
-  start_date: string;
+  start_date?: string;
   end_date?: string;
   is_current?: boolean;
   description?: string;
@@ -42,7 +33,6 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
   const [currentEducation, setCurrentEducation] = useState<Education>({
     institution: '',
     degree: '',
-    start_date: '',
   });
   const [isEditing, setIsEditing] = useState(false);
 
@@ -66,7 +56,6 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
     setCurrentEducation({
       institution: '',
       degree: '',
-      start_date: '',
     });
     setIsDialogOpen(true);
   };
@@ -77,37 +66,10 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
     setIsDialogOpen(true);
   };
 
-  const handleDeleteEducation = async (id: string) => {
+  const handleSave = async () => {
     try {
       setIsLoading(true);
-      const { error } = await supabase
-        .from('education')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      
-      setEducation(prev => prev.filter(edu => edu.id !== id));
-      toast.success('Education entry deleted');
-    } catch (error) {
-      console.error('Error deleting education entry:', error);
-      toast.error('Failed to delete education entry');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!currentEducation.institution || !currentEducation.degree || !currentEducation.start_date) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
       if (isEditing && currentEducation.id) {
-        // Update existing education entry
         const { error } = await supabase
           .from('education')
           .update({
@@ -120,16 +82,15 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
             description: currentEducation.description
           })
           .eq('id', currentEducation.id);
-          
+
         if (error) throw error;
-        
+
         setEducation(prev => 
-          prev.map(edu => (edu.id === currentEducation.id ? currentEducation as Tables<'education'> : edu))
+          prev.map(edu => edu.id === currentEducation.id ? currentEducation : edu)
         );
         
         toast.success('Education updated successfully');
       } else {
-        // Create new education entry
         const { data, error } = await supabase
           .from('education')
           .insert({
@@ -138,22 +99,42 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
             field_of_study: currentEducation.field_of_study,
             start_date: currentEducation.start_date,
             end_date: currentEducation.end_date,
-            is_current: currentEducation.is_current || false,
+            is_current: currentEducation.is_current,
             description: currentEducation.description
           })
           .select()
           .single();
-          
+
         if (error) throw error;
-        
-        setEducation(prev => [...prev, data as Tables<'education'>]);
+
+        setEducation(prev => [...prev, data]);
         toast.success('Education added successfully');
       }
-      
+
       setIsDialogOpen(false);
     } catch (error) {
       console.error('Error saving education:', error);
       toast.error('Failed to save education');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase
+        .from('education')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setEducation(prev => prev.filter(edu => edu.id !== id));
+      toast.success('Education deleted successfully');
+    } catch (error) {
+      console.error('Error deleting education:', error);
+      toast.error('Failed to delete education');
     } finally {
       setIsLoading(false);
     }
@@ -180,10 +161,8 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
             <CardHeader className="p-4 pb-2">
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle>{edu.institution}</CardTitle>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    {edu.degree} {edu.field_of_study && `in ${edu.field_of_study}`}
-                  </div>
+                  <CardTitle>{edu.degree}</CardTitle>
+                  <div className="text-sm text-muted-foreground mt-1">{edu.institution}</div>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -198,7 +177,7 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => edu.id && handleDeleteEducation(edu.id)}
+                    onClick={() => edu.id && handleDelete(edu.id)}
                     className="h-8 w-8 p-0 text-destructive hover:text-destructive/90"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -209,21 +188,16 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
             </CardHeader>
 
             <CardContent className="p-4 pt-0">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline">
-                  {format(new Date(edu.start_date), 'MMM yyyy')} - 
-                  {edu.is_current 
-                    ? ' Present'
-                    : edu.end_date
-                      ? ` ${format(new Date(edu.end_date), 'MMM yyyy')}`
-                      : ''
-                  }
-                </Badge>
-                {edu.is_current && <Badge>Current</Badge>}
-              </div>
-              
+              {edu.field_of_study && (
+                <p className="text-sm text-muted-foreground mt-2">Field of Study: {edu.field_of_study}</p>
+              )}
+              {edu.start_date && edu.end_date ? (
+                <p className="text-sm text-muted-foreground mt-2">
+                  {edu.start_date} - {edu.end_date}
+                </p>
+              ) : null}
               {edu.description && (
-                <p className="text-sm text-muted-foreground">{edu.description}</p>
+                <p className="text-sm text-muted-foreground mt-2">{edu.description}</p>
               )}
             </CardContent>
           </Card>
@@ -239,18 +213,18 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <Label htmlFor="institution">Institution*</Label>
+                <Label htmlFor="institution">Institution</Label>
                 <Input
                   id="institution"
                   name="institution"
                   value={currentEducation.institution}
                   onChange={handleInputChange}
-                  placeholder="University or School Name"
+                  placeholder="University, College, etc."
                 />
               </div>
               
-              <div className="col-span-1">
-                <Label htmlFor="degree">Degree*</Label>
+              <div className="col-span-2">
+                <Label htmlFor="degree">Degree</Label>
                 <Input
                   id="degree"
                   name="degree"
@@ -260,24 +234,24 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
                 />
               </div>
               
-              <div className="col-span-1">
+              <div className="col-span-2">
                 <Label htmlFor="field_of_study">Field of Study</Label>
                 <Input
                   id="field_of_study"
                   name="field_of_study"
                   value={currentEducation.field_of_study || ''}
                   onChange={handleInputChange}
-                  placeholder="Computer Science, Business, etc."
+                  placeholder="Computer Science, Engineering, etc."
                 />
               </div>
               
               <div className="col-span-1">
-                <Label htmlFor="start_date">Start Date*</Label>
+                <Label htmlFor="start_date">Start Date</Label>
                 <Input
                   id="start_date"
                   name="start_date"
                   type="date"
-                  value={currentEducation.start_date}
+                  value={currentEducation.start_date || ''}
                   onChange={handleInputChange}
                 />
               </div>
@@ -292,7 +266,7 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
                       onCheckedChange={handleSwitchChange}
                     />
                     <Label htmlFor="is_current" className="text-sm">
-                      Currently studying here
+                      I currently study here
                     </Label>
                   </div>
                 </div>
@@ -313,8 +287,8 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
                   name="description"
                   value={currentEducation.description || ''}
                   onChange={handleInputChange}
-                  placeholder="Tell us about your studies, achievements, etc."
-                  rows={3}
+                  placeholder="Describe your achievements and courses"
+                  rows={4}
                 />
               </div>
             </div>
@@ -324,7 +298,7 @@ const ProfileEducation = ({ education, setEducation }: ProfileEducationProps) =>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={isLoading}>
+            <Button onClick={handleSave} disabled={isLoading}>
               {isLoading ? 'Saving...' : 'Save'}
             </Button>
           </DialogFooter>
