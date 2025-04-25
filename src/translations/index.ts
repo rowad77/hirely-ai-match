@@ -1,4 +1,6 @@
 
+import { useLanguage } from '@/context/LanguageContext';
+
 export const translations = {
   en: {
     interviews: {
