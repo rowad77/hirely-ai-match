@@ -6,15 +6,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import InterviewSchedule from '@/components/company/InterviewSchedule';
 import CandidatePipeline from '@/components/company/CandidatePipeline';
 import { useLanguage } from '@/context/LanguageContext';
+import { useRtlDirection } from '@/lib/rtl-utils';
 
 const CompanyInterviews = () => {
   const [activeTab, setActiveTab] = useState('schedule');
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const rtlDirection = useRtlDirection();
 
   return (
     <CompanyLayout title={t('interview_management')}>
       <div className="space-y-6">
-        <div className="flex flex-wrap gap-4 justify-between items-center">
+        <div className={`flex flex-wrap gap-4 justify-between items-center ${rtlDirection}`}>
           <p className="text-gray-600">{t('manage_interviews')}</p>
           <Button className="bg-hirely hover:bg-hirely-dark">
             {t('schedule_new')}

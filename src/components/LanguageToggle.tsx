@@ -4,7 +4,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { Languages } from "lucide-react";
 
 export const LanguageToggle = () => {
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
 
   return (
     <Button
