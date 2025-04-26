@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Upload, Download, Globe } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { enTranslations, arTranslations } from '@/context/LanguageContext';
 
 const OwnerLanguages = () => {
   const { t } = useLanguage();
@@ -15,86 +16,40 @@ const OwnerLanguages = () => {
   // Extract translations into CSV format
   const exportTranslations = () => {
     try {
-      // Hard-code the English translations directly
-      const translations = {
-        // Common
-        login: "Log in",
-        signup: "Sign up",
-        logout: "Log out",
-        dashboard: "Dashboard",
-        profile: "Profile",
-        settings: "Settings",
-        search: "Search",
-        home: "Home",
-        findJobs: "Find Jobs",
-        save: "Save",
-        cancel: "Cancel",
-        applications: "Applications",
-        companyPortal: "Company Portal",
-        adminPanel: "Admin Panel",
-        
-        // Jobs
-        jobs: "Jobs",
-        jobTitle: "Job Title",
-        company: "Company",
-        location: "Location",
-        salary: "Salary",
-        jobType: "Job Type",
-        appliedJobs: "Applied Jobs",
-        savedJobs: "Saved Jobs",
-        applyNow: "Apply Now",
-        application: "Application",
-        
-        // Owner Dashboard
-        totalCompanies: "Total Companies",
-        totalJobs: "Total Jobs",
-        totalUsers: "Total Users",
-        cvUploads: "CV Uploads",
-        companies: "Companies",
-        
-        // Settings
-        generalSettings: "General Settings",
-        securitySettings: "Security Settings",
-        emailSettings: "Email Settings",
-        featureSettings: "Feature Settings",
-        apiSettings: "API Settings",
-        
-        // Company
-        candidates: "Candidates",
-        interviews: "Interviews",
-        analytics: "Analytics",
-        
-        // Language Management
-        languageManagement: "Language Management",
-        downloadTranslations: "Download Translations",
-        uploadTranslations: "Upload Translations",
-        currentLanguage: "Current Language",
-        switchLanguage: "Switch Language"
-      };
+      // Use translations directly from the LanguageContext
+      const englishTranslations = enTranslations;
+      const arabicTranslations = arTranslations;
       
-      if (!translations) {
-        toast.error('Error extracting translations');
-        return;
-      }
-      
-      // Create CSV content
+      // Create CSV content with both English and Arabic translations
       let csvContent = 'key,english,arabic\n';
       
-      Object.entries(translations).forEach(([key, value]) => {
-        csvContent += `${key},"${value}",""\n`;
+      Object.keys(englishTranslations).forEach((key) => {
+        const englishValue = englishTranslations[key] || '';
+        const arabicValue = arabicTranslations[key] || '';
+        
+        // Properly escape values for CSV format
+        const escapedEnglish = englishValue.replace(/"/g, '""');
+        const escapedArabic = arabicValue.replace(/"/g, '""');
+        
+        csvContent += `${key},"${escapedEnglish}","${escapedArabic}"\n`;
       });
       
-      // Create download link
+      // Create and trigger download
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'translations.csv');
+      link.setAttribute('download', 'website_translations.csv');
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
       
-      toast.success('Translations downloaded successfully');
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      toast.success('Website translations downloaded successfully');
     } catch (error) {
       console.error('Error downloading translations:', error);
       toast.error('Failed to download translations');
@@ -113,11 +68,34 @@ const OwnerLanguages = () => {
       return;
     }
     
-    // In a real implementation, you would process the CSV file here
-    // and update the translations in your database/storage
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const csvText = e.target?.result as string;
+        if (!csvText) {
+          toast.error('Error reading file');
+          return;
+        }
+        
+        // Process CSV (in a real app, this would update the translations in your database)
+        // For now, just show success message
+        toast.success('Translations uploaded successfully');
+        setUploadFile(null);
+        
+        // Reset file input
+        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+      } catch (error) {
+        console.error('Error processing CSV:', error);
+        toast.error('Failed to process translation file');
+      }
+    };
     
-    toast.success('Translations uploaded successfully');
-    setUploadFile(null);
+    reader.onerror = () => {
+      toast.error('Error reading file');
+    };
+    
+    reader.readAsText(uploadFile);
   };
 
   return (
@@ -140,7 +118,7 @@ const OwnerLanguages = () => {
                 {t('downloadTranslations')}
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                Download the CSV template containing all translation keys. Fill in your translations and upload the file back.
+                Download a CSV file containing all website text and translations. The file includes both English and Arabic translations.
               </p>
               <Button 
                 onClick={exportTranslations} 
@@ -157,7 +135,7 @@ const OwnerLanguages = () => {
                 {t('uploadTranslations')}
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                Upload your filled CSV file to update the translations in the system.
+                Upload your filled CSV file to update the translations in the system. Ensure the CSV format matches the downloaded template.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-grow">

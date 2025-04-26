@@ -69,7 +69,7 @@ interface LanguageContextType {
 }
 
 // English translations
-const enTranslations: Translations = {
+export const enTranslations: Translations = {
   // Common
   login: "Log in",
   signup: "Sign up",
@@ -126,7 +126,7 @@ const enTranslations: Translations = {
 };
 
 // Arabic translations
-const arTranslations: Translations = {
+export const arTranslations: Translations = {
   // Common
   login: "تسجيل الدخول",
   signup: "إنشاء حساب",
