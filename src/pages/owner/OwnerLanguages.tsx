@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import OwnerLayout from '@/components/layout/OwnerLayout';
@@ -34,6 +33,238 @@ const OwnerLanguages = () => {
           getStarted: {
             en: "Get started today",
             ar: "ابدأ اليوم"
+          },
+          readyToAccelerate: {
+            en: "Ready to accelerate your job search?",
+            ar: "هل أنت مستعد لتسريع عملية البحث عن وظيفة؟"
+          },
+          joinThousands: {
+            en: "Join thousands of professionals who found their dream jobs through Hirely",
+            ar: "انضم إلى آلاف المهنيين الذين وجدوا وظائف أحلامهم من خلال هايرلي"
+          },
+          createProfile: {
+            en: "Create Your Profile",
+            ar: "إنشاء ملفك الشخصي"
+          },
+          browseJobs: {
+            en: "Browse Jobs",
+            ar: "تصفح الوظائف"
+          },
+          uploadCv: {
+            en: "Upload Your CV",
+            ar: "قم بتحميل سيرتك الذاتية"
+          },
+          getMatched: {
+            en: "Get matched with relevant jobs instantly",
+            ar: "احصل على تطابق مع وظائف ذات صلة على الفور"
+          },
+          clickToUpload: {
+            en: "Click to upload or drag and drop",
+            ar: "انقر للتحميل أو اسحب وأفلت"
+          },
+          fileTypes: {
+            en: "PDF, DOC, DOCX, or TXT (max 5MB)",
+            ar: "PDF، DOC، DOCX، أو TXT (الحد الأقصى 5 ميجابايت)"
+          },
+          uploadCvFindMatches: {
+            en: "Upload CV & Find Matches",
+            ar: "قم بتحميل السيرة الذاتية والعثور على تطابقات"
+          }
+        },
+        
+        // Statistics Section
+        statsSection: {
+          activeJobs: {
+            en: "10,000+",
+            ar: "10,000+"
+          },
+          activeJobsLabel: {
+            en: "Active Jobs",
+            ar: "وظائف نشطة"
+          },
+          placementRate: {
+            en: "85%",
+            ar: "85%"
+          },
+          placementRateLabel: {
+            en: "Placement Rate",
+            ar: "معدل التوظيف"
+          },
+          companies: {
+            en: "2,500+",
+            ar: "2,500+"
+          },
+          companiesLabel: {
+            en: "Companies",
+            ar: "شركات"
+          },
+          clientSatisfaction: {
+            en: "95%",
+            ar: "95%"
+          },
+          clientSatisfactionLabel: {
+            en: "Client Satisfaction",
+            ar: "رضا العملاء"
+          }
+        },
+
+        // How It Works Section
+        howItWorksSection: {
+          sectionTitle: {
+            en: "How Hirely Works",
+            ar: "كيف يعمل هايرلي"
+          },
+          sectionSubtitle: {
+            en: "Our AI-powered platform makes finding your next job simple and effective",
+            ar: "منصتنا المدعومة بالذكاء الاصطناعي تجعل العثور على وظيفتك التالية بسيطة وفعالة"
+          },
+          simpleProcess: {
+            en: "Simple Process",
+            ar: "عملية بسيطة"
+          },
+          step1Title: {
+            en: "Upload Your CV",
+            ar: "قم بتحميل سيرتك الذاتية"
+          }, 
+          step1Description: {
+            en: "Upload your resume or complete your profile for our AI to analyze your qualifications and skills.",
+            ar: "قم بتحميل سيرتك الذاتية أو أكمل ملفك الشخصي ليقوم الذكاء الاصطناعي لدينا بتحليل مؤهلاتك ومهاراتك."
+          },
+          step2Title: {
+            en: "AI Matching",
+            ar: "مطابقة الذكاء الاصطناعي"
+          },
+          step2Description: {
+            en: "Our algorithm intelligently matches you with positions that fit your experience, skills, and career goals.",
+            ar: "خوارزميتنا تطابقك بذكاء مع المناصب التي تناسب خبرتك ومهاراتك وأهدافك المهنية."
+          },
+          step3Title: {
+            en: "Apply Instantly",
+            ar: "تقدم بطلب على الفور"
+          },
+          step3Description: {
+            en: "Apply to matched positions with a single click, your profile is automatically submitted to employers.",
+            ar: "تقدم للوظائف المتطابقة بنقرة واحدة، ويتم إرسال ملفك الشخصي تلقائياً إلى أصحاب العمل."
+          }
+        },
+        
+        // Why Choose Hirely Section (Added the missing marketing content)
+        whyChooseSection: {
+          sectionTitle: {
+            en: "Why Choose Hirely",
+            ar: "لماذا تختار هايرلي"
+          },
+          sectionSubtitle: {
+            en: "Supercharge Your Job Search",
+            ar: "تعزيز بحثك عن وظيفة"
+          },
+          sectionDescription: {
+            en: "Our platform offers unique advantages that help you find your dream job faster and with less hassle.",
+            ar: "توفر منصتنا مزايا فريدة تساعدك في العثور على وظيفة أحلامك بشكل أسرع ومع متاعب أقل."
+          },
+          feature1Title: {
+            en: "AI-Powered Matching",
+            ar: "مطابقة مدعومة بالذكاء الاصطناعي"
+          },
+          feature1Description: {
+            en: "Get job recommendations tailored specifically to your profile",
+            ar: "احصل على توصيات وظيفية مخصصة خصيصاً لملفك الشخصي"
+          },
+          feature2Title: {
+            en: "Verified Employers",
+            ar: "أصحاب عمل موثقين"
+          },
+          feature2Description: {
+            en: "All companies on our platform are verified to ensure legitimate opportunities",
+            ar: "جميع الشركات على منصتنا تم التحقق منها لضمان فرص مشروعة"
+          },
+          feature3Title: {
+            en: "Higher Success Rate",
+            ar: "معدل نجاح أعلى"
+          },
+          feature3Description: {
+            en: "85% of our candidates receive interview offers within 14 days",
+            ar: "85% من مرشحينا يتلقون عروض مقابلات في غضون 14 يومًا"
+          },
+          feature4Title: {
+            en: "Career Growth Tools",
+            ar: "أدوات تطوير المهنة"
+          },
+          feature4Description: {
+            en: "Get insights on skill development to advance your career trajectory",
+            ar: "احصل على رؤى حول تطوير المهارات لتعزيز مسارك المهني"
+          },
+          benefit1Title: {
+            en: "Smart Matching",
+            ar: "مطابقة ذكية"
+          },
+          benefit1Description: {
+            en: "Our AI analyzes thousands of data points to find your perfect job match.",
+            ar: "يحلل الذكاء الاصطناعي لدينا آلاف البيانات للعثور على وظيفتك المثالية."
+          },
+          benefit2Title: {
+            en: "Privacy Protected",
+            ar: "حماية الخصوصية"
+          },
+          benefit2Description: {
+            en: "Your data is secure, and you control who sees your profile information.",
+            ar: "بياناتك آمنة، وأنت تتحكم في من يرى معلومات ملفك الشخصي."
+          },
+          benefit3Title: {
+            en: "Skill Assessment",
+            ar: "تقييم المهارات"
+          },
+          benefit3Description: {
+            en: "Get personalized recommendations to enhance your skillset.",
+            ar: "احصل على توصيات مخصصة لتعزيز مهاراتك."
+          },
+          benefit4Title: {
+            en: "Career Insights",
+            ar: "رؤى مهنية"
+          },
+          benefit4Description: {
+            en: "Access market trends and salary benchmarks in your industry.",
+            ar: "الوصول إلى اتجاهات السوق ومعايير الرواتب في صناعتك."
+          }
+        },
+        
+        // Featured Jobs Section
+        featuredJobsSection: {
+          sectionTitle: {
+            en: "Featured Jobs",
+            ar: "الوظائف المميزة"
+          },
+          sectionSubtitle: {
+            en: "Latest Opportunities",
+            ar: "أحدث الفرص"
+          },
+          sectionDescription: {
+            en: "Discover your next career move with top companies looking for talent like yours",
+            ar: "اكتشف خطوتك المهنية التالية مع أفضل الشركات التي تبحث عن مواهب مثلك"
+          },
+          allCategories: {
+            en: "All Categories",
+            ar: "جميع الفئات"
+          },
+          technology: {
+            en: "Technology",
+            ar: "التكنولوجيا"
+          },
+          marketing: {
+            en: "Marketing",
+            ar: "التسويق"
+          },
+          design: {
+            en: "Design",
+            ar: "التصميم"
+          },
+          viewDetails: {
+            en: "View Details",
+            ar: "عرض التفاصيل"
+          },
+          viewAllJobs: {
+            en: "View All Jobs",
+            ar: "عرض جميع الوظائف"
           }
         },
         
