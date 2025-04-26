@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import OwnerLayout from '@/components/layout/OwnerLayout';
@@ -7,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Upload, Download, Globe } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { enTranslations, arTranslations } from '@/context/LanguageContext';
 
 const OwnerLanguages = () => {
   const { t } = useLanguage();
@@ -16,22 +14,62 @@ const OwnerLanguages = () => {
   // Extract translations into CSV format
   const exportTranslations = () => {
     try {
-      // Use translations directly from the LanguageContext
-      const englishTranslations = enTranslations;
-      const arabicTranslations = arTranslations;
+      // Website text content including UI elements and hardcoded text
+      const websiteContent = {
+        // Homepage
+        findDreamCareer: {
+          en: "Find your dream career in minutes",
+          ar: "اعثر على وظيفة أحلامك في دقائق"
+        },
+        // Common UI elements
+        searchJobs: {
+          en: "Search Jobs",
+          ar: "البحث عن وظائف"
+        },
+        browseCategories: {
+          en: "Browse Categories",
+          ar: "تصفح الفئات"
+        },
+        recentJobListings: {
+          en: "Recent Job Listings",
+          ar: "أحدث الوظائف"
+        },
+        // Job related
+        jobDescription: {
+          en: "Job Description",
+          ar: "وصف الوظيفة"
+        },
+        requirements: {
+          en: "Requirements",
+          ar: "المتطلبات"
+        },
+        responsibilities: {
+          en: "Responsibilities",
+          ar: "المسؤوليات"
+        },
+        // Application process
+        applyNow: {
+          en: "Apply Now",
+          ar: "تقدم الآن"
+        },
+        uploadResume: {
+          en: "Upload Resume",
+          ar: "تحميل السيرة الذاتية"
+        },
+        // Create CSV content
+        ...t // Include all translations from the language context
+      };
       
-      // Create CSV content with both English and Arabic translations
+      // Create CSV header
       let csvContent = 'key,english,arabic\n';
       
-      Object.keys(englishTranslations).forEach((key) => {
-        const englishValue = englishTranslations[key] || '';
-        const arabicValue = arabicTranslations[key] || '';
-        
-        // Properly escape values for CSV format
-        const escapedEnglish = englishValue.replace(/"/g, '""');
-        const escapedArabic = arabicValue.replace(/"/g, '""');
-        
-        csvContent += `${key},"${escapedEnglish}","${escapedArabic}"\n`;
+      // Add all website content to CSV
+      Object.entries(websiteContent).forEach(([key, value]) => {
+        if (typeof value === 'object') {
+          const englishValue = value.en?.toString().replace(/"/g, '""') || '';
+          const arabicValue = value.ar?.toString().replace(/"/g, '""') || '';
+          csvContent += `${key},"${englishValue}","${arabicValue}"\n`;
+        }
       });
       
       // Create and trigger download
