@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Language = 'en' | 'ar';
@@ -59,6 +58,14 @@ interface Translations {
   uploadTranslations: string;
   currentLanguage: string;
   switchLanguage: string;
+}
+
+// Define the type for the language context
+interface LanguageContextType {
+  language: Language;
+  direction: Direction;
+  setLanguage: (lang: Language) => void;
+  t: (key: keyof Translations) => string;
 }
 
 // English translations
@@ -187,7 +194,6 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [direction, setDirection] = useState<Direction>('ltr');
 
   useEffect(() => {
-    // Get saved language from localStorage or use browser language
     const savedLanguage = localStorage.getItem('language') as Language;
     if (savedLanguage) {
       setLanguage(savedLanguage);
@@ -198,14 +204,11 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, []);
 
   useEffect(() => {
-    // Set direction based on language
     const dir = language === 'ar' ? 'rtl' : 'ltr';
     setDirection(dir);
     
-    // Save language to localStorage
     localStorage.setItem('language', language);
     
-    // Set HTML dir and lang attributes
     document.documentElement.dir = dir;
     document.documentElement.lang = language;
   }, [language]);
