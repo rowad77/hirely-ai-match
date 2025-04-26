@@ -1,9 +1,10 @@
 
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Briefcase, Settings, LogOut, Home, BarChart3, Shield, Database, LayoutDashboard } from 'lucide-react';
+import { Users, Briefcase, Settings, LogOut, Home, BarChart3, Shield, Database, LayoutDashboard, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import Navbar from './Navbar';
 
 type OwnerLayoutProps = {
@@ -14,6 +15,7 @@ type OwnerLayoutProps = {
 const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
   const location = useLocation();
   const { logout } = useAuth();
+  const { t, direction } = useLanguage();
   
   const isActiveRoute = (path: string) => {
     // For exact matches
@@ -35,17 +37,20 @@ const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/owner', icon: LayoutDashboard },
-    { name: 'Companies', path: '/owner/companies', icon: Briefcase },
-    { name: 'Users', path: '/owner/users', icon: Users },
-    { name: 'Jobs', path: '/owner/jobs', icon: Database },
-    { name: 'Analytics', path: '/owner/analytics', icon: BarChart3 },
-    { name: 'Settings', path: '/owner/settings', icon: Settings },
+    { name: t('dashboard'), path: '/owner', icon: LayoutDashboard },
+    { name: t('companies'), path: '/owner/companies', icon: Briefcase },
+    { name: t('totalUsers'), path: '/owner/users', icon: Users },
+    { name: t('jobs'), path: '/owner/jobs', icon: Database },
+    { name: t('analytics'), path: '/owner/analytics', icon: BarChart3 },
+    { name: t('languageManagement'), path: '/owner/languages', icon: Globe },
+    { name: t('settings'), path: '/owner/settings', icon: Settings },
   ];
 
   const handleLogout = () => {
     logout();
   };
+
+  const marginClass = direction === 'rtl' ? 'ml-3' : 'mr-3';
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -55,8 +60,8 @@ const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
         <div className="hidden md:flex md:w-64 md:flex-col">
           <div className="flex flex-col flex-grow border-r border-gray-200 bg-white pt-5 pb-4 overflow-y-auto">
             <div className="flex items-center flex-shrink-0 px-4 mb-5">
-              <Shield className="h-6 w-6 text-purple-600 mr-2" />
-              <span className="text-xl font-medium text-gray-900">Owner Portal</span>
+              <Shield className={`h-6 w-6 text-purple-600 ${direction === 'rtl' ? 'ml-2' : 'mr-2'}`} />
+              <span className="text-xl font-medium text-gray-900">{t('adminPanel')}</span>
             </div>
             <div className="mt-5 flex-grow flex flex-col">
               <nav className="flex-1 px-2 space-y-1">
@@ -77,7 +82,7 @@ const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
                       <Icon
                         className={cn(
                           active ? 'text-white' : 'text-gray-400 group-hover:text-gray-500',
-                          'mr-3 flex-shrink-0 h-5 w-5'
+                          marginClass + ' flex-shrink-0 h-5 w-5'
                         )}
                       />
                       {item.name}
@@ -89,8 +94,8 @@ const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
                     className="w-full group flex items-center px-2 py-2 text-sm font-medium rounded-md text-red-600 hover:bg-red-50"
                     onClick={handleLogout}
                   >
-                    <LogOut className="mr-3 flex-shrink-0 h-5 w-5 text-red-400" />
-                    Sign Out
+                    <LogOut className={`${marginClass} flex-shrink-0 h-5 w-5 text-red-400`} />
+                    {t('logout')}
                   </button>
                 </div>
               </nav>

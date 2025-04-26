@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -54,6 +55,50 @@
   [dir="rtl"] .rtl-rotate-180 {
     @apply transform rotate-180;
   }
+  
+  [dir="rtl"] .rtl-mirror {
+    transform: scaleX(-1);
+  }
+
+  /* RTL specific margins and paddings */
+  [dir="rtl"] .mr-2 {
+    margin-right: 0;
+    margin-left: 0.5rem;
+  }
+
+  [dir="rtl"] .ml-2 {
+    margin-left: 0;
+    margin-right: 0.5rem;
+  }
+
+  [dir="rtl"] .mr-3 {
+    margin-right: 0;
+    margin-left: 0.75rem;
+  }
+
+  [dir="rtl"] .ml-3 {
+    margin-left: 0;
+    margin-right: 0.75rem;
+  }
+
+  [dir="rtl"] .mr-4 {
+    margin-right: 0;
+    margin-left: 1rem;
+  }
+
+  [dir="rtl"] .ml-4 {
+    margin-left: 0;
+    margin-right: 1rem;
+  }
+
+  /* RTL text alignment */
+  [dir="rtl"] .text-left {
+    text-align: right;
+  }
+
+  [dir="rtl"] .text-right {
+    text-align: left;
+  }
 }
 
 @layer components {
@@ -83,7 +128,7 @@
     --space-reverse: 1;
   }
 
-  [dir="rtl"] .rtl-mirror {
-    transform: scaleX(-1);
+  .rtl-flex-row-reverse {
+    flex-direction: row-reverse;
   }
 }

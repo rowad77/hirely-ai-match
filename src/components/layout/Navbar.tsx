@@ -3,10 +3,12 @@ import { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import MobileNav from './MobileNav';
+import LanguageToggle from '@/components/LanguageToggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +30,7 @@ import { Tables } from '@/integrations/supabase/types';
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut, userRole } = useAuth();
+  const { t, direction } = useLanguage();
   const [profile, setProfile] = useState<Partial<Tables<'profiles'>> | null>(null);
 
   useEffect(() => {
@@ -51,13 +54,13 @@ const Navbar = () => {
   }, [user]);
 
   const primaryNavItems = [
-    { to: '/', label: 'Home' },
-    { to: '/jobs', label: 'Find Jobs' },
+    { to: '/', label: t('home') },
+    { to: '/jobs', label: t('findJobs') },
   ];
 
   const conditionalNavItems = [
-    userRole === 'company' && { to: '/company/dashboard', label: 'Company Portal' },
-    userRole === 'owner' && { to: '/owner/dashboard', label: 'Admin Panel' },
+    userRole === 'company' && { to: '/company/dashboard', label: t('companyPortal') },
+    userRole === 'owner' && { to: '/owner/dashboard', label: t('adminPanel') },
   ].filter(Boolean);
 
   return (
@@ -102,6 +105,9 @@ const Navbar = () => {
             <MobileNav />
           </div>
 
+          {/* Language Toggle */}
+          <LanguageToggle />
+
           {/* User Account / Auth Buttons */}
           {user ? (
             <DropdownMenu>
@@ -118,31 +124,31 @@ const Navbar = () => {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuContent align={direction === 'rtl' ? 'start' : 'end'} className="w-56">
+                <DropdownMenuLabel>{t('dashboard')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard">
-                    <LayoutDashboard className="mr-2 h-4 w-4" />
-                    <span>Dashboard</span>
+                    <LayoutDashboard className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                    <span>{t('dashboard')}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/profile">
-                    <UserRound className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                    <UserRound className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                    <span>{t('profile')}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/application-history">
-                    <History className="mr-2 h-4 w-4" />
-                    <span>Applications</span>
+                    <History className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                    <span>{t('applications')}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
+                  <LogOut className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                  <span>{t('logout')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -150,11 +156,11 @@ const Navbar = () => {
             <>
               <Link to="/login">
                 <Button variant="outline" size="sm">
-                  Log in
+                  {t('login')}
                 </Button>
               </Link>
               <Link to="/signup">
-                <Button size="sm">Sign up</Button>
+                <Button size="sm">{t('signup')}</Button>
               </Link>
             </>
           )}
