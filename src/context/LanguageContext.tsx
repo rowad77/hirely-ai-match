@@ -39,6 +39,7 @@ interface Translations {
   totalJobs: string;
   totalUsers: string;
   cvUploads: string;
+  companies: string; // Added missing key
   
   // Settings
   generalSettings: string;
@@ -58,13 +59,6 @@ interface Translations {
   uploadTranslations: string;
   currentLanguage: string;
   switchLanguage: string;
-}
-
-interface LanguageContextType {
-  language: Language;
-  direction: Direction;
-  setLanguage: (lang: Language) => void;
-  t: (key: keyof Translations) => string;
 }
 
 // English translations
@@ -102,6 +96,7 @@ const enTranslations: Translations = {
   totalJobs: "Total Jobs",
   totalUsers: "Total Users",
   cvUploads: "CV Uploads",
+  companies: "Companies", // Added missing key
   
   // Settings
   generalSettings: "General Settings",
@@ -158,6 +153,7 @@ const arTranslations: Translations = {
   totalJobs: "إجمالي الوظائف",
   totalUsers: "إجمالي المستخدمين",
   cvUploads: "السير الذاتية المرفوعة",
+  companies: "الشركات", // Added missing key
   
   // Settings
   generalSettings: "الإعدادات العامة",
@@ -239,4 +235,3 @@ export const useLanguage = (): LanguageContextType => {
   }
   return context;
 };
-
