@@ -66,6 +66,10 @@ interface LanguageContextType {
   direction: Direction;
   setLanguage: (lang: Language) => void;
   t: (key: keyof Translations) => string;
+  setCustomTranslations: (translations: {
+    en: Record<string, string>;
+    ar: Record<string, string>;
+  }) => void;
 }
 
 // English translations
@@ -150,7 +154,7 @@ export const arTranslations: Translations = {
   location: "الموقع",
   salary: "الراتب",
   jobType: "نوع الوظيفة",
-  appliedJobs: "الوظائف المتقدم لها",
+  appliedJobs: "الوظائف المتق��م لها",
   savedJobs: "الوظائف المحفوظة",
   applyNow: "تقدم الآن",
   application: "طلب التوظيف",
@@ -192,6 +196,10 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('en');
   const [direction, setDirection] = useState<Direction>('ltr');
+  const [customTranslations, setCustomTranslations] = useState<{
+    en: Record<string, string>;
+    ar: Record<string, string>;
+  }>({ en: {}, ar: {} });
 
   useEffect(() => {
     const savedLanguage = localStorage.getItem('language') as Language;
@@ -214,6 +222,11 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, [language]);
 
   const t = (key: keyof Translations): string => {
+    // First check custom translations
+    if (customTranslations[language] && customTranslations[language][key]) {
+      return customTranslations[language][key];
+    }
+    // Fallback to default translations
     return translations[language][key] || key;
   };
 
@@ -222,6 +235,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     direction,
     setLanguage,
     t,
+    setCustomTranslations,
   };
 
   return (

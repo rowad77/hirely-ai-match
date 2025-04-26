@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import OwnerLayout from '@/components/layout/OwnerLayout';
@@ -8,7 +9,7 @@ import { Upload, Download, Globe, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 const OwnerLanguages = () => {
-  const { t } = useLanguage();
+  const { t, setCustomTranslations } = useLanguage();
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   
   // Extract translations into CSV format with ALL website text content
@@ -711,9 +712,34 @@ const OwnerLanguages = () => {
           toast.error('Invalid CSV format. Required columns: key, english, arabic');
           return;
         }
+
+        // Initialize translation objects
+        const englishTranslations: Record<string, string> = {};
+        const arabicTranslations: Record<string, string> = {};
+
+        // Process each line of the CSV
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+
+          // Split by comma but handle quoted values correctly
+          const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+          const key = values[headers.indexOf('key')].trim();
+          const english = values[headers.indexOf('english')].replace(/^"|"$/g, '').trim();
+          const arabic = values[headers.indexOf('arabic')].replace(/^"|"$/g, '').trim();
+
+          if (key && english && arabic) {
+            englishTranslations[key] = english;
+            arabicTranslations[key] = arabic;
+          }
+        }
+
+        // Update translations in the context
+        setCustomTranslations({
+          en: englishTranslations,
+          ar: arabicTranslations
+        });
         
-        // In a real app, this would update translations in your database
-        // Here we just show a success message
         toast.success('Translations uploaded and processed successfully');
         setUploadFile(null);
         
