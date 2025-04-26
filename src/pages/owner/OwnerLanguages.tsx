@@ -14,32 +14,91 @@ const OwnerLanguages = () => {
   
   // Extract translations into CSV format
   const exportTranslations = () => {
-    // Get English translations from LanguageContext
-    const translations = require('@/context/LanguageContext').enTranslations;
-    
-    if (!translations) {
-      toast.error('Error extracting translations');
-      return;
+    try {
+      // Hard-code the English translations directly
+      const translations = {
+        // Common
+        login: "Log in",
+        signup: "Sign up",
+        logout: "Log out",
+        dashboard: "Dashboard",
+        profile: "Profile",
+        settings: "Settings",
+        search: "Search",
+        home: "Home",
+        findJobs: "Find Jobs",
+        save: "Save",
+        cancel: "Cancel",
+        applications: "Applications",
+        companyPortal: "Company Portal",
+        adminPanel: "Admin Panel",
+        
+        // Jobs
+        jobs: "Jobs",
+        jobTitle: "Job Title",
+        company: "Company",
+        location: "Location",
+        salary: "Salary",
+        jobType: "Job Type",
+        appliedJobs: "Applied Jobs",
+        savedJobs: "Saved Jobs",
+        applyNow: "Apply Now",
+        application: "Application",
+        
+        // Owner Dashboard
+        totalCompanies: "Total Companies",
+        totalJobs: "Total Jobs",
+        totalUsers: "Total Users",
+        cvUploads: "CV Uploads",
+        companies: "Companies",
+        
+        // Settings
+        generalSettings: "General Settings",
+        securitySettings: "Security Settings",
+        emailSettings: "Email Settings",
+        featureSettings: "Feature Settings",
+        apiSettings: "API Settings",
+        
+        // Company
+        candidates: "Candidates",
+        interviews: "Interviews",
+        analytics: "Analytics",
+        
+        // Language Management
+        languageManagement: "Language Management",
+        downloadTranslations: "Download Translations",
+        uploadTranslations: "Upload Translations",
+        currentLanguage: "Current Language",
+        switchLanguage: "Switch Language"
+      };
+      
+      if (!translations) {
+        toast.error('Error extracting translations');
+        return;
+      }
+      
+      // Create CSV content
+      let csvContent = 'key,english,arabic\n';
+      
+      Object.entries(translations).forEach(([key, value]) => {
+        csvContent += `${key},"${value}",""\n`;
+      });
+      
+      // Create download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'translations.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Translations downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading translations:', error);
+      toast.error('Failed to download translations');
     }
-    
-    // Create CSV content
-    let csvContent = 'key,english,arabic\n';
-    
-    Object.entries(translations).forEach(([key, value]) => {
-      csvContent += `${key},"${value}",""\n`;
-    });
-    
-    // Create download link
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'translations.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast.success('Translations downloaded successfully');
   };
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
