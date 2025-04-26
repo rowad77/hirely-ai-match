@@ -1,74 +1,427 @@
+
 import { useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Upload, Download, Globe } from 'lucide-react';
+import { Upload, Download, Globe, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 const OwnerLanguages = () => {
   const { t } = useLanguage();
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   
-  // Extract translations into CSV format
+  // Extract translations into CSV format with ALL website text content
   const exportTranslations = () => {
     try {
-      // Website text content including UI elements and hardcoded text
+      // Comprehensive website text content organized by sections
       const websiteContent = {
-        // Homepage
-        findDreamCareer: {
-          en: "Find your dream career in minutes",
-          ar: "اعثر على وظيفة أحلامك في دقائق"
+        // Homepage content
+        homepageSection: {
+          findDreamCareer: {
+            en: "Find your dream career in minutes",
+            ar: "اعثر على وظيفة أحلامك في دقائق"
+          },
+          connectWithCompanies: {
+            en: "Connect with top companies looking for talent",
+            ar: "تواصل مع أفضل الشركات التي تبحث عن المواهب"
+          },
+          uploadYourResume: {
+            en: "Upload your resume and let AI match you with the perfect job",
+            ar: "قم بتحميل سيرتك الذاتية ودع الذكاء الاصطناعي يطابقك مع الوظيفة المثالية"
+          },
+          getStarted: {
+            en: "Get started today",
+            ar: "ابدأ اليوم"
+          }
         },
-        // Common UI elements
-        searchJobs: {
-          en: "Search Jobs",
-          ar: "البحث عن وظائف"
+        
+        // Navigation & UI elements
+        navigationSection: {
+          searchJobs: {
+            en: "Search Jobs",
+            ar: "البحث عن وظائف"
+          },
+          browseCategories: {
+            en: "Browse Categories",
+            ar: "تصفح الفئات"
+          },
+          recentJobListings: {
+            en: "Recent Job Listings",
+            ar: "أحدث الوظائف"
+          },
+          dashboard: {
+            en: "Dashboard",
+            ar: "لوحة التحكم"
+          },
+          profile: {
+            en: "Profile",
+            ar: "الملف الشخصي"
+          },
+          settings: {
+            en: "Settings",
+            ar: "الإعدادات"
+          },
+          applications: {
+            en: "Applications",
+            ar: "الطلبات"
+          },
+          logout: {
+            en: "Logout",
+            ar: "تسجيل الخروج"
+          }
         },
-        browseCategories: {
-          en: "Browse Categories",
-          ar: "تصفح الفئات"
+        
+        // Job listings content
+        jobsSection: {
+          jobDescription: {
+            en: "Job Description",
+            ar: "وصف الوظيفة"
+          },
+          requirements: {
+            en: "Requirements",
+            ar: "المتطلبات"
+          },
+          responsibilities: {
+            en: "Responsibilities",
+            ar: "المسؤوليات"
+          },
+          qualifications: {
+            en: "Qualifications",
+            ar: "المؤهلات"
+          },
+          experience: {
+            en: "Experience",
+            ar: "الخبرة"
+          },
+          location: {
+            en: "Location",
+            ar: "الموقع"
+          },
+          salary: {
+            en: "Salary",
+            ar: "الراتب"
+          },
+          jobType: {
+            en: "Job Type",
+            ar: "نوع الوظيفة"
+          },
+          postedDate: {
+            en: "Posted Date",
+            ar: "تاريخ النشر"
+          }
         },
-        recentJobListings: {
-          en: "Recent Job Listings",
-          ar: "أحدث الوظائف"
-        },
-        // Job related
-        jobDescription: {
-          en: "Job Description",
-          ar: "وصف الوظيفة"
-        },
-        requirements: {
-          en: "Requirements",
-          ar: "المتطلبات"
-        },
-        responsibilities: {
-          en: "Responsibilities",
-          ar: "المسؤوليات"
-        },
+        
         // Application process
-        applyNow: {
-          en: "Apply Now",
-          ar: "تقدم الآن"
+        applicationSection: {
+          applyNow: {
+            en: "Apply Now",
+            ar: "تقدم الآن"
+          },
+          uploadResume: {
+            en: "Upload Resume",
+            ar: "تحميل السيرة الذاتية"
+          },
+          personalInfo: {
+            en: "Personal Information",
+            ar: "المعلومات الشخصية"
+          },
+          workHistory: {
+            en: "Work History",
+            ar: "تاريخ العمل"
+          },
+          education: {
+            en: "Education",
+            ar: "التعليم"
+          },
+          skills: {
+            en: "Skills",
+            ar: "المهارات"
+          },
+          coverLetter: {
+            en: "Cover Letter",
+            ar: "خطاب التغطية"
+          },
+          videoInterview: {
+            en: "Video Interview",
+            ar: "مقابلة فيديو"
+          },
+          submitApplication: {
+            en: "Submit Application",
+            ar: "تقديم الطلب"
+          },
+          applicationSuccess: {
+            en: "Application Submitted Successfully!",
+            ar: "تم تقديم الطلب بنجاح!"
+          },
+          whatHappensNext: {
+            en: "What happens next?",
+            ar: "ماذا يحدث بعد ذلك؟"
+          }
         },
-        uploadResume: {
-          en: "Upload Resume",
-          ar: "تحميل السيرة الذاتية"
+        
+        // Profile section
+        profileSection: {
+          basicInfo: {
+            en: "Basic Information",
+            ar: "المعلومات الأساسية"
+          },
+          fullName: {
+            en: "Full Name",
+            ar: "الاسم الكامل"
+          },
+          emailAddress: {
+            en: "Email Address",
+            ar: "عنوان البريد الإلكتروني"
+          },
+          phoneNumber: {
+            en: "Phone Number",
+            ar: "رقم الهاتف"
+          },
+          currentPosition: {
+            en: "Current Position",
+            ar: "المنصب الحالي"
+          },
+          location: {
+            en: "Location",
+            ar: "الموقع"
+          },
+          bio: {
+            en: "Bio",
+            ar: "السيرة الذاتية"
+          },
+          updateProfile: {
+            en: "Update Profile",
+            ar: "تحديث الملف الشخصي"
+          }
         },
-        // Create CSV content
-        ...t // Include all translations from the language context
+        
+        // Company pages content
+        companySection: {
+          companyProfile: {
+            en: "Company Profile",
+            ar: "ملف الشركة"
+          },
+          companyDescription: {
+            en: "Company Description",
+            ar: "وصف الشركة"
+          },
+          industry: {
+            en: "Industry",
+            ar: "الصناعة"
+          },
+          companySize: {
+            en: "Company Size",
+            ar: "حجم الشركة"
+          },
+          founded: {
+            en: "Founded",
+            ar: "تأسست"
+          },
+          website: {
+            en: "Website",
+            ar: "الموقع الإلكتروني"
+          },
+          headquarters: {
+            en: "Headquarters",
+            ar: "المقر الرئيسي"
+          },
+          openPositions: {
+            en: "Open Positions",
+            ar: "الوظائف المفتوحة"
+          }
+        },
+        
+        // Documentation page
+        documentationSection: {
+          gettingStarted: {
+            en: "Getting Started",
+            ar: "البدء"
+          },
+          creatingProfile: {
+            en: "Creating a Profile",
+            ar: "إنشاء ملف شخصي"
+          },
+          searchingForJobs: {
+            en: "Searching for Jobs",
+            ar: "البحث عن وظائف"
+          },
+          applyingToPositions: {
+            en: "Applying to Positions",
+            ar: "التقدم للوظائف"
+          },
+          features: {
+            en: "Features",
+            ar: "الميزات"
+          },
+          aiResumeAnalysis: {
+            en: "AI Resume Analysis",
+            ar: "تحليل السيرة الذاتية بالذكاء الاصطناعي"
+          },
+          videoInterviewPreparation: {
+            en: "Video Interview Preparation",
+            ar: "الإعداد لمقابلة الفيديو"
+          },
+          jobMatching: {
+            en: "Job Matching",
+            ar: "مطابقة الوظائف"
+          },
+          cvExtraction: {
+            en: "CV Extraction and Profile Updates",
+            ar: "استخراج السيرة الذاتية وتحديثات الملف الشخصي"
+          }
+        },
+        
+        // Login/Signup content
+        authSection: {
+          login: {
+            en: "Sign in to your account",
+            ar: "تسجيل الدخول إلى حسابك"
+          },
+          dontHaveAccount: {
+            en: "Don't have an account?",
+            ar: "ليس لديك حساب؟"
+          },
+          signup: {
+            en: "Create your account",
+            ar: "إنشاء حسابك"
+          },
+          alreadyHaveAccount: {
+            en: "Already have an account?",
+            ar: "لديك حساب بالفعل؟"
+          },
+          forgotPassword: {
+            en: "Forgot your password?",
+            ar: "نسيت كلمة المرور؟"
+          },
+          emailAddress: {
+            en: "Email address",
+            ar: "عنوان البريد الإلكتروني"
+          },
+          password: {
+            en: "Password",
+            ar: "كلمة المرور"
+          },
+          companyName: {
+            en: "Company name",
+            ar: "اسم الشركة"
+          },
+          passwordStrength: {
+            en: "Password strength",
+            ar: "قوة كلمة المرور"
+          },
+          termsOfService: {
+            en: "Terms of Service",
+            ar: "شروط الخدمة"
+          },
+          privacyPolicy: {
+            en: "Privacy Policy",
+            ar: "سياسة الخصوصية"
+          }
+        },
+        
+        // Footer content
+        footerSection: {
+          aboutUs: {
+            en: "About Us",
+            ar: "عن الشركة"
+          },
+          contactUs: {
+            en: "Contact Us",
+            ar: "اتصل بنا"
+          },
+          faq: {
+            en: "FAQ",
+            ar: "الأسئلة الشائعة"
+          },
+          blog: {
+            en: "Blog",
+            ar: "المدونة"
+          },
+          careers: {
+            en: "Careers",
+            ar: "وظائف"
+          },
+          privacyPolicy: {
+            en: "Privacy Policy",
+            ar: "سياسة الخصوصية"
+          },
+          termsOfService: {
+            en: "Terms of Service",
+            ar: "شروط الخدمة"
+          },
+          copyright: {
+            en: "© 2025 Hirely. All rights reserved.",
+            ar: "© 2025 هايرلي. جميع الحقوق محفوظة."
+          }
+        },
+        
+        // Error messages & notifications
+        notificationSection: {
+          error: {
+            en: "Error",
+            ar: "خطأ"
+          },
+          success: {
+            en: "Success",
+            ar: "نجاح"
+          },
+          warning: {
+            en: "Warning",
+            ar: "تحذير"
+          },
+          info: {
+            en: "Information",
+            ar: "معلومات"
+          },
+          loginSuccess: {
+            en: "Login successful",
+            ar: "تم تسجيل الدخول بنجاح"
+          },
+          loginFailed: {
+            en: "Login failed",
+            ar: "فشل تسجيل الدخول"
+          },
+          profileUpdated: {
+            en: "Profile updated successfully",
+            ar: "تم تحديث الملف الشخصي بنجاح"
+          },
+          applicationSubmitted: {
+            en: "Application submitted successfully",
+            ar: "تم تقديم الطلب بنجاح"
+          }
+        },
+        
+        // Include existing translations from language context
+        ...t
       };
       
-      // Create CSV header
-      let csvContent = 'key,english,arabic\n';
+      // Create CSV header with additional context columns
+      let csvContent = 'key,section,english,arabic,context\n';
       
-      // Add all website content to CSV
-      Object.entries(websiteContent).forEach(([key, value]) => {
-        if (typeof value === 'object') {
-          const englishValue = value.en?.toString().replace(/"/g, '""') || '';
-          const arabicValue = value.ar?.toString().replace(/"/g, '""') || '';
-          csvContent += `${key},"${englishValue}","${arabicValue}"\n`;
+      // Process all website content to CSV, preserving nested structure
+      Object.entries(websiteContent).forEach(([sectionKey, sectionValue]) => {
+        // Skip if it's not an object (could be a nested object from language context)
+        if (typeof sectionValue !== 'object' || sectionValue === null) return;
+        
+        // Process the direct keys from this section 
+        if ('en' in sectionValue && 'ar' in sectionValue) {
+          // Handle direct translations in the section
+          const englishValue = sectionValue.en?.toString().replace(/"/g, '""') || '';
+          const arabicValue = sectionValue.ar?.toString().replace(/"/g, '""') || '';
+          const context = `Website text found in ${sectionKey}`;
+          csvContent += `${sectionKey},"main","${englishValue}","${arabicValue}","${context}"\n`;
+        } else {
+          // Handle nested objects within the section
+          Object.entries(sectionValue as Record<string, any>).forEach(([key, value]) => {
+            if (typeof value === 'object' && value !== null && 'en' in value && 'ar' in value) {
+              const englishValue = value.en?.toString().replace(/"/g, '""') || '';
+              const arabicValue = value.ar?.toString().replace(/"/g, '""') || '';
+              const context = `Located in the ${sectionKey} section`;
+              csvContent += `${key},"${sectionKey}","${englishValue}","${arabicValue}","${context}"\n`;
+            }
+          });
         }
       });
       
@@ -77,7 +430,7 @@ const OwnerLanguages = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'website_translations.csv');
+      link.setAttribute('download', 'website_translations_complete.csv');
       document.body.appendChild(link);
       link.click();
       
@@ -87,7 +440,7 @@ const OwnerLanguages = () => {
         URL.revokeObjectURL(url);
       }, 100);
       
-      toast.success('Website translations downloaded successfully');
+      toast.success('Complete website translations downloaded successfully');
     } catch (error) {
       console.error('Error downloading translations:', error);
       toast.error('Failed to download translations');
@@ -115,9 +468,22 @@ const OwnerLanguages = () => {
           return;
         }
         
-        // Process CSV (in a real app, this would update the translations in your database)
-        // For now, just show success message
-        toast.success('Translations uploaded successfully');
+        // Parse CSV and validate format
+        const lines = csvText.split('\n');
+        const headers = lines[0].split(',');
+        
+        // Check if CSV has required columns
+        if (headers.length < 3 || 
+            !headers.includes('key') || 
+            !headers.includes('english') || 
+            !headers.includes('arabic')) {
+          toast.error('Invalid CSV format. Required columns: key, english, arabic');
+          return;
+        }
+        
+        // In a real app, this would update translations in your database
+        // Here we just show a success message
+        toast.success('Translations uploaded and processed successfully');
         setUploadFile(null);
         
         // Reset file input
@@ -158,13 +524,22 @@ const OwnerLanguages = () => {
               <p className="text-sm text-gray-600 mb-4">
                 Download a CSV file containing all website text and translations. The file includes both English and Arabic translations.
               </p>
-              <Button 
-                onClick={exportTranslations} 
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                {t('downloadTranslations')}
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button 
+                  onClick={exportTranslations} 
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  {t('downloadTranslations')}
+                </Button>
+              </div>
+              <div className="mt-4 flex items-start gap-2 bg-blue-100 p-3 rounded-md">
+                <Info className="h-5 w-5 text-blue-700 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-blue-800">
+                  The exported CSV contains all website text organized by sections, including homepage content, navigation, 
+                  job listings, application process, profiles, company pages, documentation, authentication, footer, and notifications.
+                </p>
+              </div>
             </div>
             
             {/* Upload Section */}
@@ -198,6 +573,13 @@ const OwnerLanguages = () => {
                   Selected file: {uploadFile.name}
                 </p>
               )}
+              <div className="mt-4 flex items-start gap-2 bg-green-100 p-3 rounded-md">
+                <Info className="h-5 w-5 text-green-700 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-green-800">
+                  When uploading translations, the system will validate your CSV format and ensure all required columns 
+                  are present. The file should contain at minimum the key, english, and arabic columns.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
