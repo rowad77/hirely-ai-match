@@ -1,3 +1,4 @@
+
 import { Translations } from '@/types/translations';
 
 export const enTranslations: Translations = {
@@ -38,7 +39,6 @@ export const enTranslations: Translations = {
   
   // Settings
   generalSettings: "General Settings",
-  securitySettings: "Security Settings",
   securitySettings: "Security Settings",
   emailSettings: "Email Settings",
   featureSettings: "Feature Settings",

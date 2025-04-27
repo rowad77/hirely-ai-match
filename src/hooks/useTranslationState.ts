@@ -10,6 +10,7 @@ export const useTranslationState = () => {
     ar: Record<string, string>;
   }>({ en: {}, ar: {} });
 
+  // Initialize from localStorage or browser preference
   useEffect(() => {
     const savedLanguage = localStorage.getItem('language') as Language;
     if (savedLanguage) {
@@ -20,6 +21,7 @@ export const useTranslationState = () => {
     }
   }, []);
 
+  // Update direction and HTML attributes when language changes
   useEffect(() => {
     const dir = language === 'ar' ? 'rtl' : 'ltr';
     setDirection(dir);
@@ -28,6 +30,13 @@ export const useTranslationState = () => {
     
     document.documentElement.dir = dir;
     document.documentElement.lang = language;
+
+    // Add or remove the RTL class on the body for global styling
+    if (dir === 'rtl') {
+      document.body.classList.add('rtl');
+    } else {
+      document.body.classList.remove('rtl');
+    }
   }, [language]);
 
   return {
@@ -38,4 +47,3 @@ export const useTranslationState = () => {
     setCustomTranslations,
   };
 };
-

@@ -39,15 +39,16 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
+  flipIconRtl?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, flipIconRtl = false, ...props }, ref) => {
     const { direction } = useLanguage();
     const Comp = asChild ? Slot : "button"
     
     // Add RTL specific classes when needed
-    const rtlClasses = direction === 'rtl' ? 'rtl-flip' : '';
+    const rtlClasses = direction === 'rtl' && flipIconRtl ? 'rtl-flip' : '';
     
     return (
       <Comp

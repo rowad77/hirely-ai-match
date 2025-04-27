@@ -3,9 +3,10 @@ import React from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Globe } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const LanguageToggle: React.FC = () => {
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage, t, direction } = useLanguage();
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'ar' : 'en');
@@ -16,7 +17,10 @@ const LanguageToggle: React.FC = () => {
       variant="ghost"
       size="sm"
       onClick={toggleLanguage}
-      className="flex items-center gap-1"
+      className={cn(
+        "flex items-center gap-1",
+        direction === 'rtl' ? 'flex-row-reverse' : ''
+      )}
     >
       <Globe className="h-4 w-4" />
       {language === 'en' ? 'العربية' : 'English'}
