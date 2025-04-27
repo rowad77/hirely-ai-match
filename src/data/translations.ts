@@ -17,6 +17,7 @@ export const enTranslations: Translations = {
   applications: "Applications",
   companyPortal: "Company Portal",
   adminPanel: "Admin Panel",
+  loading: "Loading...",
 
   // Jobs
   jobs: "Jobs",
@@ -35,7 +36,7 @@ export const enTranslations: Translations = {
   totalJobs: "Total Jobs",
   totalUsers: "Total Users",
   cvUploads: "CV Uploads",
-  companies: "Companies", // Added missing key
+  companies: "Companies",
   
   // Settings
   generalSettings: "General Settings",
@@ -73,6 +74,7 @@ export const arTranslations: Translations = {
   applications: "الطلبات",
   companyPortal: "بوابة الشركة",
   adminPanel: "لوحة المسؤول",
+  loading: "جارٍ التحميل...",
   
   // Jobs
   jobs: "الوظائف",
@@ -91,7 +93,7 @@ export const arTranslations: Translations = {
   totalJobs: "إجمالي الوظائف",
   totalUsers: "إجمالي المستخدمين",
   cvUploads: "السير الذاتية المرفوعة",
-  companies: "الشركات", // Added missing key
+  companies: "الشركات",
   
   // Settings
   generalSettings: "الإعدادات العامة",

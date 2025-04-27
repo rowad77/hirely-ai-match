@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>hirely-ai-match</title>
-    <meta name="description" content="Lovable Generated Project" />
+    <meta name="description" content="AI-powered job matching platform" />
     <meta name="author" content="Lovable" />
 
     <!-- Preload fonts for better performance -->
@@ -14,7 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
 
     <meta property="og:title" content="hirely-ai-match" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <meta property="og:description" content="AI-powered job matching platform" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
@@ -32,25 +32,102 @@
       }
       /* Smooth transitions for direction changes */
       .dir-transition * {
-        transition: transform 0.3s, margin 0.3s, padding 0.3s;
+        transition: transform 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+      }
+      
+      /* Add a pre-loading state */
+      .app-loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f9fafb;
+        z-index: 9999;
+        transition: opacity 0.3s ease-out;
+      }
+      
+      html[data-theme="dark"] .app-loading {
+        background-color: #111827;
+      }
+      
+      .app-loading.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      
+      .app-loading-spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        border-left-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
     </style>
     
     <script>
       // Initialize language and direction from localStorage
       (function() {
-        const savedLanguage = localStorage.getItem('language') || 'en';
-        const direction = savedLanguage === 'ar' ? 'rtl' : 'ltr';
-        document.documentElement.lang = savedLanguage;
-        document.documentElement.dir = direction;
+        try {
+          const savedLanguage = localStorage.getItem('language') || 'en';
+          const direction = savedLanguage === 'ar' ? 'rtl' : 'ltr';
+          document.documentElement.lang = savedLanguage;
+          document.documentElement.dir = direction;
+          
+          // Check for theme preference
+          const theme = localStorage.getItem('vite-react-theme') || 'system';
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          
+          if (theme === 'dark' || (theme === 'system' && prefersDark)) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.dataset.theme = 'dark';
+          } else {
+            document.documentElement.classList.add('light');
+            document.documentElement.dataset.theme = 'light';
+          }
+        } catch (e) {
+          console.error('Error initializing language/theme:', e);
+          // Fallback to defaults
+          document.documentElement.lang = 'en';
+          document.documentElement.dir = 'ltr';
+        }
       })();
     </script>
   </head>
 
   <body>
+    <!-- Loading indicator -->
+    <div class="app-loading">
+      <div class="app-loading-spinner"></div>
+    </div>
+    
     <div id="root"></div>
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <script>
+      // Remove loading indicator after app loads
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          const loader = document.querySelector('.app-loading');
+          if (loader) {
+            loader.classList.add('hidden');
+            setTimeout(() => {
+              loader.remove();
+            }, 300);
+          }
+        }, 500);
+      });
+    </script>
   </body>
 </html>

@@ -19,6 +19,7 @@ export interface Translations {
   applications: string;
   companyPortal: string;
   adminPanel: string;
+  loading: string; // Added missing loading key
   
   // Jobs
   jobs: string;

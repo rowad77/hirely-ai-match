@@ -15,7 +15,14 @@ type ThemeContextType = {
   toggleTheme: () => void;
 };
 
-const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined);
+// Create a default context value for better type safety
+const defaultThemeContext: ThemeContextType = {
+  theme: "system",
+  setTheme: () => console.warn("ThemeContext not initialized"),
+  toggleTheme: () => console.warn("ThemeContext not initialized"),
+};
+
+const ThemeContext = React.createContext<ThemeContextType>(defaultThemeContext);
 
 export function ThemeProvider({
   children,
@@ -23,10 +30,26 @@ export function ThemeProvider({
   storageKey = "vite-ui-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = React.useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-  );
+  // Safely get the theme from localStorage with fallback
+  const getInitialTheme = React.useCallback((): Theme => {
+    if (typeof window === "undefined") return defaultTheme;
+    
+    try {
+      const savedTheme = localStorage.getItem(storageKey) as Theme;
+      // Validate the theme is one of the allowed values
+      if (savedTheme && ["dark", "light", "system"].includes(savedTheme)) {
+        return savedTheme;
+      }
+    } catch (error) {
+      console.warn("Failed to read theme from localStorage", error);
+    }
+    
+    return defaultTheme;
+  }, [defaultTheme, storageKey]);
 
+  const [theme, setTheme] = React.useState<Theme>(getInitialTheme);
+
+  // Apply theme to the document
   React.useEffect(() => {
     const root = window.document.documentElement;
     
@@ -45,22 +68,52 @@ export function ThemeProvider({
     root.classList.add(theme);
   }, [theme]);
 
+  // Watch for system theme changes if using system preference
+  React.useEffect(() => {
+    if (theme !== "system") return;
+    
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    
+    const handleChange = () => {
+      const root = window.document.documentElement;
+      root.classList.remove("light", "dark");
+      root.classList.add(mediaQuery.matches ? "dark" : "light");
+    };
+    
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [theme]);
+  
+  // Toggle through themes (light → dark → system → light)
   const toggleTheme = React.useCallback(() => {
     setTheme((prev) => {
-      if (prev === "light") return "dark";
-      if (prev === "dark") return "system";
-      return "light";
+      const nextTheme = prev === "light" ? "dark" : prev === "dark" ? "system" : "light";
+      
+      try {
+        localStorage.setItem(storageKey, nextTheme);
+      } catch (error) {
+        console.warn("Failed to save theme to localStorage", error);
+      }
+      
+      return nextTheme;
     });
-  }, []);
+  }, [storageKey]);
+
+  // Safe setTheme with localStorage handling 
+  const setThemeSafe = React.useCallback((newTheme: Theme) => {
+    try {
+      localStorage.setItem(storageKey, newTheme);
+    } catch (error) {
+      console.warn("Failed to save theme to localStorage", error);
+    }
+    setTheme(newTheme);
+  }, [storageKey]);
 
   const value = React.useMemo(() => ({
     theme,
-    setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
-      setTheme(theme);
-    },
+    setTheme: setThemeSafe,
     toggleTheme,
-  }), [theme, storageKey, toggleTheme]);
+  }), [theme, setThemeSafe, toggleTheme]);
 
   return (
     <ThemeContext.Provider {...props} value={value}>
@@ -72,8 +125,9 @@ export function ThemeProvider({
 export const useTheme = () => {
   const context = React.useContext(ThemeContext);
   
-  if (context === undefined)
+  if (!context) {
     throw new Error("useTheme must be used within a ThemeProvider");
+  }
   
   return context;
 };

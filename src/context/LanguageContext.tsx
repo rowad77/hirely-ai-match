@@ -1,10 +1,24 @@
 
-import React, { createContext, useContext, ReactNode, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo, useCallback, useRef } from 'react';
 import { translations } from '@/data/translations';
 import { useTranslationState } from '@/hooks/useTranslationState';
 import { LanguageContextType, Translations, Language } from '@/types/translations';
 
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+// Create a context with a meaningful default value for better type safety
+const defaultContextValue: LanguageContextType = {
+  language: 'en',
+  direction: 'ltr',
+  setLanguage: () => console.warn('LanguageContext not initialized'),
+  t: (key) => String(key),
+  isChangingLanguage: false,
+  setCustomTranslations: () => console.warn('LanguageContext not initialized'),
+};
+
+const LanguageContext = createContext<LanguageContextType>(defaultContextValue);
+
+type TranslationCache = {
+  [key: string]: string;
+};
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const {
@@ -16,22 +30,55 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     setCustomTranslations,
   } = useTranslationState();
 
-  // Optimized translation function with better fallback handling
+  // Use a ref to create a translation cache for better performance
+  const translationCacheRef = useRef<TranslationCache>({});
+
+  // Clear cache when language changes
+  React.useEffect(() => {
+    translationCacheRef.current = {};
+  }, [language, customTranslations]);
+
+  // Optimized translation function with better fallback handling and caching
   const t = useCallback((key: keyof Translations): string => {
+    // Create a cache key that combines the language and translation key
+    const cacheKey = `${language}:${String(key)}`;
+    
+    // Check if we already have this translation cached
+    if (translationCacheRef.current[cacheKey]) {
+      return translationCacheRef.current[cacheKey];
+    }
+    
+    let result: string;
+    
     // First check custom translations
-    if (customTranslations[language] && customTranslations[language][key]) {
-      return customTranslations[language][key];
+    if (customTranslations[language] && customTranslations[language][String(key)]) {
+      result = customTranslations[language][String(key)];
     }
     // Then check default translations
-    if (translations[language] && translations[language][key]) {
-      return translations[language][key];
+    else if (translations[language] && translations[language][key]) {
+      result = translations[language][key];
     }
-    // Log missing translation in development
-    if (process.env.NODE_ENV === 'development') {
-      console.warn(`Translation missing for key: ${String(key)} in ${language}`);
+    // If we can't find in current language, try English as fallback
+    else if (language !== 'en' && translations.en && translations.en[key]) {
+      result = translations.en[key];
+      // Log missing translation in development
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`Translation missing for key: ${String(key)} in ${language}, falling back to English`);
+      }
     }
     // Final fallback to key
-    return String(key);
+    else {
+      result = String(key);
+      // Log missing translation in development
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`Translation missing for key: ${String(key)} in both ${language} and fallback language`);
+      }
+    }
+    
+    // Cache the result
+    translationCacheRef.current[cacheKey] = result;
+    
+    return result;
   }, [language, customTranslations]);
   
   // Memoize context value to prevent unnecessary re-renders
@@ -53,8 +100,10 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
 export const useLanguage = (): LanguageContextType => {
   const context = useContext(LanguageContext);
-  if (context === undefined) {
+  
+  if (!context) {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }
+  
   return context;
 };
