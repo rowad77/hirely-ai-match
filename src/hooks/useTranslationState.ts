@@ -28,6 +28,7 @@ export const useTranslationState = () => {
     
     localStorage.setItem('language', language);
     
+    // Update HTML document attributes
     document.documentElement.dir = dir;
     document.documentElement.lang = language;
 

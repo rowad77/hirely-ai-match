@@ -21,6 +21,7 @@ const LanguageToggle: React.FC = () => {
         "flex items-center gap-1",
         direction === 'rtl' ? 'flex-row-reverse' : ''
       )}
+      flipIconRtl
     >
       <Globe className="h-4 w-4" />
       {language === 'en' ? 'العربية' : 'English'}
