@@ -8,7 +8,10 @@
     <meta name="description" content="Lovable Generated Project" />
     <meta name="author" content="Lovable" />
 
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Preload fonts for better performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
 
     <meta property="og:title" content="hirely-ai-match" />
     <meta property="og:description" content="Lovable Generated Project" />
@@ -18,6 +21,30 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    
+    <style>
+      /* Critical rendering path styles to avoid FOUC */
+      html[dir="rtl"] {
+        font-family: 'IBM Plex Sans Arabic', sans-serif;
+      }
+      html[dir="ltr"] {
+        font-family: 'IBM Plex Sans', sans-serif;
+      }
+      /* Smooth transitions for direction changes */
+      .dir-transition * {
+        transition: transform 0.3s, margin 0.3s, padding 0.3s;
+      }
+    </style>
+    
+    <script>
+      // Initialize language and direction from localStorage
+      (function() {
+        const savedLanguage = localStorage.getItem('language') || 'en';
+        const direction = savedLanguage === 'ar' ? 'rtl' : 'ltr';
+        document.documentElement.lang = savedLanguage;
+        document.documentElement.dir = direction;
+      })();
+    </script>
   </head>
 
   <body>

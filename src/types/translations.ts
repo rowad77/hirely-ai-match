@@ -64,9 +64,17 @@ export interface LanguageContextType {
   direction: Direction;
   setLanguage: (lang: Language) => void;
   t: (key: keyof Translations) => string;
+  isChangingLanguage: boolean;
   setCustomTranslations: (translations: {
     en: Record<string, string>;
     ar: Record<string, string>;
   }) => void;
 }
 
+// Utility type for validating translation completeness
+export type TranslationCompleteness = {
+  [L in Language]: {
+    missingKeys: Array<keyof Translations>;
+    completionPercentage: number;
+  }
+};

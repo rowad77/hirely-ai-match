@@ -33,6 +33,12 @@
     --input: 240 5.9% 90%;
     --ring: 240 5% 64.9%;
     --radius: 0.5rem;
+    
+    /* RTL specific spacing variables */
+    --margin-start: 0;
+    --margin-end: 0;
+    --padding-start: 0;
+    --padding-end: 0;
   }
 
   * {
@@ -44,6 +50,16 @@
     font-feature-settings: "ss01", "ss02", "cv01", "cv02";
   }
 
+  html {
+    transition: background-color 0.3s ease;
+  }
+
+  /* Smooth transition for RTL/LTR changes */
+  body.dir-transition * {
+    transition: transform 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+  }
+
+  /* Base RTL adjustments */
   html[dir="rtl"] {
     text-align: right;
   }
@@ -99,6 +115,71 @@
   [dir="rtl"] .text-right {
     text-align: left;
   }
+  
+  /* Dynamic margin/padding utilities based on direction */
+  .ms-1 {
+    margin-inline-start: 0.25rem;
+  }
+  
+  .ms-2 {
+    margin-inline-start: 0.5rem;
+  }
+  
+  .ms-3 {
+    margin-inline-start: 0.75rem;
+  }
+  
+  .ms-4 {
+    margin-inline-start: 1rem;
+  }
+  
+  .me-1 {
+    margin-inline-end: 0.25rem;
+  }
+  
+  .me-2 {
+    margin-inline-end: 0.5rem;
+  }
+  
+  .me-3 {
+    margin-inline-end: 0.75rem;
+  }
+  
+  .me-4 {
+    margin-inline-end: 1rem;
+  }
+  
+  .ps-1 {
+    padding-inline-start: 0.25rem;
+  }
+  
+  .ps-2 {
+    padding-inline-start: 0.5rem;
+  }
+  
+  .ps-3 {
+    padding-inline-start: 0.75rem;
+  }
+  
+  .ps-4 {
+    padding-inline-start: 1rem;
+  }
+  
+  .pe-1 {
+    padding-inline-end: 0.25rem;
+  }
+  
+  .pe-2 {
+    padding-inline-end: 0.5rem;
+  }
+  
+  .pe-3 {
+    padding-inline-end: 0.75rem;
+  }
+  
+  .pe-4 {
+    padding-inline-end: 1rem;
+  }
 }
 
 @layer components {
@@ -117,6 +198,25 @@
   .apple-input {
     @apply rounded-lg border border-apple-gray-200 bg-white/80 px-4 py-2 text-apple-gray-600 focus:border-apple-blue focus:ring-1 focus:ring-apple-blue/20 transition-all duration-200;
   }
+  
+  /* Language transition styling */
+  .language-fade-enter {
+    opacity: 0;
+  }
+  
+  .language-fade-enter-active {
+    opacity: 1;
+    transition: opacity 300ms ease-in;
+  }
+  
+  .language-fade-exit {
+    opacity: 1;
+  }
+  
+  .language-fade-exit-active {
+    opacity: 0;
+    transition: opacity 300ms ease-out;
+  }
 }
 
 @layer utilities {
@@ -130,5 +230,39 @@
 
   .rtl-flex-row-reverse {
     flex-direction: row-reverse;
+  }
+  
+  /* Direction-aware flexbox utilities */
+  .flex-row-adaptive {
+    @apply flex-row;
+  }
+  
+  [dir="rtl"] .flex-row-adaptive {
+    @apply flex-row-reverse;
+  }
+  
+  .flex-row-reverse-adaptive {
+    @apply flex-row-reverse;
+  }
+  
+  [dir="rtl"] .flex-row-reverse-adaptive {
+    @apply flex-row;
+  }
+  
+  /* Direction-aware text alignment */
+  .text-start {
+    text-align: left;
+  }
+  
+  [dir="rtl"] .text-start {
+    text-align: right;
+  }
+  
+  .text-end {
+    text-align: right;
+  }
+  
+  [dir="rtl"] .text-end {
+    text-align: left;
   }
 }
