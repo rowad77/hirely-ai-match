@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useEffect, useState } from "react";
+import React from "react";
 
 type Theme = "dark" | "light" | "system";
 
@@ -15,7 +15,7 @@ type ThemeContextType = {
   toggleTheme: () => void;
 };
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({
   children,
@@ -23,11 +23,11 @@ export function ThemeProvider({
   storageKey = "vite-ui-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
+  const [theme, setTheme] = React.useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   );
 
-  useEffect(() => {
+  React.useEffect(() => {
     const root = window.document.documentElement;
     
     root.classList.remove("light", "dark");
@@ -45,22 +45,22 @@ export function ThemeProvider({
     root.classList.add(theme);
   }, [theme]);
 
-  const toggleTheme = () => {
+  const toggleTheme = React.useCallback(() => {
     setTheme((prev) => {
       if (prev === "light") return "dark";
       if (prev === "dark") return "system";
       return "light";
     });
-  };
+  }, []);
 
-  const value = {
+  const value = React.useMemo(() => ({
     theme,
     setTheme: (theme: Theme) => {
       localStorage.setItem(storageKey, theme);
       setTheme(theme);
     },
     toggleTheme,
-  };
+  }), [theme, storageKey, toggleTheme]);
 
   return (
     <ThemeContext.Provider {...props} value={value}>
@@ -70,7 +70,7 @@ export function ThemeProvider({
 }
 
 export const useTheme = () => {
-  const context = useContext(ThemeContext);
+  const context = React.useContext(ThemeContext);
   
   if (context === undefined)
     throw new Error("useTheme must be used within a ThemeProvider");
