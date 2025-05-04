@@ -1,22 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { BookmarkPlus, Trash2, Bell, Search } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { BookmarkPlus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { JobFilters } from '@/components/JobFilters';
-
-type SavedSearch = {
-  id: string;
-  name: string;
-  filters: JobFilters;
-  notify_new_matches: boolean;
-  created_at: string;
-};
+import SavedSearchForm from './SavedSearchForm';
+import SavedSearchList, { SavedSearch } from './SavedSearchList';
+import { query } from '@/utils/supabase-api';
+import { ErrorResponse, ErrorType } from '@/utils/error-handling';
+import { ApiErrorMessage } from '@/components/ui/ApiErrorMessage';
 
 type SavedSearchesProps = {
   currentFilters: JobFilters;
@@ -33,8 +27,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
-  const [searchName, setSearchName] = useState('');
-  const [notifyNewMatches, setNotifyNewMatches] = useState(false);
+  const [error, setError] = useState<ErrorResponse | null>(null);
 
   // Fetch saved searches when component mounts or userId changes
   useEffect(() => {
@@ -47,24 +40,27 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     if (!userId) return;
     
     setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('saved_searches')
+    setError(null);
+    
+    const { data, error } = await query<SavedSearch[]>(
+      'saved_searches',
+      (query) => query
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+    );
 
-      if (error) throw error;
-      setSavedSearches(data || []);
-    } catch (error) {
-      console.error('Error fetching saved searches:', error);
-      toast.error('Failed to load saved searches');
-    } finally {
-      setIsLoading(false);
+    setIsLoading(false);
+    
+    if (error) {
+      setError(error);
+      return;
     }
+    
+    setSavedSearches(data || []);
   };
 
-  const saveSearch = async () => {
+  const saveSearch = async (searchName: string, notifyNewMatches: boolean) => {
     if (!userId) {
       toast.error('You must be logged in to save searches');
       return;
@@ -90,6 +86,8 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     }
 
     setIsLoading(true);
+    setError(null);
+    
     try {
       const { data, error } = await supabase
         .from('saved_searches')
@@ -105,11 +103,16 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
       
       setSavedSearches([...(data || []), ...savedSearches]);
       setSaveDialogOpen(false);
-      setSearchName('');
-      setNotifyNewMatches(false);
       toast.success('Search saved successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving search:', error);
+      setError({
+        type: ErrorType.SERVER,
+        message: 'Failed to save search',
+        userMessage: 'We could not save your search. Please try again.',
+        originalError: error,
+        retryable: true
+      });
       toast.error('Failed to save search');
     } finally {
       setIsLoading(false);
@@ -120,6 +123,8 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     if (!userId) return;
     
     setIsLoading(true);
+    setError(null);
+    
     try {
       const { error } = await supabase
         .from('saved_searches')
@@ -130,7 +135,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
       
       setSavedSearches(savedSearches.filter(search => search.id !== id));
       toast.success('Search deleted successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting search:', error);
       toast.error('Failed to delete search');
     } finally {
@@ -148,6 +153,8 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     if (!userId) return;
     
     setIsLoading(true);
+    setError(null);
+    
     try {
       const { error } = await supabase
         .from('saved_searches')
@@ -161,7 +168,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
       ));
       
       toast.success(notify ? 'Notifications enabled' : 'Notifications disabled');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating notification settings:', error);
       toast.error('Failed to update notification settings');
     } finally {
@@ -199,8 +206,20 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     return parts.join(', ') || 'No filters';
   };
 
+  const handleRetry = () => {
+    fetchSavedSearches();
+  };
+
   return (
     <div>
+      {error && (
+        <ApiErrorMessage 
+          error={error}
+          onRetry={handleRetry}
+          className="mb-4"
+        />
+      )}
+      
       <div className="flex justify-between items-center mb-4">
         <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
           <DialogTrigger asChild>
@@ -213,39 +232,13 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
             <DialogHeader>
               <DialogTitle>Save Search</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="search-name">Search Name</Label>
-                <Input
-                  id="search-name"
-                  placeholder="e.g., Remote Developer Jobs"
-                  value={searchName}
-                  onChange={(e) => setSearchName(e.target.value)}
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="notify"
-                  checked={notifyNewMatches}
-                  onCheckedChange={setNotifyNewMatches}
-                />
-                <Label htmlFor="notify">Notify me about new matching jobs</Label>
-              </div>
-              <div className="bg-muted p-3 rounded-md">
-                <h4 className="text-sm font-medium mb-2">Current Filters</h4>
-                <p className="text-sm text-muted-foreground">
-                  {formatFilterSummary(currentFilters)}
-                </p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={saveSearch} disabled={isLoading || !searchName.trim()}>
-                {isLoading ? 'Saving...' : 'Save Search'}
-              </Button>
-            </DialogFooter>
+            <SavedSearchForm
+              currentFilters={currentFilters}
+              formatFilterSummary={formatFilterSummary}
+              onSave={(name, notifyMatches) => saveSearch(name, notifyMatches)}
+              onCancel={() => setSaveDialogOpen(false)}
+              isLoading={isLoading}
+            />
           </DialogContent>
         </Dialog>
 
@@ -261,56 +254,13 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
               <DialogTitle>Saved Searches</DialogTitle>
             </DialogHeader>
             <div className="py-4">
-              {savedSearches.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">You don't have any saved searches yet.</p>
-                </div>
-              ) : (
-                <div className="grid gap-4">
-                  {savedSearches.map((search) => (
-                    <Card key={search.id}>
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-lg">{search.name}</CardTitle>
-                            <CardDescription>
-                              {formatFilterSummary(search.filters)}
-                            </CardDescription>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => toggleNotification(search.id, !search.notify_new_matches)}
-                              title={search.notify_new_matches ? "Disable notifications" : "Enable notifications"}
-                            >
-                              <Bell className={`h-4 w-4 ${search.notify_new_matches ? 'text-hirely' : 'text-muted-foreground'}`} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => deleteSearch(search.id)}
-                              title="Delete search"
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => applySearch(search.filters)}
-                          className="w-full"
-                        >
-                          Apply This Search
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+              <SavedSearchList
+                searches={savedSearches}
+                formatFilterSummary={formatFilterSummary}
+                onApplySearch={applySearch}
+                onToggleNotification={toggleNotification}
+                onDeleteSearch={deleteSearch}
+              />
             </div>
           </DialogContent>
         </Dialog>

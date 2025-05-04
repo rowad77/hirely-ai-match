@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, ReactNode, useMemo, useCallback, useRef } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo, useCallback, useEffect } from 'react';
 import { translations } from '@/data/translations';
 import { useTranslationState } from '@/hooks/useTranslationState';
 import { LanguageContextType, Translations, Language } from '@/types/translations';
@@ -16,10 +16,6 @@ const defaultContextValue: LanguageContextType = {
 
 const LanguageContext = createContext<LanguageContextType>(defaultContextValue);
 
-type TranslationCache = {
-  [key: string]: string;
-};
-
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const {
     language,
@@ -28,24 +24,47 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     isChangingLanguage,
     customTranslations,
     setCustomTranslations,
+    translationCacheRef,
+    trackKeyUsage,
+    getTranslationTracker
   } = useTranslationState();
 
-  // Use a ref to create a translation cache for better performance
-  const translationCacheRef = useRef<TranslationCache>({});
-
-  // Clear cache when language changes
-  React.useEffect(() => {
-    translationCacheRef.current = {};
-  }, [language, customTranslations]);
+  // Preload commonly used translations for faster switching
+  useEffect(() => {
+    // Identify the "other" language to preload
+    const otherLanguage: Language = language === 'en' ? 'ar' : 'en';
+    
+    // Get a list of frequently used keys (mock implementation - in reality this would be based on usage)
+    const commonKeys = ['login', 'signup', 'search', 'settings', 'dashboard'];
+    
+    // Preload translations in a non-blocking way
+    setTimeout(() => {
+      commonKeys.forEach(key => {
+        if (translations[otherLanguage] && translations[otherLanguage][key as keyof Translations]) {
+          const cacheKey = `${otherLanguage}:${String(key)}`;
+          if (!translationCacheRef.current[cacheKey]) {
+            translationCacheRef.current[cacheKey] = {
+              value: translations[otherLanguage][key as keyof Translations],
+              timestamp: Date.now(),
+              version: '1.0.0'
+            };
+          }
+        }
+      });
+    }, 1000); // Delay preloading to not interfere with initial rendering
+  }, [language, translationCacheRef]);
 
   // Optimized translation function with better fallback handling and caching
   const t = useCallback((key: keyof Translations): string => {
     // Create a cache key that combines the language and translation key
     const cacheKey = `${language}:${String(key)}`;
     
+    // Track key usage for future preloading
+    trackKeyUsage(cacheKey);
+    
     // Check if we already have this translation cached
     if (translationCacheRef.current[cacheKey]) {
-      return translationCacheRef.current[cacheKey];
+      return translationCacheRef.current[cacheKey].value;
     }
     
     let result: string;
@@ -76,10 +95,14 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
     
     // Cache the result
-    translationCacheRef.current[cacheKey] = result;
+    translationCacheRef.current[cacheKey] = {
+      value: result,
+      timestamp: Date.now(),
+      version: '1.0.0'
+    };
     
     return result;
-  }, [language, customTranslations]);
+  }, [language, customTranslations, trackKeyUsage, translationCacheRef]);
   
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
