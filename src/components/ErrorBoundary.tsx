@@ -48,14 +48,16 @@ class ErrorBoundary extends Component<Props, State> {
           <p className="mb-4">The application encountered an unexpected error.</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            className="px-4 py-2 bg-destructive/20 hover:bg-destructive/30 text-destructive rounded-md transition-colors"
           >
-            Reload page
+            Retry
           </button>
           {process.env.NODE_ENV === 'development' && this.state.error && (
-            <pre className="mt-4 p-4 bg-muted overflow-auto rounded text-sm max-w-full">
-              {this.state.error.toString()}
-            </pre>
+            <div className="mt-4 p-4 bg-destructive/5 rounded-md overflow-auto max-w-full">
+              <pre className="text-sm text-destructive whitespace-pre-wrap break-words">
+                {this.state.error.toString()}
+              </pre>
+            </div>
           )}
         </div>
       );

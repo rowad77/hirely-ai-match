@@ -86,12 +86,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (error) {
+        toast.error('Failed to fetch user profile');
         console.error('Error fetching user profile:', error);
+        return;
+      }
+
+      if (!data) {
+        toast.error('User profile not found');
         return;
       }
 
       setProfile(data as UserProfile);
     } catch (error) {
+      toast.error('An unexpected error occurred');
       console.error('Error in fetchUserProfile:', error);
     }
   };
@@ -105,16 +112,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
+        toast.error(error.message || 'Failed to login');
         throw error;
       }
 
+      toast.success('Logged in successfully');
+
       // Log activity
       if (data.user) {
-        await supabase.rpc('track_activity', {
-          p_user_id: data.user.id,
-          p_activity_type: 'login',
-          p_activity_data: { method: 'email' }
-        });
+        try {
+          await supabase.rpc('track_activity', {
+            p_user_id: data.user.id,
+            p_activity_type: 'login',
+            p_activity_data: { method: 'email' }
+          });
+        } catch (activityError) {
+          console.error('Failed to track login activity:', activityError);
+        }
       }
 
       return Promise.resolve();

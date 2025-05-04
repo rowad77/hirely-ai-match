@@ -4,6 +4,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronUp, Filter } from 'lucide-react';
+import SkillsFilter from '@/components/jobs/SkillsFilter';
+import ExperienceLevelFilter from '@/components/jobs/ExperienceLevelFilter';
+import SavedSearches from '@/components/jobs/SavedSearches';
+import { useAuth } from '@/context/AuthContext';
 
 type JobFilterProps = {
   onFilterChange: (filters: JobFilters) => void;
@@ -17,6 +21,8 @@ export type JobFilters = {
   locations: string[];
   salaryRanges: string[];
   categories: string[];
+  skills?: { name: string; required: boolean }[];
+  experienceLevels?: string[];
 };
 
 const JobFilters = ({ 
@@ -25,12 +31,15 @@ const JobFilters = ({
   initialFilters,
   filterCounts = {} 
 }: JobFilterProps) => {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(inModal ? true : false);
   const [filters, setFilters] = useState<JobFilters>({
     jobTypes: [],
     locations: [],
     salaryRanges: [],
     categories: [],
+    skills: [],
+    experienceLevels: [],
   });
 
   useEffect(() => {
@@ -62,6 +71,18 @@ const JobFilters = ({
     setFilters(updatedFilters);
     onFilterChange(updatedFilters);
   };
+  
+  const handleSkillsChange = (skills: { name: string; required: boolean }[]) => {
+    const updatedFilters = { ...filters, skills };
+    setFilters(updatedFilters);
+    onFilterChange(updatedFilters);
+  };
+  
+  const handleExperienceLevelsChange = (experienceLevels: string[]) => {
+    const updatedFilters = { ...filters, experienceLevels };
+    setFilters(updatedFilters);
+    onFilterChange(updatedFilters);
+  };
 
   const clearFilters = () => {
     const emptyFilters = {
@@ -69,6 +90,8 @@ const JobFilters = ({
       locations: [],
       salaryRanges: [],
       categories: [],
+      skills: [],
+      experienceLevels: [],
     };
     setFilters(emptyFilters);
     onFilterChange(emptyFilters);
@@ -78,7 +101,9 @@ const JobFilters = ({
     return filters.jobTypes.length > 0 || 
            filters.locations.length > 0 || 
            filters.salaryRanges.length > 0 ||
-           filters.categories.length > 0;
+           filters.categories.length > 0 ||
+           (filters.skills && filters.skills.length > 0) ||
+           (filters.experienceLevels && filters.experienceLevels.length > 0);
   };
 
   const renderCount = (key: string) => {
@@ -168,6 +193,19 @@ const JobFilters = ({
                 ))}
               </div>
             </div>
+            
+            <div>
+              <h3 className="font-medium mb-2">Skills</h3>
+              <SkillsFilter 
+                selectedSkills={filters.skills || []}
+                onSkillsChange={handleSkillsChange}
+              />
+            </div>
+            
+            <ExperienceLevelFilter 
+              selectedLevels={filters.experienceLevels || []}
+              onLevelsChange={handleExperienceLevelsChange}
+            />
           </div>
           
           <div className="flex justify-end mt-4">
@@ -280,7 +318,29 @@ const JobFilters = ({
             </div>
           </div>
           
-          <div className="flex justify-end p-4 bg-white rounded-lg border border-t-0 rounded-t-none">
+          <div className="p-4 bg-white rounded-lg border border-t-0 rounded-t-none">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-medium mb-2">Skills</h3>
+                <SkillsFilter 
+                  selectedSkills={filters.skills || []}
+                  onSkillsChange={handleSkillsChange}
+                />
+              </div>
+              
+              <ExperienceLevelFilter 
+                selectedLevels={filters.experienceLevels || []}
+                onLevelsChange={handleExperienceLevelsChange}
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-between p-4 bg-white rounded-lg border border-t-0 rounded-t-none">
+            <SavedSearches 
+              currentFilters={filters}
+              onApplySearch={onFilterChange}
+              userId={user?.id}
+            />
             <Button 
               variant="outline" 
               size="sm" 

@@ -21,7 +21,10 @@ export function JobsFilterProvider({ children }: JobsFilterProviderProps) {
     locations: [],
     salaryRanges: [],
     categories: [],
+    skills: [],
+    experienceLevels: [],
   });
+
 
   const clearFilters = () => {
     setFilters({
@@ -29,6 +32,8 @@ export function JobsFilterProvider({ children }: JobsFilterProviderProps) {
       locations: [],
       salaryRanges: [],
       categories: [],
+      skills: [],
+      experienceLevels: [],
     });
   };
 
@@ -36,7 +41,9 @@ export function JobsFilterProvider({ children }: JobsFilterProviderProps) {
     filters.jobTypes.length + 
     filters.locations.length + 
     filters.salaryRanges.length + 
-    filters.categories.length;
+    filters.categories.length +
+    (filters.skills?.length || 0) +
+    (filters.experienceLevels?.length || 0);
 
   return (
     <JobsFilterContext.Provider

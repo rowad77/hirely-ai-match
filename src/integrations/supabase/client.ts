@@ -2,10 +2,18 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://lckyfjxdnmwhmruvgpwn.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxja3lmanhkbm13aG1ydXZncHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY1NzIsImV4cCI6MjA1OTMxMjU3Mn0.wzqFbyCnj0UtQu8085V4Akep4ilTo7hB_acx0sezZuU";
+// Use environment variables for Supabase credentials
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://lckyfjxdnmwhmruvgpwn.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxja3lmanhkbm13aG1ydXZncHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY1NzIsImV4cCI6MjA1OTMxMjU3Mn0.wzqFbyCnj0UtQu8085V4Akep4ilTo7hB_acx0sezZuU";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Create client with better error handling
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});

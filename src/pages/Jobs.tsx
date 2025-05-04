@@ -31,6 +31,8 @@ const Jobs = () => {
     locations: [],
     salaryRanges: [],
     categories: [],
+    skills: [],
+    experienceLevels: [],
   });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [favoriteJobs, setFavoriteJobs] = useState<string[]>([]);
@@ -140,7 +142,53 @@ const Jobs = () => {
           return true;
         });
       
-      return matchesSearch && matchesJobType && matchesLocation && matchesSalary && matchesCategory;
+      // Match skills if any are selected
+      const matchesSkills = !filters.skills || filters.skills.length === 0 ||
+        filters.skills.every(skill => {
+          // For required skills, the job must have them
+          if (skill.required) {
+            return job.description?.toLowerCase().includes(skill.name.toLowerCase());
+          }
+          // For non-required skills, we'll count the job as matching if it has at least one
+          return !skill.required || job.description?.toLowerCase().includes(skill.name.toLowerCase());
+        });
+      
+      // Match experience level if any are selected
+      const matchesExperience = !filters.experienceLevels || filters.experienceLevels.length === 0 ||
+        filters.experienceLevels.some(level => {
+          const description = job.description?.toLowerCase() || '';
+          
+          if (level === "Entry-level") {
+            return description.includes("entry level") || 
+                   description.includes("junior") || 
+                   description.includes("beginner") ||
+                   description.includes("0-2 years");
+          }
+          
+          if (level === "Mid-level") {
+            return description.includes("mid level") || 
+                   description.includes("intermediate") || 
+                   description.includes("2-5 years");
+          }
+          
+          if (level === "Senior") {
+            return description.includes("senior") || 
+                   description.includes("experienced") || 
+                   description.includes("5+ years");
+          }
+          
+          if (level === "Executive") {
+            return description.includes("executive") || 
+                   description.includes("director") || 
+                   description.includes("chief") || 
+                   description.includes("head of") ||
+                   description.includes("lead");
+          }
+          
+          return false;
+        });
+      
+      return matchesSearch && matchesJobType && matchesLocation && matchesSalary && matchesCategory && matchesSkills && matchesExperience;
     });
   }, [searchTerm, filters, jobs]);
 
