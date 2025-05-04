@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMessaging } from '@/hooks/use-messaging';
@@ -12,7 +13,7 @@ import { format } from 'date-fns';
 import { InterviewRequestDialog } from './InterviewRequestDialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { messagingClient } from '@/integrations/supabase/messaging-client';
 import type { Conversation, Message, ConversationParticipant } from '@/types/messaging';
 
 export function ConversationView() {
@@ -29,17 +30,22 @@ export function ConversationView() {
     queryFn: async () => {
       if (!conversationId) return null;
       
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-          *,
-          participants:conversation_participants(*, profile:profiles(*))
-        `)
-        .eq('id', conversationId)
-        .single();
-        
-      if (error) throw error;
-      return data as Conversation;
+      try {
+        const { data, error } = await messagingClient
+          .from('conversations')
+          .select(`
+            *,
+            participants:conversation_participants(*, profile:profiles(*))
+          `)
+          .eq('id', conversationId)
+          .single();
+          
+        if (error) throw error;
+        return data as Conversation;
+      } catch (error) {
+        console.error('Error fetching conversation:', error);
+        return null;
+      }
     },
     enabled: !!conversationId
   });
@@ -75,7 +81,7 @@ export function ConversationView() {
   useEffect(() => {
     if (!conversationId) return;
     
-    const subscription = supabase
+    const subscription = messagingClient
       .channel(`conversation:${conversationId}`)
       .on('postgres_changes', {
         event: 'INSERT',
@@ -97,13 +103,17 @@ export function ConversationView() {
     e.preventDefault();
     if (!newMessageText.trim() || !conversationId || !user) return;
     
-    await sendMessage({
-      conversationId,
-      content: newMessageText,
-      senderId: user.id
-    });
-    
-    setNewMessageText('');
+    try {
+      await sendMessage({
+        conversationId,
+        content: newMessageText,
+        senderId: user.id
+      });
+      
+      setNewMessageText('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
   };
   
   if (conversationLoading || messagesLoading) {

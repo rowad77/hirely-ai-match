@@ -11,6 +11,16 @@ export type SavedSearch = {
   created_at: string;
 };
 
+// Database mapping type that represents how data is stored in Supabase
+export type SavedSearchDB = {
+  id: string;
+  profile_id: string;
+  search_name: string; // Maps to 'name' in our app
+  search_params: JobFilters; // Maps to 'filters' in our app
+  notify_new_matches?: boolean;
+  created_at: string;
+};
+
 interface SavedSearchListProps {
   searches: SavedSearch[];
   formatFilterSummary: (filters: JobFilters) => string;

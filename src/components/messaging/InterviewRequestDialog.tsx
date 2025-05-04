@@ -1,6 +1,7 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useMessaging } from '@/hooks/use-messaging';
+import { useMessaging } from '@/hooks/use-messaging'; 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -8,7 +9,6 @@ import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Clock } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface InterviewRequestDialogProps {
   open: boolean;

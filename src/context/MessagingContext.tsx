@@ -1,6 +1,7 @@
+
 import { createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { messagingClient } from '@/integrations/supabase/messaging-client';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
 import type { Message, ConversationWithParticipants, InterviewRequest } from '@/types/messaging';
@@ -34,57 +35,62 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       if (!user) return [];
       
-      const { data, error } = await supabase
-        .from('conversation_participants')
-        .select(`
-          conversation:conversation_id(*, 
-            participants:conversation_participants(*, profile:profiles(*)),
-            last_message:messages(content, created_at, sender_id)
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      try {
+        const { data, error } = await messagingClient
+          .from('conversation_participants')
+          .select(`
+            conversation:conversation_id(*, 
+              participants:conversation_participants(*, profile:profiles(*)),
+              last_message:messages(content, created_at, sender_id)
+            )
+          `)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+          
+        if (error) {
+          toast.error('Failed to fetch conversations');
+          throw error;
+        }
         
-      if (error) {
-        toast.error('Failed to fetch conversations');
-        throw error;
-      }
-      
-      // Process the data to get the conversations with unread count
-      const conversationsWithUnread = await Promise.all(
-        data.map(async (item) => {
-          const conversation = item.conversation;
-          
-          // Get unread count
-          const { count, error: countError } = await supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('conversation_id', conversation.id)
-            .neq('sender_id', user.id)
-            .is('read_at', null);
+        // Process the data to get the conversations with unread count
+        const conversationsWithUnread = await Promise.all(
+          data.map(async (item: any) => {
+            const conversation = item.conversation;
             
-          if (countError) {
-            console.error('Error getting unread count:', countError);
-            return { ...conversation, unread_count: 0 };
-          }
-          
-          // Get the last message if available
-          const lastMessage = conversation.last_message?.[0] || null;
-          
-          return {
-            ...conversation,
-            last_message: lastMessage,
-            unread_count: count || 0
-          };
-        })
-      );
-      
-      // Sort by last message date
-      return conversationsWithUnread.sort((a, b) => {
-        const dateA = a.last_message_at || a.created_at;
-        const dateB = b.last_message_at || b.created_at;
-        return new Date(dateB).getTime() - new Date(dateA).getTime();
-      });
+            // Get unread count
+            const { count, error: countError } = await messagingClient
+              .from('messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('conversation_id', conversation.id)
+              .neq('sender_id', user.id)
+              .is('read_at', null);
+              
+            if (countError) {
+              console.error('Error getting unread count:', countError);
+              return { ...conversation, unread_count: 0 };
+            }
+            
+            // Get the last message if available
+            const lastMessage = conversation.last_message?.[0] || null;
+            
+            return {
+              ...conversation,
+              last_message: lastMessage,
+              unread_count: count || 0
+            };
+          })
+        );
+        
+        // Sort by last message date
+        return conversationsWithUnread.sort((a, b) => {
+          const dateA = a.last_message_at || a.created_at;
+          const dateB = b.last_message_at || b.created_at;
+          return new Date(dateB).getTime() - new Date(dateA).getTime();
+        });
+      } catch (error) {
+        console.error('Error fetching conversations:', error);
+        return [];
+      }
     },
     enabled: !!user
   });
@@ -93,18 +99,23 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
   const getMessages = async (conversationId: string): Promise<Message[]> => {
     if (!user) return [];
     
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true });
+    try {
+      const { data, error } = await messagingClient
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+        
+      if (error) {
+        toast.error('Failed to fetch messages');
+        throw error;
+      }
       
-    if (error) {
-      toast.error('Failed to fetch messages');
-      throw error;
+      return data as Message[];
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      return [];
     }
-    
-    return data as Message[];
   };
 
   // Send a new message
@@ -113,75 +124,89 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
     content: string;
     senderId: string;
   }): Promise<void> => {
-    const { error } = await supabase
-      .from('messages')
-      .insert({
-        conversation_id: conversationId,
-        sender_id: senderId,
-        content
-      });
+    try {
+      const { error } = await messagingClient
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: senderId,
+          content
+        });
+        
+      if (error) {
+        toast.error('Failed to send message');
+        throw error;
+      }
       
-    if (error) {
-      toast.error('Failed to send message');
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    } catch (error) {
+      console.error('Error sending message:', error);
       throw error;
     }
-    
-    // Invalidate queries to refresh data
-    queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-    queryClient.invalidateQueries({ queryKey: ['conversations'] });
   };
 
   // Mark messages as read
   const markMessagesAsRead = async (conversationId: string): Promise<void> => {
     if (!user) return;
     
-    const { error } = await supabase
-      .from('messages')
-      .update({ read_at: new Date().toISOString() })
-      .eq('conversation_id', conversationId)
-      .neq('sender_id', user.id)
-      .is('read_at', null);
-      
-    if (error) {
+    try {
+      const { error } = await messagingClient
+        .from('messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('conversation_id', conversationId)
+        .neq('sender_id', user.id)
+        .is('read_at', null);
+        
+      if (error) {
+        console.error('Error marking messages as read:', error);
+      } else {
+        // Invalidate queries to refresh unread count
+        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      }
+    } catch (error) {
       console.error('Error marking messages as read:', error);
-    } else {
-      // Invalidate queries to refresh unread count
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
     }
   };
 
   // Create a new conversation
   const createConversation = async (participantIds: string[]): Promise<string> => {
-    // Create the conversation
-    const { data: conversationData, error: conversationError } = await supabase
-      .from('conversations')
-      .insert({})
-      .select()
-      .single();
+    try {
+      // Create the conversation
+      const { data: conversationData, error: conversationError } = await messagingClient
+        .from('conversations')
+        .insert({})
+        .select()
+        .single();
+        
+      if (conversationError) {
+        toast.error('Failed to create conversation');
+        throw conversationError;
+      }
       
-    if (conversationError) {
-      toast.error('Failed to create conversation');
-      throw conversationError;
+      const conversationId = conversationData.id;
+      
+      // Add participants
+      const participantPromises = participantIds.map(userId =>
+        messagingClient
+          .from('conversation_participants')
+          .insert({
+            conversation_id: conversationId,
+            user_id: userId
+          })
+      );
+      
+      await Promise.all(participantPromises);
+      
+      // Invalidate conversations query
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      
+      return conversationId;
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      throw error;
     }
-    
-    const conversationId = conversationData.id;
-    
-    // Add participants
-    const participantPromises = participantIds.map(userId =>
-      supabase
-        .from('conversation_participants')
-        .insert({
-          conversation_id: conversationId,
-          user_id: userId
-        })
-    );
-    
-    await Promise.all(participantPromises);
-    
-    // Invalidate conversations query
-    queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    
-    return conversationId;
   };
 
   // Send an interview request
@@ -196,53 +221,63 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
     recipientId: string;
     proposedTimes: string[];
   }): Promise<void> => {
-    // Create the interview request
-    const { error: requestError } = await supabase
-      .from('interview_requests')
-      .insert({
-        conversation_id: conversationId,
-        sender_id: senderId,
-        recipient_id: recipientId,
-        proposed_times: proposedTimes,
-        status: 'pending'
+    try {
+      // Create the interview request
+      const { error: requestError } = await messagingClient
+        .from('interview_requests')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: senderId,
+          recipient_id: recipientId,
+          proposed_times: proposedTimes,
+          status: 'pending'
+        });
+        
+      if (requestError) {
+        toast.error('Failed to send interview request');
+        throw requestError;
+      }
+      
+      // Send a message about the interview request
+      await sendMessage({
+        conversationId,
+        senderId,
+        content: `📅 I've sent you an interview request with ${proposedTimes.length} proposed time${proposedTimes.length > 1 ? 's' : ''}.`
       });
       
-    if (requestError) {
-      toast.error('Failed to send interview request');
-      throw requestError;
+      toast.success('Interview request sent');
+    } catch (error) {
+      console.error('Error sending interview request:', error);
+      throw error;
     }
-    
-    // Send a message about the interview request
-    await sendMessage({
-      conversationId,
-      senderId,
-      content: `📅 I've sent you an interview request with ${proposedTimes.length} proposed time${proposedTimes.length > 1 ? 's' : ''}.`
-    });
-    
-    toast.success('Interview request sent');
   };
 
   // Get interview requests for the current user
   const getInterviewRequests = async (): Promise<InterviewRequest[]> => {
     if (!user) return [];
     
-    const { data, error } = await supabase
-      .from('interview_requests')
-      .select(`
-        *,
-        sender:sender_id(id, full_name, avatar_url),
-        recipient:recipient_id(id, full_name, avatar_url),
-        conversation:conversation_id(*)
-      `)
-      .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await messagingClient
+        .from('interview_requests')
+        .select(`
+          *,
+          sender:sender_id(id, full_name, avatar_url),
+          recipient:recipient_id(id, full_name, avatar_url),
+          conversation:conversation_id(*)
+        `)
+        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        toast.error('Failed to fetch interview requests');
+        throw error;
+      }
       
-    if (error) {
-      toast.error('Failed to fetch interview requests');
-      throw error;
+      return data as InterviewRequest[];
+    } catch (error) {
+      console.error('Error fetching interview requests:', error);
+      return [];
     }
-    
-    return data as InterviewRequest[];
   };
 
   // Respond to an interview request
@@ -253,45 +288,50 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
   ): Promise<void> => {
     if (!user) return;
     
-    // Get the request first to get conversation ID
-    const { data: requestData, error: fetchError } = await supabase
-      .from('interview_requests')
-      .select('*')
-      .eq('id', requestId)
-      .single();
+    try {
+      // Get the request first to get conversation ID
+      const { data: requestData, error: fetchError } = await messagingClient
+        .from('interview_requests')
+        .select('*')
+        .eq('id', requestId)
+        .single();
+        
+      if (fetchError) {
+        toast.error('Failed to fetch interview request');
+        throw fetchError;
+      }
       
-    if (fetchError) {
-      toast.error('Failed to fetch interview request');
-      throw fetchError;
+      // Update the request status
+      const { error: updateError } = await messagingClient
+        .from('interview_requests')
+        .update({
+          status,
+          selected_time: selectedTime || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+        
+      if (updateError) {
+        toast.error(`Failed to ${status} interview request`);
+        throw updateError;
+      }
+      
+      // Send a message about the response
+      const message = status === 'accepted'
+        ? `✅ I've accepted your interview request for ${new Date(selectedTime || '').toLocaleString()}.`
+        : `❌ I've declined your interview request.`;
+        
+      await sendMessage({
+        conversationId: requestData.conversation_id,
+        senderId: user.id,
+        content: message
+      });
+      
+      toast.success(`Interview request ${status}`);
+    } catch (error) {
+      console.error('Error responding to interview request:', error);
+      throw error;
     }
-    
-    // Update the request status
-    const { error: updateError } = await supabase
-      .from('interview_requests')
-      .update({
-        status,
-        selected_time: selectedTime || null,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', requestId);
-      
-    if (updateError) {
-      toast.error(`Failed to ${status} interview request`);
-      throw updateError;
-    }
-    
-    // Send a message about the response
-    const message = status === 'accepted'
-      ? `✅ I've accepted your interview request for ${new Date(selectedTime || '').toLocaleString()}.`
-      : `❌ I've declined your interview request.`;
-      
-    await sendMessage({
-      conversationId: requestData.conversation_id,
-      senderId: user.id,
-      content: message
-    });
-    
-    toast.success(`Interview request ${status}`);
   };
 
   return (

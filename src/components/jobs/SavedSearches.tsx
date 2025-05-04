@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -7,7 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { JobFilters } from '@/components/JobFilters';
 import SavedSearchForm from './SavedSearchForm';
-import SavedSearchList, { SavedSearch } from './SavedSearchList';
+import SavedSearchList, { SavedSearch, SavedSearchDB } from './SavedSearchList';
 import { query } from '@/utils/supabase-api';
 import { ErrorResponse, ErrorType } from '@/utils/error-handling';
 import { ApiErrorMessage } from '@/components/ui/ApiErrorMessage';
@@ -42,11 +41,11 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     setIsLoading(true);
     setError(null);
     
-    const { data, error } = await query<SavedSearch[]>(
+    const { data, error } = await query<SavedSearchDB[]>(
       'saved_searches',
       (query) => query
         .select('*')
-        .eq('user_id', userId)
+        .eq('profile_id', userId)
         .order('created_at', { ascending: false })
     );
 
@@ -57,7 +56,16 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
       return;
     }
     
-    setSavedSearches(data || []);
+    // Transform database records to application model
+    const transformedSearches = data?.map(dbRecord => ({
+      id: dbRecord.id,
+      name: dbRecord.search_name || 'Unnamed Search',
+      filters: dbRecord.search_params,
+      notify_new_matches: dbRecord.notify_new_matches || false,
+      created_at: dbRecord.created_at
+    })) || [];
+    
+    setSavedSearches(transformedSearches);
   };
 
   const saveSearch = async (searchName: string, notifyNewMatches: boolean) => {
@@ -92,16 +100,25 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
       const { data, error } = await supabase
         .from('saved_searches')
         .insert({
-          user_id: userId,
-          name: searchName.trim(),
-          filters: currentFilters,
+          profile_id: userId,
+          search_name: searchName.trim(),
+          search_params: currentFilters,
           notify_new_matches: notifyNewMatches,
         })
         .select();
 
       if (error) throw error;
       
-      setSavedSearches([...(data || []), ...savedSearches]);
+      // Transform the database record to our application model
+      const newSearches = (data || []).map(dbRecord => ({
+        id: dbRecord.id,
+        name: dbRecord.search_name || 'Unnamed Search',
+        filters: dbRecord.search_params as JobFilters,
+        notify_new_matches: dbRecord.notify_new_matches || false, 
+        created_at: dbRecord.created_at
+      }));
+      
+      setSavedSearches([...newSearches, ...savedSearches]);
       setSaveDialogOpen(false);
       toast.success('Search saved successfully');
     } catch (error: any) {
