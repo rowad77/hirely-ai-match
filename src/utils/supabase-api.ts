@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { apiCall, ErrorType, ErrorResponse } from './error-handling';
 
@@ -8,14 +7,15 @@ export interface SupabaseResponse<T> {
   error: ErrorResponse | null;
 }
 
-// Database query wrapper
+// Database query wrapper with proper type handling for dynamic tables
 export async function query<T>(
   table: string,
   queryFn: (query: any) => any
 ): Promise<SupabaseResponse<T>> {
   try {
     const result = await apiCall(async () => {
-      const query = supabase.from(table);
+      // Use any type for the query to allow dynamic table names
+      const query = supabase.from(table as any);
       const { data, error } = await queryFn(query);
       
       if (error) throw error;

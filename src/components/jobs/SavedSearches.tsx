@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -41,31 +42,46 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     setIsLoading(true);
     setError(null);
     
-    const { data, error } = await query<SavedSearchDB[]>(
-      'saved_searches',
-      (query) => query
+    try {
+      const { data, error } = await supabase
+        .from('saved_searches')
         .select('*')
         .eq('profile_id', userId)
-        .order('created_at', { ascending: false })
-    );
-
-    setIsLoading(false);
-    
-    if (error) {
-      setError(error);
-      return;
+        .order('created_at', { ascending: false });
+      
+      setIsLoading(false);
+      
+      if (error) {
+        setError({
+          type: ErrorType.SERVER,
+          message: error.message,
+          userMessage: 'Failed to load saved searches',
+          retryable: true,
+          originalError: error
+        });
+        return;
+      }
+      
+      // Transform database records to application model
+      const transformedSearches = data.map(dbRecord => ({
+        id: dbRecord.id,
+        name: dbRecord.search_name || 'Unnamed Search',
+        filters: dbRecord.search_params,
+        notify_new_matches: dbRecord.notify_new_matches || false,
+        created_at: dbRecord.created_at
+      })) || [];
+      
+      setSavedSearches(transformedSearches);
+    } catch (error: any) {
+      setIsLoading(false);
+      setError({
+        type: ErrorType.UNKNOWN,
+        message: error.message || 'Unknown error',
+        userMessage: 'An unexpected error occurred',
+        retryable: true,
+        originalError: error
+      });
     }
-    
-    // Transform database records to application model
-    const transformedSearches = data?.map(dbRecord => ({
-      id: dbRecord.id,
-      name: dbRecord.search_name || 'Unnamed Search',
-      filters: dbRecord.search_params,
-      notify_new_matches: dbRecord.notify_new_matches || false,
-      created_at: dbRecord.created_at
-    })) || [];
-    
-    setSavedSearches(transformedSearches);
   };
 
   const saveSearch = async (searchName: string, notifyNewMatches: boolean) => {
@@ -81,10 +97,10 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
 
     // Check if there are any active filters
     const hasActiveFilters = 
-      currentFilters.jobTypes.length > 0 || 
-      currentFilters.locations.length > 0 || 
-      currentFilters.salaryRanges.length > 0 || 
-      currentFilters.categories.length > 0 ||
+      currentFilters.jobTypes?.length > 0 || 
+      currentFilters.locations?.length > 0 || 
+      currentFilters.salaryRanges?.length > 0 || 
+      currentFilters.categories?.length > 0 ||
       (currentFilters.skills && currentFilters.skills.length > 0) ||
       (currentFilters.experienceLevels && currentFilters.experienceLevels.length > 0);
 
@@ -103,7 +119,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
           profile_id: userId,
           search_name: searchName.trim(),
           search_params: currentFilters,
-          notify_new_matches: notifyNewMatches,
+          notify_new_matches: notifyNewMatches
         })
         .select();
 

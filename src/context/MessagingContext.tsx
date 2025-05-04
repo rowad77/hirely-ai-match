@@ -1,362 +1,295 @@
 
-import { createContext, useContext, ReactNode } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { messagingClient } from '@/integrations/supabase/messaging-client';
-import { useAuth } from './AuthContext';
-import { toast } from 'sonner';
-import type { Message, ConversationWithParticipants, InterviewRequest } from '@/types/messaging';
+import { useAuth } from '@/context/AuthContext';
+import { Conversation, Message, InterviewRequest } from '@/types/messaging';
 
+// Define the context type
 interface MessagingContextType {
-  conversations: ConversationWithParticipants[];
+  conversations: Conversation[];
+  currentConversation: Conversation | null;
+  messages: Message[];
   isLoading: boolean;
-  getMessages: (conversationId: string) => Promise<Message[]>;
-  sendMessage: (params: { conversationId: string; content: string; senderId: string }) => Promise<void>;
-  markMessagesAsRead: (conversationId: string) => Promise<void>;
-  createConversation: (participantIds: string[]) => Promise<string>;
+  error: Error | null;
+  unreadCount: number;
+  setCurrentConversationId: (id: string | null) => void;
+  sendMessage: (content: string) => Promise<void>;
   sendInterviewRequest: (params: {
     conversationId: string;
     senderId: string;
     recipientId: string;
     proposedTimes: string[];
   }) => Promise<void>;
-  getInterviewRequests: () => Promise<InterviewRequest[]>;
-  respondToInterviewRequest: (requestId: string, status: 'accepted' | 'rejected', selectedTime?: string) => Promise<void>;
+  markMessagesAsRead: () => Promise<void>;
+  createConversation: (participantIds: string[]) => Promise<string>;
+  getMessages: (conversationId: string) => Promise<Message[]>;
 }
 
-const MessagingContext = createContext<MessagingContextType | undefined>(undefined);
+// Create the context with default values
+export const MessagingContext = createContext<MessagingContextType>({
+  conversations: [],
+  currentConversation: null,
+  messages: [],
+  isLoading: false,
+  error: null,
+  unreadCount: 0,
+  setCurrentConversationId: () => {},
+  sendMessage: async () => {},
+  sendInterviewRequest: async () => {},
+  markMessagesAsRead: async () => {},
+  createConversation: async () => '',
+  getMessages: async () => []
+});
 
-export function MessagingProvider({ children }: { children: ReactNode }) {
+interface MessagingProviderProps {
+  children: ReactNode;
+}
+
+export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }) => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
 
-  // Fetch all conversations for the current user
-  const { data: conversations = [], isLoading } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: async () => {
-      if (!user) return [];
-      
-      try {
-        const { data, error } = await messagingClient
-          .from('conversation_participants')
-          .select(`
-            conversation:conversation_id(*, 
-              participants:conversation_participants(*, profile:profiles(*)),
-              last_message:messages(content, created_at, sender_id)
-            )
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+  // Load conversations when the user changes
+  useEffect(() => {
+    if (user) {
+      loadConversations();
+      loadUnreadCount();
+    } else {
+      setConversations([]);
+      setCurrentConversationId(null);
+      setCurrentConversation(null);
+      setMessages([]);
+      setUnreadCount(0);
+    }
+  }, [user]);
+
+  // Load messages when the current conversation changes
+  useEffect(() => {
+    if (currentConversationId) {
+      loadMessagesAndMarkAsRead();
+      loadConversationDetails();
+    } else {
+      setMessages([]);
+      setCurrentConversation(null);
+    }
+  }, [currentConversationId]);
+
+  // Set up real-time updates for new messages
+  useEffect(() => {
+    if (!user) return;
+
+    const subscription = supabase
+      .channel('messaging-changes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages'
+      }, (payload) => {
+        const newMessage = payload.new as Message;
+        
+        // If the message is for the current conversation, add it to the messages list
+        if (newMessage.conversation_id === currentConversationId) {
+          setMessages(prev => [...prev, newMessage]);
           
-        if (error) {
-          toast.error('Failed to fetch conversations');
-          throw error;
+          // If the user is viewing the conversation and the message is from someone else, mark it as read
+          if (user?.id !== newMessage.sender_id) {
+            messagingClient.markMessagesAsRead(newMessage.conversation_id, user!.id);
+          }
         }
-        
-        // Process the data to get the conversations with unread count
-        const conversationsWithUnread = await Promise.all(
-          data.map(async (item: any) => {
-            const conversation = item.conversation;
-            
-            // Get unread count
-            const { count, error: countError } = await messagingClient
-              .from('messages')
-              .select('*', { count: 'exact', head: true })
-              .eq('conversation_id', conversation.id)
-              .neq('sender_id', user.id)
-              .is('read_at', null);
-              
-            if (countError) {
-              console.error('Error getting unread count:', countError);
-              return { ...conversation, unread_count: 0 };
-            }
-            
-            // Get the last message if available
-            const lastMessage = conversation.last_message?.[0] || null;
-            
-            return {
-              ...conversation,
-              last_message: lastMessage,
-              unread_count: count || 0
-            };
-          })
-        );
-        
-        // Sort by last message date
-        return conversationsWithUnread.sort((a, b) => {
-          const dateA = a.last_message_at || a.created_at;
-          const dateB = b.last_message_at || b.created_at;
-          return new Date(dateB).getTime() - new Date(dateA).getTime();
-        });
-      } catch (error) {
-        console.error('Error fetching conversations:', error);
-        return [];
-      }
-    },
-    enabled: !!user
-  });
 
-  // Get messages for a specific conversation
-  const getMessages = async (conversationId: string): Promise<Message[]> => {
-    if (!user) return [];
+        // Update unread count
+        loadUnreadCount();
+        
+        // Update conversations list to reflect the new message
+        updateConversationWithNewMessage(newMessage);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [user, currentConversationId]);
+
+  // Load all conversations for the current user
+  const loadConversations = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
     
     try {
-      const { data, error } = await messagingClient
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-        
-      if (error) {
-        toast.error('Failed to fetch messages');
-        throw error;
-      }
-      
-      return data as Message[];
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-      return [];
+      const data = await messagingClient.getConversations(user.id);
+      setConversations(data);
+    } catch (err: any) {
+      setError(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Send a new message
-  const sendMessage = async ({ conversationId, content, senderId }: {
-    conversationId: string;
-    content: string;
-    senderId: string;
-  }): Promise<void> => {
-    try {
-      const { error } = await messagingClient
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: senderId,
-          content
-        });
-        
-      if (error) {
-        toast.error('Failed to send message');
-        throw error;
-      }
-      
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    } catch (error) {
-      console.error('Error sending message:', error);
-      throw error;
-    }
-  };
-
-  // Mark messages as read
-  const markMessagesAsRead = async (conversationId: string): Promise<void> => {
+  // Load unread message count
+  const loadUnreadCount = async () => {
     if (!user) return;
     
     try {
-      const { error } = await messagingClient
-        .from('messages')
-        .update({ read_at: new Date().toISOString() })
-        .eq('conversation_id', conversationId)
-        .neq('sender_id', user.id)
-        .is('read_at', null);
-        
-      if (error) {
-        console.error('Error marking messages as read:', error);
-      } else {
-        // Invalidate queries to refresh unread count
-        queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      }
-    } catch (error) {
-      console.error('Error marking messages as read:', error);
+      const count = await messagingClient.getUnreadCount(user.id);
+      setUnreadCount(count);
+    } catch (err) {
+      console.error('Error loading unread count:', err);
     }
   };
 
-  // Create a new conversation
-  const createConversation = async (participantIds: string[]): Promise<string> => {
+  // Load messages for the current conversation and mark them as read
+  const loadMessagesAndMarkAsRead = async () => {
+    if (!user || !currentConversationId) return;
+    
+    setIsLoading(true);
+    
     try {
-      // Create the conversation
-      const { data: conversationData, error: conversationError } = await messagingClient
-        .from('conversations')
-        .insert({})
-        .select()
-        .single();
-        
-      if (conversationError) {
-        toast.error('Failed to create conversation');
-        throw conversationError;
-      }
+      const messages = await messagingClient.getMessages(currentConversationId);
+      setMessages(messages);
       
-      const conversationId = conversationData.id;
+      // Mark messages as read
+      await messagingClient.markMessagesAsRead(currentConversationId, user.id);
       
-      // Add participants
-      const participantPromises = participantIds.map(userId =>
-        messagingClient
-          .from('conversation_participants')
-          .insert({
-            conversation_id: conversationId,
-            user_id: userId
-          })
-      );
-      
-      await Promise.all(participantPromises);
-      
-      // Invalidate conversations query
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      
-      return conversationId;
-    } catch (error) {
-      console.error('Error creating conversation:', error);
-      throw error;
+      // Update unread count
+      loadUnreadCount();
+    } catch (err: any) {
+      setError(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load current conversation details with participants
+  const loadConversationDetails = async () => {
+    if (!currentConversationId) return;
+    
+    try {
+      const conversation = await messagingClient.getConversationWithParticipants(currentConversationId);
+      setCurrentConversation(conversation);
+    } catch (err) {
+      console.error('Error loading conversation details:', err);
+    }
+  };
+
+  // Update conversations list with a new message
+  const updateConversationWithNewMessage = (message: Message) => {
+    setConversations(prev => {
+      return prev.map(conv => {
+        if (conv.id === message.conversation_id) {
+          return {
+            ...conv,
+            last_message: {
+              content: message.content,
+              created_at: message.created_at,
+              sender_id: message.sender_id
+            },
+            last_message_at: message.created_at
+          };
+        }
+        return conv;
+      });
+    });
+  };
+
+  // Send a message in the current conversation
+  const sendMessage = async (content: string) => {
+    if (!user || !currentConversationId || !content.trim()) return;
+    
+    try {
+      await messagingClient.sendMessage({
+        conversationId: currentConversationId,
+        senderId: user.id,
+        content
+      });
+    } catch (err: any) {
+      setError(err);
     }
   };
 
   // Send an interview request
-  const sendInterviewRequest = async ({
-    conversationId,
-    senderId,
-    recipientId,
-    proposedTimes
-  }: {
+  const sendInterviewRequest = async (params: {
     conversationId: string;
     senderId: string;
     recipientId: string;
     proposedTimes: string[];
-  }): Promise<void> => {
+  }) => {
     try {
-      // Create the interview request
-      const { error: requestError } = await messagingClient
-        .from('interview_requests')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: senderId,
-          recipient_id: recipientId,
-          proposed_times: proposedTimes,
-          status: 'pending'
-        });
-        
-      if (requestError) {
-        toast.error('Failed to send interview request');
-        throw requestError;
-      }
-      
-      // Send a message about the interview request
-      await sendMessage({
-        conversationId,
-        senderId,
-        content: `📅 I've sent you an interview request with ${proposedTimes.length} proposed time${proposedTimes.length > 1 ? 's' : ''}.`
-      });
-      
-      toast.success('Interview request sent');
-    } catch (error) {
-      console.error('Error sending interview request:', error);
-      throw error;
+      await messagingClient.sendInterviewRequest(params);
+    } catch (err: any) {
+      setError(err);
     }
   };
 
-  // Get interview requests for the current user
-  const getInterviewRequests = async (): Promise<InterviewRequest[]> => {
-    if (!user) return [];
+  // Mark all messages in the current conversation as read
+  const markMessagesAsRead = async () => {
+    if (!user || !currentConversationId) return;
     
     try {
-      const { data, error } = await messagingClient
-        .from('interview_requests')
-        .select(`
-          *,
-          sender:sender_id(id, full_name, avatar_url),
-          recipient:recipient_id(id, full_name, avatar_url),
-          conversation:conversation_id(*)
-        `)
-        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
-        .order('created_at', { ascending: false });
-        
-      if (error) {
-        toast.error('Failed to fetch interview requests');
-        throw error;
-      }
+      await messagingClient.markMessagesAsRead(currentConversationId, user.id);
+      loadUnreadCount();
+    } catch (err: any) {
+      setError(err);
+    }
+  };
+
+  // Create a new conversation with the specified participants
+  const createConversation = async (participantIds: string[]): Promise<string> => {
+    if (!user) throw new Error('User must be authenticated');
+    
+    // Make sure the current user is included in the participants
+    if (!participantIds.includes(user.id)) {
+      participantIds.push(user.id);
+    }
+    
+    try {
+      const conversationId = await messagingClient.createConversation({
+        participantIds
+      });
       
-      return data as InterviewRequest[];
-    } catch (error) {
-      console.error('Error fetching interview requests:', error);
+      // Refresh conversations list
+      loadConversations();
+      
+      return conversationId;
+    } catch (err: any) {
+      setError(err);
+      throw err;
+    }
+  };
+
+  // Get messages for a specific conversation
+  const getMessages = async (conversationId: string): Promise<Message[]> => {
+    try {
+      return await messagingClient.getMessages(conversationId);
+    } catch (err: any) {
+      setError(err);
       return [];
     }
   };
 
-  // Respond to an interview request
-  const respondToInterviewRequest = async (
-    requestId: string,
-    status: 'accepted' | 'rejected',
-    selectedTime?: string
-  ): Promise<void> => {
-    if (!user) return;
-    
-    try {
-      // Get the request first to get conversation ID
-      const { data: requestData, error: fetchError } = await messagingClient
-        .from('interview_requests')
-        .select('*')
-        .eq('id', requestId)
-        .single();
-        
-      if (fetchError) {
-        toast.error('Failed to fetch interview request');
-        throw fetchError;
-      }
-      
-      // Update the request status
-      const { error: updateError } = await messagingClient
-        .from('interview_requests')
-        .update({
-          status,
-          selected_time: selectedTime || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', requestId);
-        
-      if (updateError) {
-        toast.error(`Failed to ${status} interview request`);
-        throw updateError;
-      }
-      
-      // Send a message about the response
-      const message = status === 'accepted'
-        ? `✅ I've accepted your interview request for ${new Date(selectedTime || '').toLocaleString()}.`
-        : `❌ I've declined your interview request.`;
-        
-      await sendMessage({
-        conversationId: requestData.conversation_id,
-        senderId: user.id,
-        content: message
-      });
-      
-      toast.success(`Interview request ${status}`);
-    } catch (error) {
-      console.error('Error responding to interview request:', error);
-      throw error;
-    }
-  };
-
   return (
-    <MessagingContext.Provider
-      value={{
-        conversations,
-        isLoading,
-        getMessages,
-        sendMessage,
-        markMessagesAsRead,
-        createConversation,
-        sendInterviewRequest,
-        getInterviewRequests,
-        respondToInterviewRequest
-      }}
-    >
+    <MessagingContext.Provider value={{
+      conversations,
+      currentConversation,
+      messages,
+      isLoading,
+      error,
+      unreadCount,
+      setCurrentConversationId,
+      sendMessage,
+      sendInterviewRequest,
+      markMessagesAsRead,
+      createConversation,
+      getMessages
+    }}>
       {children}
     </MessagingContext.Provider>
   );
-}
-
-export const useMessaging = () => {
-  const context = useContext(MessagingContext);
-  if (context === undefined) {
-    throw new Error('useMessaging must be used within a MessagingProvider');
-  }
-  return context;
 };

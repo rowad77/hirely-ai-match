@@ -17,7 +17,7 @@ export type SavedSearchDB = {
   profile_id: string;
   search_name: string; // Maps to 'name' in our app
   search_params: JobFilters; // Maps to 'filters' in our app
-  notify_new_matches?: boolean;
+  notify_new_matches: boolean;
   created_at: string;
 };
 
