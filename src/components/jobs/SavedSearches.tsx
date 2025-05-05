@@ -12,13 +12,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { JobFilters } from '@/pages/Jobs';
 
+// Import SavedSearchCard component
+import SavedSearchCard from './SavedSearchCard';
+
 interface SavedSearchesProps {
   currentFilters: JobFilters;
   onApplySearch: (filters: JobFilters) => void;
 }
-
-// Import SavedSearchCard component
-import SavedSearchCard from './SavedSearchCard';
 
 const SavedSearches: React.FC<SavedSearchesProps> = ({ currentFilters, onApplySearch }) => {
   const [savedSearches, setSavedSearches] = useState<Tables<'saved_searches'>[]>([]);
@@ -74,14 +74,22 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({ currentFilters, onApplySe
     }
 
     try {
-      // Convert JobFilters to plain object to store as JSON
-      const searchParamsJson = JSON.stringify(currentFilters);
+      // Convert JobFilters to a proper JSON object
+      const searchParams = {
+        jobTypes: currentFilters.jobTypes,
+        locations: currentFilters.locations,
+        salaryRanges: currentFilters.salaryRanges,
+        categories: currentFilters.categories,
+        skills: currentFilters.skills,
+        experienceLevels: currentFilters.experienceLevels,
+        query: currentFilters.query
+      };
       
       const { data, error } = await supabase
         .from('saved_searches')
         .insert({
           search_name: newSearchName.trim(),
-          search_params: JSON.parse(searchParamsJson),
+          search_params: searchParams,
           notify_new_matches: notifyNewMatches
         })
         .select();

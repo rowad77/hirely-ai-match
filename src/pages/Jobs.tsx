@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
-import JobFilters, { JobFilters as JobFiltersType } from '@/components/JobFilters';
+import JobFilters from '@/components/JobFilters';
 import JobCard from '@/components/jobs/JobCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -20,7 +20,7 @@ import SavedSearches from '@/components/jobs/SavedSearches';
 
 // Define job type for JobsGrid
 export interface Job {
-  id: number | string;
+  id: string; // Changed from number | string to just string
   title: string;
   company: string;
   location: string;
@@ -110,7 +110,7 @@ const Jobs = () => {
         } else if (data) {
           // Convert Supabase jobs to our Job interface
           const formattedJobs: Job[] = data.map(job => ({
-            id: job.id,
+            id: String(job.id), // Ensure ID is always a string
             title: job.title,
             company: job.company_id || 'Unknown Company', // You might want to fetch company names separately
             location: job.location || 'Remote',
@@ -199,7 +199,6 @@ const Jobs = () => {
             <JobFilters
               initialFilters={filters}
               onApplyFilters={handleFilterChange}
-              onFilterChange={handleFilterChange}
             />
             
             <div className="hidden lg:block">
@@ -211,7 +210,13 @@ const Jobs = () => {
           </div>
           
           <div className="lg:col-span-3">
-            <JobsGrid jobs={jobs} isLoading={isLoading} viewMode={viewMode} />
+            <JobsGrid 
+              jobs={jobs} 
+              isLoading={isLoading} 
+              viewMode={viewMode} 
+              favoriteJobs={[]}
+              onFavorite={() => {}}
+            />
           </div>
         </div>
       </div>
