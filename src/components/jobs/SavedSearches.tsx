@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -63,13 +62,13 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
       }
       
       // Transform database records to application model
-      const transformedSearches = data.map(dbRecord => ({
+      const transformedSearches: SavedSearch[] = (data || []).map((dbRecord: any) => ({
         id: dbRecord.id,
         name: dbRecord.search_name || 'Unnamed Search',
-        filters: dbRecord.search_params,
-        notify_new_matches: dbRecord.notify_new_matches || false,
+        filters: dbRecord.search_params as JobFilters,
+        notify_new_matches: Boolean(dbRecord.notify_new_matches),
         created_at: dbRecord.created_at
-      })) || [];
+      }));
       
       setSavedSearches(transformedSearches);
     } catch (error: any) {
@@ -118,7 +117,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
         .insert({
           profile_id: userId,
           search_name: searchName.trim(),
-          search_params: currentFilters,
+          search_params: currentFilters as any,
           notify_new_matches: notifyNewMatches
         })
         .select();
@@ -126,11 +125,11 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
       if (error) throw error;
       
       // Transform the database record to our application model
-      const newSearches = (data || []).map(dbRecord => ({
+      const newSearches: SavedSearch[] = (data || []).map((dbRecord: any) => ({
         id: dbRecord.id,
         name: dbRecord.search_name || 'Unnamed Search',
         filters: dbRecord.search_params as JobFilters,
-        notify_new_matches: dbRecord.notify_new_matches || false, 
+        notify_new_matches: Boolean(dbRecord.notify_new_matches),
         created_at: dbRecord.created_at
       }));
       

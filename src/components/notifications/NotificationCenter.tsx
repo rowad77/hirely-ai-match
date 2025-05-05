@@ -6,19 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { NotificationItem } from './NotificationItem';
-import { getNotifications, markNotificationAsRead } from '@/services/notification-service';
 import { useNotificationState } from '@/hooks/use-notification-state';
 import { Badge } from '@/components/ui/badge';
-
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: string;
-  read: boolean;
-  created_at: string;
-  metadata?: Record<string, any>;
-}
+import { Notification } from '@/services/notification-service';
 
 export function NotificationCenter() {
   const { user } = useAuth();
@@ -35,7 +25,7 @@ export function NotificationCenter() {
     if (user) {
       loadNotifications();
     }
-  }, [user]);
+  }, [user, loadNotifications]);
 
   // If the user isn't logged in, don't show the notification center
   if (!user) return null;

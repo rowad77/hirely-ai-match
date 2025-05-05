@@ -1,14 +1,11 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useMessaging } from '@/hooks/use-messaging'; 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { CalendarIcon, Clock } from 'lucide-react';
+import { useMessaging } from '@/hooks/use-messaging';
+import { format, addDays, addHours, setHours, setMinutes } from 'date-fns';
 
 interface InterviewRequestDialogProps {
   open: boolean;
@@ -16,12 +13,6 @@ interface InterviewRequestDialogProps {
   conversationId: string;
   recipientId: string;
 }
-
-const timeSlots = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
-  '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'
-];
 
 export function InterviewRequestDialog({
   open,
@@ -31,110 +22,126 @@ export function InterviewRequestDialog({
 }: InterviewRequestDialogProps) {
   const { user } = useAuth();
   const { sendInterviewRequest } = useMessaging();
-  const [date, setDate] = useState<Date | undefined>(undefined);
-  const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleAddTime = (time: string) => {
-    if (selectedTimes.includes(time)) {
-      setSelectedTimes(selectedTimes.filter(t => t !== time));
-    } else if (selectedTimes.length < 3) {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(addDays(new Date(), 1));
+  const [selectedTimes, setSelectedTimes] = useState<Date[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const availableTimes = selectedDate ? generateAvailableTimes(selectedDate) : [];
+  
+  function generateAvailableTimes(date: Date): Date[] {
+    const times: Date[] = [];
+    
+    // Generate times from 9 AM to 5 PM in 30-minute increments
+    for (let hour = 9; hour <= 17; hour++) {
+      for (let minute of [0, 30]) {
+        const time = setMinutes(setHours(new Date(date), hour), minute);
+        times.push(time);
+      }
+    }
+    
+    return times;
+  }
+  
+  const toggleTimeSelection = (time: Date) => {
+    const timeString = time.toISOString();
+    
+    if (selectedTimes.some(t => t.toISOString() === timeString)) {
+      setSelectedTimes(selectedTimes.filter(t => t.toISOString() !== timeString));
+    } else {
       setSelectedTimes([...selectedTimes, time]);
     }
   };
-
-  const handleSubmit = async () => {
-    if (!date || selectedTimes.length === 0 || !user || !conversationId || !recipientId) return;
+  
+  const handleSendRequest = async () => {
+    if (!user || selectedTimes.length === 0) return;
     
-    setIsSubmitting(true);
+    setIsLoading(true);
     
     try {
-      // Convert selected times to full ISO date strings
-      const proposedTimes = selectedTimes.map(time => {
-        const [hours, minutes] = time.split(':');
-        const dateTime = new Date(date);
-        dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-        return dateTime.toISOString();
-      });
-      
       await sendInterviewRequest({
         conversationId,
         senderId: user.id,
         recipientId,
-        proposedTimes
+        proposedTimes: selectedTimes.map(t => t.toISOString())
       });
       
-      // Close dialog and reset form
       onOpenChange(false);
-      setDate(undefined);
       setSelectedTimes([]);
     } catch (error) {
       console.error('Error sending interview request:', error);
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
-
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Schedule Interview</DialogTitle>
+          <DialogTitle>Schedule an interview</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <label className="text-sm font-medium">Select Date</label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  initialFocus
-                  disabled={(date) => date < new Date()}
-                />
-              </PopoverContent>
-            </Popover>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h3 className="text-sm font-medium mb-2">Select a date</h3>
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              disabled={(date) => date < new Date() || date > addDays(new Date(), 30)}
+              className="border rounded-md"
+            />
           </div>
           
-          <div className="grid gap-2">
-            <label className="text-sm font-medium">Suggest Times (max 3)</label>
-            <div className="grid grid-cols-3 gap-2">
-              {timeSlots.map((time) => (
-                <Button
-                  key={time}
-                  type="button"
-                  variant={selectedTimes.includes(time) ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleAddTime(time)}
-                  className="flex items-center justify-center"
-                >
-                  <Clock className="mr-1 h-3 w-3" />
-                  {time}
-                </Button>
-              ))}
-            </div>
+          <div>
+            <h3 className="text-sm font-medium mb-2">Select available times</h3>
+            {selectedDate ? (
+              <div className="h-[280px] overflow-y-auto border rounded-md p-2 space-y-2">
+                {availableTimes.map((time) => {
+                  const isSelected = selectedTimes.some(
+                    t => t.toISOString() === time.toISOString()
+                  );
+                  
+                  return (
+                    <Button
+                      key={time.toISOString()}
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => toggleTimeSelection(time)}
+                    >
+                      {format(time, 'p')}
+                    </Button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                Please select a date first
+              </div>
+            )}
           </div>
         </div>
+        
+        <div className="mt-4">
+          <p className="text-sm text-muted-foreground">
+            {selectedTimes.length > 0 ? (
+              <>Selected {selectedTimes.length} time slots</>
+            ) : (
+              <>Select at least one time slot to continue</>
+            )}
+          </p>
+        </div>
+        
         <DialogFooter>
-          <Button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!date || selectedTimes.length === 0 || isSubmitting}
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSendRequest} 
+            disabled={selectedTimes.length === 0 || isLoading}
           >
-            {isSubmitting ? 'Sending...' : 'Send Interview Request'}
+            {isLoading ? 'Sending...' : 'Send Interview Request'}
           </Button>
         </DialogFooter>
       </DialogContent>

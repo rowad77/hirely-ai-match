@@ -1,3 +1,4 @@
+
 export interface JobFilters {
   jobTypes: { name: string; required: boolean }[];
   locations: { name: string; required: boolean }[];
@@ -7,14 +8,27 @@ export interface JobFilters {
   experienceLevels?: { name: string; required: boolean }[];
 }
 
-// You would also need to update all places that create these objects to use the proper format
-// For example, when initializing filters:
+interface JobFiltersProps {
+  onFilterChange: (filters: JobFilters) => void;
+  initialFilters?: JobFilters;
+  inModal?: boolean;
+  filterCounts?: {[key: string]: number};
+}
 
-const initialFilters: JobFilters = {
-  jobTypes: [],
-  locations: [], 
-  categories: [],
-  salaryRanges: [],
-  skills: [],
-  experienceLevels: []
+const JobFiltersComponent: React.FC<JobFiltersProps> = ({
+  onFilterChange,
+  initialFilters,
+  inModal = false,
+  filterCounts = {}
+}) => {
+  // Component implementation would go here
+  // This is a stub implementation - you would need to replace this with actual implementation
+  return (
+    <div>
+      {/* Job filters UI would go here */}
+      <div>Job Filters Component</div>
+    </div>
+  );
 };
+
+export default JobFiltersComponent;

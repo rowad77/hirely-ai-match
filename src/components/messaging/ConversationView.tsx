@@ -19,7 +19,7 @@ import type { Conversation, Message, ConversationParticipant } from '@/types/mes
 export function ConversationView() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const { user } = useAuth();
-  const { getMessages, sendMessage, markMessagesAsRead } = useMessaging();
+  const { sendMessage, markMessagesAsRead } = useMessaging();
   const [newMessageText, setNewMessageText] = useState('');
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -29,33 +29,17 @@ export function ConversationView() {
     queryKey: ['conversation', conversationId],
     queryFn: async () => {
       if (!conversationId) return null;
-      
-      try {
-        const { data, error } = await messagingClient
-          .from('conversations')
-          .select(`
-            *,
-            participants:conversation_participants(*, profile:profiles(*))
-          `)
-          .eq('id', conversationId)
-          .single();
-          
-        if (error) throw error;
-        return data as Conversation;
-      } catch (error) {
-        console.error('Error fetching conversation:', error);
-        return null;
-      }
+      return messagingClient.getConversationWithParticipants(conversationId);
     },
     enabled: !!conversationId
   });
   
   // Fetch messages for the conversation
-  const { data: messages, isLoading: messagesLoading, refetch: refetchMessages } = useQuery({
+  const { data: messages = [], isLoading: messagesLoading, refetch: refetchMessages } = useQuery({
     queryKey: ['messages', conversationId],
     queryFn: async () => {
       if (!conversationId) return [];
-      return getMessages(conversationId);
+      return messagingClient.getMessages(conversationId);
     },
     enabled: !!conversationId
   });
@@ -72,44 +56,23 @@ export function ConversationView() {
   
   // Mark messages as read when conversation is opened
   useEffect(() => {
-    if (conversationId && user) {
-      markMessagesAsRead(conversationId);
+    if (conversationId && user?.id) {
+      messagingClient.markMessagesAsRead(conversationId, user.id);
     }
-  }, [conversationId, user, markMessagesAsRead]);
-  
-  // Set up real-time subscription for new messages
-  useEffect(() => {
-    if (!conversationId) return;
-    
-    const subscription = messagingClient
-      .channel(`conversation:${conversationId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `conversation_id=eq.${conversationId}`
-      }, () => {
-        refetchMessages();
-        markMessagesAsRead(conversationId);
-      })
-      .subscribe();
-      
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [conversationId, refetchMessages, markMessagesAsRead]);
+  }, [conversationId, user]);
   
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessageText.trim() || !conversationId || !user) return;
     
     try {
-      await sendMessage({
+      await messagingClient.sendMessage({
         conversationId,
-        content: newMessageText,
-        senderId: user.id
+        senderId: user.id,
+        content: newMessageText
       });
       
+      refetchMessages();
       setNewMessageText('');
     } catch (error) {
       console.error('Error sending message:', error);
@@ -201,12 +164,14 @@ export function ConversationView() {
         </form>
       </div>
       
-      <InterviewRequestDialog
-        open={isInterviewDialogOpen}
-        onOpenChange={setIsInterviewDialogOpen}
-        conversationId={conversationId}
-        recipientId={otherParticipant?.user_id || ''}
-      />
+      {otherParticipant && (
+        <InterviewRequestDialog
+          open={isInterviewDialogOpen}
+          onOpenChange={setIsInterviewDialogOpen}
+          conversationId={conversationId}
+          recipientId={otherParticipant.user_id}
+        />
+      )}
     </Card>
   );
 }

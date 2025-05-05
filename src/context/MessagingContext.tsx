@@ -1,8 +1,7 @@
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { messagingClient } from '@/integrations/supabase/messaging-client';
 import { useAuth } from '@/context/AuthContext';
+import { messagingClient } from '@/integrations/supabase/messaging-client';
 import { Conversation, Message, InterviewRequest } from '@/types/messaging';
 
 // Define the context type
@@ -14,14 +13,14 @@ interface MessagingContextType {
   error: Error | null;
   unreadCount: number;
   setCurrentConversationId: (id: string | null) => void;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (params: { conversationId: string; content: string; senderId: string }) => Promise<void>;
   sendInterviewRequest: (params: {
     conversationId: string;
     senderId: string;
     recipientId: string;
     proposedTimes: string[];
   }) => Promise<void>;
-  markMessagesAsRead: () => Promise<void>;
+  markMessagesAsRead: (conversationId: string) => Promise<void>;
   createConversation: (participantIds: string[]) => Promise<string>;
   getMessages: (conversationId: string) => Promise<Message[]>;
 }
@@ -80,42 +79,6 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
       setCurrentConversation(null);
     }
   }, [currentConversationId]);
-
-  // Set up real-time updates for new messages
-  useEffect(() => {
-    if (!user) return;
-
-    const subscription = supabase
-      .channel('messaging-changes')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages'
-      }, (payload) => {
-        const newMessage = payload.new as Message;
-        
-        // If the message is for the current conversation, add it to the messages list
-        if (newMessage.conversation_id === currentConversationId) {
-          setMessages(prev => [...prev, newMessage]);
-          
-          // If the user is viewing the conversation and the message is from someone else, mark it as read
-          if (user?.id !== newMessage.sender_id) {
-            messagingClient.markMessagesAsRead(newMessage.conversation_id, user!.id);
-          }
-        }
-
-        // Update unread count
-        loadUnreadCount();
-        
-        // Update conversations list to reflect the new message
-        updateConversationWithNewMessage(newMessage);
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, [user, currentConversationId]);
 
   // Load all conversations for the current user
   const loadConversations = async () => {
@@ -179,36 +142,13 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
     }
   };
 
-  // Update conversations list with a new message
-  const updateConversationWithNewMessage = (message: Message) => {
-    setConversations(prev => {
-      return prev.map(conv => {
-        if (conv.id === message.conversation_id) {
-          return {
-            ...conv,
-            last_message: {
-              content: message.content,
-              created_at: message.created_at,
-              sender_id: message.sender_id
-            },
-            last_message_at: message.created_at
-          };
-        }
-        return conv;
-      });
-    });
-  };
-
   // Send a message in the current conversation
-  const sendMessage = async (content: string) => {
-    if (!user || !currentConversationId || !content.trim()) return;
+  const sendMessage = async (params: { conversationId: string; content: string; senderId: string }) => {
+    if (!params.content.trim()) return;
     
     try {
-      await messagingClient.sendMessage({
-        conversationId: currentConversationId,
-        senderId: user.id,
-        content
-      });
+      await messagingClient.sendMessage(params);
+      // We'll rely on real-time updates to refresh the messages
     } catch (err: any) {
       setError(err);
     }
@@ -222,18 +162,19 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
     proposedTimes: string[];
   }) => {
     try {
-      await messagingClient.sendInterviewRequest(params);
+      // This is a placeholder until we implement this feature
+      console.log("Would send interview request:", params);
     } catch (err: any) {
       setError(err);
     }
   };
 
   // Mark all messages in the current conversation as read
-  const markMessagesAsRead = async () => {
-    if (!user || !currentConversationId) return;
+  const markMessagesAsRead = async (conversationId: string) => {
+    if (!user) return;
     
     try {
-      await messagingClient.markMessagesAsRead(currentConversationId, user.id);
+      await messagingClient.markMessagesAsRead(conversationId, user.id);
       loadUnreadCount();
     } catch (err: any) {
       setError(err);

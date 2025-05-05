@@ -22,44 +22,56 @@ const ActiveFilters = ({ filters, onFilterChange }: ActiveFiltersProps) => {
     <div className="mb-6 flex flex-wrap gap-2 items-center">
       <span className="text-sm text-gray-500 mr-2">Active filters:</span>
       {filters.jobTypes.map(type => (
-        <Badge key={type} variant="secondary" className="flex items-center gap-1">
-          {type}
+        <Badge key={type.name} variant="secondary" className="flex items-center gap-1">
+          {type.name}
           <button 
             className="ml-1" 
-            onClick={() => onFilterChange({...filters, jobTypes: filters.jobTypes.filter(t => t !== type)})}
+            onClick={() => onFilterChange({
+              ...filters, 
+              jobTypes: filters.jobTypes.filter(t => t.name !== type.name)
+            })}
           >
             ×
           </button>
         </Badge>
       ))}
       {filters.locations.map(location => (
-        <Badge key={location} variant="secondary" className="flex items-center gap-1">
-          {location}
+        <Badge key={location.name} variant="secondary" className="flex items-center gap-1">
+          {location.name}
           <button 
             className="ml-1" 
-            onClick={() => onFilterChange({...filters, locations: filters.locations.filter(l => l !== location)})}
+            onClick={() => onFilterChange({
+              ...filters, 
+              locations: filters.locations.filter(l => l.name !== location.name)
+            })}
           >
             ×
           </button>
         </Badge>
       ))}
       {filters.salaryRanges.map(range => (
-        <Badge key={range} variant="secondary" className="flex items-center gap-1">
-          {range}
+        <Badge key={range.name} variant="secondary" className="flex items-center gap-1">
+          {range.name}
           <button 
             className="ml-1" 
-            onClick={() => onFilterChange({...filters, salaryRanges: filters.salaryRanges.filter(r => r !== range)})}
+            onClick={() => onFilterChange({
+              ...filters, 
+              salaryRanges: filters.salaryRanges.filter(r => r.name !== range.name)
+            })}
           >
             ×
           </button>
         </Badge>
       ))}
       {filters.categories.map(category => (
-        <Badge key={category} variant="secondary" className="flex items-center gap-1">
-          {category}
+        <Badge key={category.name} variant="secondary" className="flex items-center gap-1">
+          {category.name}
           <button 
             className="ml-1" 
-            onClick={() => onFilterChange({...filters, categories: filters.categories.filter(c => c !== category)})}
+            onClick={() => onFilterChange({
+              ...filters, 
+              categories: filters.categories.filter(c => c.name !== category.name)
+            })}
           >
             ×
           </button>
@@ -74,6 +86,8 @@ const ActiveFilters = ({ filters, onFilterChange }: ActiveFiltersProps) => {
           locations: [],
           salaryRanges: [],
           categories: [],
+          skills: [],
+          experienceLevels: []
         })}
       >
         Clear all
