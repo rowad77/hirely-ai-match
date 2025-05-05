@@ -394,6 +394,45 @@ export type Database = {
           },
         ]
       }
+      job_import_schedules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          job_import_config_id: string
+          last_run_at: string | null
+          name: string
+          parameters: Json
+          schedule: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          job_import_config_id: string
+          last_run_at?: string | null
+          name: string
+          parameters?: Json
+          schedule: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          job_import_config_id?: string
+          last_run_at?: string | null
+          name?: string
+          parameters?: Json
+          schedule?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       job_imports: {
         Row: {
           completed_at: string | null
@@ -781,23 +820,38 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          last_notified_at: string | null
+          last_viewed_at: string | null
+          notification_frequency: string | null
+          notify_new_matches: boolean | null
           profile_id: string | null
           search_name: string | null
           search_params: Json | null
+          tags: string[] | null
         }
         Insert: {
           created_at?: string | null
           id?: string
+          last_notified_at?: string | null
+          last_viewed_at?: string | null
+          notification_frequency?: string | null
+          notify_new_matches?: boolean | null
           profile_id?: string | null
           search_name?: string | null
           search_params?: Json | null
+          tags?: string[] | null
         }
         Update: {
           created_at?: string | null
           id?: string
+          last_notified_at?: string | null
+          last_viewed_at?: string | null
+          notification_frequency?: string | null
+          notify_new_matches?: boolean | null
           profile_id?: string | null
           search_name?: string | null
           search_params?: Json | null
+          tags?: string[] | null
         }
         Relationships: [
           {
@@ -824,6 +878,36 @@ export type Database = {
           category?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      system_config: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
         }
         Relationships: []
       }
@@ -905,6 +989,10 @@ export type Database = {
     Functions: {
       get_dashboard_stats: {
         Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_system_config: {
+        Args: { config_key: string }
         Returns: Json
       }
       track_activity: {

@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,8 @@ import {
   CheckCircle, 
   Ban,
   Clock,
-  Download
+  Download,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -30,28 +31,89 @@ import {
   SheetHeader, 
   SheetTitle, 
   SheetDescription,
-  SheetTrigger
+  SheetTrigger,
+  SheetFooter
 } from '@/components/ui/sheet';
 import { JobImportConfig } from '@/components/owner/JobImportConfig';
 import { useOwnerJobs } from '@/hooks/use-owner-jobs';
 import { Tables } from '@/integrations/supabase/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/integrations/supabase/client';
 
 const OwnerJobs = () => {
   const { jobs, loading, refetchJobs } = useOwnerJobs();
   const [searchTerm, setSearchTerm] = useState('');
+  const [importSidebarOpen, setImportSidebarOpen] = useState(false);
+  const [importHistoryOpen, setImportHistoryOpen] = useState(false);
+  const [importHistory, setImportHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [selectedImport, setSelectedImport] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (importHistoryOpen) {
+      fetchImportHistory();
+    }
+  }, [importHistoryOpen]);
+  
+  const fetchImportHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from('job_imports')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+        
+      if (error) throw error;
+      
+      setImportHistory(data || []);
+    } catch (error: any) {
+      console.error('Error fetching import history:', error);
+      toast.error('Failed to load import history');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
   
   const handleDeleteJob = async (jobId: string) => {
     // TODO: Implement job deletion
+    toast.info('Job deletion will be implemented in the future');
   };
   
   const toggleJobStatus = async (jobId: string) => {
     // TODO: Implement job status toggle
+    toast.info('Job status toggle will be implemented in the future');
   };
 
   const handleExportJobs = () => {
     toast.success('Jobs data exported successfully');
     // In a real app, this would generate a CSV or Excel file
+  };
+  
+  const setupCronJob = async () => {
+    setSetupLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('setup-jobspy-cron');
+      
+      if (error) throw error;
+      
+      if (data?.success) {
+        toast.success('JobSpy scheduled import has been set up successfully');
+      } else {
+        throw new Error(data?.message || 'Unknown error');
+      }
+    } catch (error: any) {
+      console.error('Error setting up cron job:', error);
+      toast.error(`Failed to set up scheduled imports: ${error.message || 'Unknown error'}`);
+    } finally {
+      setSetupLoading(false);
+    }
+  };
+  
+  const viewImportDetails = (importId: string) => {
+    setSelectedImport(importId);
+    // In a more advanced implementation, you could show a modal with the import details
   };
 
   const filteredJobs = jobs.filter(job => 
@@ -74,13 +136,14 @@ const OwnerJobs = () => {
             />
           </div>
           <div className="flex space-x-2">
-            <Sheet>
+            {/* Job Import Sheet */}
+            <Sheet open={importSidebarOpen} onOpenChange={setImportSidebarOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" className="bg-blue-600 hover:bg-blue-700 text-white">
                   Import Jobs
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[400px]">
+              <SheetContent side="right" className="w-[400px] sm:max-w-2xl md:w-[600px]">
                 <SheetHeader>
                   <SheetTitle>Import Jobs</SheetTitle>
                   <SheetDescription>
@@ -88,10 +151,109 @@ const OwnerJobs = () => {
                   </SheetDescription>
                 </SheetHeader>
                 <div className="mt-6">
-                  <JobImportConfig onImportComplete={refetchJobs} />
+                  <JobImportConfig onImportComplete={() => {
+                    refetchJobs();
+                    fetchImportHistory();
+                  }} />
+                </div>
+                <SheetFooter className="mt-6">
+                  <Button variant="outline" onClick={() => setImportSidebarOpen(false)}>Close</Button>
+                  <Button onClick={setupCronJob} disabled={setupLoading}>
+                    {setupLoading ? 'Setting up...' : 'Setup Scheduled Imports'}
+                  </Button>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
+            
+            {/* Import History Sheet */}
+            <Sheet open={importHistoryOpen} onOpenChange={setImportHistoryOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline">
+                  <Clock className="h-4 w-4 mr-2" />
+                  Import History
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[400px] sm:max-w-2xl md:w-[600px]">
+                <SheetHeader>
+                  <SheetTitle>Job Import History</SheetTitle>
+                  <SheetDescription>
+                    View the history of job imports
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="mt-6">
+                  <div className="flex justify-between mb-4">
+                    <h3 className="text-lg font-medium">Recent Imports</h3>
+                    <Button variant="outline" size="sm" onClick={fetchImportHistory}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh
+                    </Button>
+                  </div>
+                  
+                  {loadingHistory ? (
+                    <div className="space-y-2">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="p-4 border rounded-md">
+                          <Skeleton className="h-5 w-32 mb-2" />
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : importHistory.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      No import history found. Try running an import first.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                      {importHistory.map((importItem) => (
+                        <div 
+                          key={importItem.id} 
+                          className={`p-4 border rounded-md ${
+                            importItem.status === 'completed' 
+                              ? 'border-green-200 bg-green-50' 
+                              : importItem.status === 'failed'
+                                ? 'border-red-200 bg-red-50'
+                                : 'border-yellow-200 bg-yellow-50'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-medium">{importItem.source}</h4>
+                              <p className="text-sm text-gray-600">
+                                {new Date(importItem.started_at).toLocaleString()}
+                              </p>
+                              <div className="flex items-center mt-1">
+                                <Badge variant={
+                                  importItem.status === 'completed' 
+                                    ? 'success' 
+                                    : importItem.status === 'failed'
+                                      ? 'destructive'
+                                      : 'outline'
+                                }>
+                                  {importItem.status}
+                                </Badge>
+                                {importItem.jobs_imported !== null && (
+                                  <span className="text-sm ml-2">
+                                    {importItem.jobs_imported} jobs imported
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => viewImportDetails(importItem.id)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </SheetContent>
             </Sheet>
+            
             <Button 
               className="bg-purple-600 hover:bg-purple-700"
               onClick={handleExportJobs}

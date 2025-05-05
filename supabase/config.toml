@@ -1,7 +1,11 @@
 
-project_id = "lckyfjxdnmwhmruvgpwn"
+project_id = 'lckyfjxdnmwhmruvgpwn'
 
 [functions.import-jobspy-jobs]
+verify_jwt = true
 
 [functions.scheduled-job-import]
+verify_jwt = true
+
+[functions.analyze-resume]
 verify_jwt = false

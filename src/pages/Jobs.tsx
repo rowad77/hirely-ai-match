@@ -1,572 +1,269 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Filter, Briefcase, SearchX, Loader, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { JobFiltersComponent, JobFilters } from '@/components/JobFilters';
+import JobCard from '@/components/jobs/JobCard';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import MainLayout from '../components/layout/MainLayout';
-import { JobFiltersComponent as JobFilters, JobFilters as JobFiltersType } from '@/components/JobFilters';
-import { fetchJobs } from '@/data/jobs';
-import JobListItem from '@/components/JobListItem';
-import SearchHeader from '@/components/jobs/SearchHeader';
-import ActiveFilters from '@/components/jobs/ActiveFilters';
-import JobsGrid from '@/components/jobs/JobsGrid';
-import JobSourceSelector from '@/components/jobs/JobSourceSelector';
-import { useToast } from '@/components/ui/use-toast';
-import RecentlyViewed from '@/components/jobs/RecentlyViewed';
-import ViewModeToggle from '@/components/jobs/ViewModeToggle';
-import { EmptyState } from '@/components/ui/empty-state';
-import { ErrorDisplay } from '@/components/ui/error-display';
-import JobRecommendations from '@/components/jobs/JobRecommendations';
+import { Skeleton } from '@/components/ui/skeleton';
+import { fetchData } from '@/utils/supabase-api';
+import { ApiErrorMessage } from '@/components/ui/ApiErrorMessage';
+import { ErrorResponse, ErrorType } from '@/utils/error-handling';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
-const ITEMS_PER_PAGE = 6;
-
-// Define the JobFilter type to match what fetchJobs expects
-interface JobFilter {
-  search?: string;
-  sources?: string[];
-  jobTypes?: string[];
-  locations?: string[];
-  salaryRanges?: string[];
-  categories?: string[];
-  skills?: string[];
-  experienceLevels?: string[];
+// Define the Job type
+interface Job {
+  id: string;
+  title: string;
+  company_id: string;
+  location: string;
+  type: string;
+  description: string;
+  posted_date: string;
+  is_approved: boolean;
+  is_featured: boolean;
+  salary: string;
+  url: string;
 }
 
+// Update only the filters handling section to include skills and experience levels
 const Jobs = () => {
-  const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState<JobFiltersType>({
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<ErrorResponse | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(12);
+  const [totalJobs, setTotalJobs] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+
+  const [filters, setFilters] = useState<JobFilters>({
     jobTypes: [],
     locations: [],
     salaryRanges: [],
     categories: [],
-    skills: [],
-    experienceLevels: [],
+    skills: [], // Initialize skills array
+    experienceLevels: [] // Initialize experience levels array
   });
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [favoriteJobs, setFavoriteJobs] = useState<string[]>([]);
-  const [isUsingFallback, setIsUsingFallback] = useState(false);
-  const [dataSources, setDataSources] = useState<string[]>(['theirstack', 'firecrawl']);
-  const [popularSearches, setPopularSearches] = useState<string[]>([
-    'Software Engineer', 'Product Manager', 'Data Scientist', 
-    'UX Designer', 'Marketing Manager', 'Sales Representative'
-  ]);
-  const [filterCounts, setFilterCounts] = useState<{[key: string]: number}>({});
-  const [userInterests, setUserInterests] = useState<string[]>(['Engineering', 'Technology']);
 
-  useEffect(() => {
-    const savedFavorites = localStorage.getItem('favoriteJobs');
-    if (savedFavorites) {
-      try {
-        setFavoriteJobs(JSON.parse(savedFavorites));
-      } catch (e) {
-        console.error('Failed to parse favorite jobs', e);
+  const [filterCounts, setFilterCounts] = useState({
+    jobTypes: 0,
+    locations: 0,
+    salaryRanges: 0,
+    categories: 0,
+    skills: 0,
+    experienceLevels: 0
+  });
+
+  const fetchJobs = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Build the filter object based on the current state
+      const filter: Record<string, any> = {};
+      if (filters.jobTypes && filters.jobTypes.length > 0) {
+        filter.type = `in.(${filters.jobTypes.join(',')})`;
       }
-    }
-    
-    const mockInterests = ['Engineering', 'Technology', 'Remote Work'];
-    setUserInterests(mockInterests);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('favoriteJobs', JSON.stringify(favoriteJobs));
-  }, [favoriteJobs]);
-
-  const { data: jobs = [], isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: ['jobs', currentPage, filters, searchTerm, dataSources],
-    queryFn: async () => {
-      // Convert filters from object arrays to string arrays for the API
-      const jobFilter: JobFilter = {
-        search: searchTerm,
-        sources: dataSources,
-        jobTypes: filters.jobTypes.map(item => item.name),
-        locations: filters.locations.map(item => item.name),
-        salaryRanges: filters.salaryRanges.map(item => item.name),
-        categories: filters.categories.map(item => item.name),
-        skills: filters.skills?.map(item => item.name),
-        experienceLevels: filters.experienceLevels?.map(item => item.name),
-      };
-      
-      const result = await fetchJobs(currentPage, jobFilter);
-      
-      if (result.length > 0 && result.some(job => job.source === 'fallback')) {
-        setIsUsingFallback(true);
-      } else {
-        setIsUsingFallback(false);
+      if (filters.locations && filters.locations.length > 0) {
+        filter.location = `in.(${filters.locations.join(',')})`;
       }
-      
-      return result;
-    },
-    meta: {
-      onSettled: (data, error) => {
-        if (error) {
-          toast({
-            title: "Error fetching jobs",
-            description: "There was an issue loading jobs. Using fallback data instead.",
-            variant: "destructive"
-          });
+      if (filters.salaryRanges && filters.salaryRanges.length > 0) {
+        // Assuming salaryRanges are strings like '50000-75000'
+        const salaryFilters = filters.salaryRanges.map(range => {
+          const [min, max] = range.split('-').map(Number);
+          return `salary.gte.${min},salary.lte.${max}`;
+        }).join(',');
+        filter.salary = `or.(${salaryFilters})`;
+      }
+      if (filters.categories && filters.categories.length > 0) {
+        filter.category = `in.(${filters.categories.join(',')})`;
+      }
+      if (searchTerm) {
+        filter.title = `ilike.*${searchTerm}*`;
+      }
+
+      // Fetch jobs with filters and pagination
+      const { data, error } = await fetchData<Job>('jobs', {
+        filter: filter,
+        order: { column: 'posted_date', ascending: false },
+        limit: limit,
+        page: page
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setJobs(data);
+        // Fetch total count separately (efficiently if your API supports it)
+        const { data: allJobs, error: countError } = await fetchData<Job>('jobs', {
+          columns: 'id',
+          filter: filter
+        });
+
+        if (countError) {
+          console.error('Error fetching total job count:', countError);
+          setTotalJobs(0); // Fallback to 0 if count fails
+        } else {
+          setTotalJobs(allJobs?.length || 0);
         }
+      } else {
+        setJobs([]);
+        setTotalJobs(0);
       }
-    },
-    staleTime: 1000 * 60 * 5,
-    retry: 2
-  });
+    } catch (err: any) {
+      setError({
+        type: ErrorType.SERVER,
+        message: err.message,
+        userMessage: 'Failed to fetch jobs. Please try again.',
+        retryable: true,
+        originalError: err
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, limit, page, searchTerm]);
 
   useEffect(() => {
-    if (!jobs.length) return;
-    
-    const counts: {[key: string]: number} = {};
-    
-    jobs.forEach(job => {
-      const type = job.type.toLowerCase();
-      counts[type] = (counts[type] || 0) + 1;
-      
-      const category = job.category.toLowerCase();
-      counts[category] = (counts[category] || 0) + 1;
-      
-      if (job.remote || job.type.toLowerCase().includes('remote')) {
-        counts['remote'] = (counts['remote'] || 0) + 1;
+    fetchJobs();
+  }, [fetchJobs]);
+
+  const handleRetry = () => {
+    fetchJobs();
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+
+    // Update URL with search term
+    setSearchParams(params => {
+      if (term) {
+        params.set('search', term);
+      } else {
+        params.delete('search');
       }
-    });
-    
-    setFilterCounts(counts);
-  }, [jobs]);
-
-  const filteredJobs = useMemo(() => {
-    return jobs.filter(job => {
-      const matchesSearch = searchTerm === '' || 
-        job.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        job.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        job.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (job.description && job.description.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      const matchesJobType = filters.jobTypes.length === 0 || 
-        filters.jobTypes.some(type => job.type === type.name);
-      
-      const matchesLocation = filters.locations.length === 0 || 
-        filters.locations.some(location => job.location?.includes(location.name));
-      
-      const matchesCategory = filters.categories.length === 0 ||
-        filters.categories.some(category => job.category === category.name);
-      
-      const matchesSalary = filters.salaryRanges.length === 0 || 
-        filters.salaryRanges.some(range => {
-          const jobSalary = job.salary ? parseInt(job.salary.replace(/[^0-9]/g, '')) : 0;
-          const rangeName = range.name;
-          if (rangeName === "Under $50k") return jobSalary < 50000;
-          if (rangeName === "$50k - $100k") return jobSalary >= 50000 && jobSalary < 100000;
-          if (rangeName === "$100k - $150k") return jobSalary >= 100000 && jobSalary < 150000;
-          if (rangeName === "$150k+") return jobSalary >= 150000;
-          return true;
-        });
-      
-      // Match skills if any are selected
-      const matchesSkills = !filters.skills || filters.skills.length === 0 ||
-        filters.skills.every(skill => {
-          // For required skills, the job must have them
-          if (skill.required) {
-            return job.description?.toLowerCase().includes(skill.name.toLowerCase());
-          }
-          // For non-required skills, we'll count the job as matching if it has at least one
-          return !skill.required || job.description?.toLowerCase().includes(skill.name.toLowerCase());
-        });
-      
-      // Match experience level if any are selected
-      const matchesExperience = !filters.experienceLevels || filters.experienceLevels.length === 0 ||
-        filters.experienceLevels.some(level => {
-          const levelName = level.name;
-          const description = job.description?.toLowerCase() || '';
-          
-          if (levelName === "Entry-level") {
-            return description.includes("entry level") || 
-                   description.includes("junior") || 
-                   description.includes("beginner") ||
-                   description.includes("0-2 years");
-          }
-          
-          if (levelName === "Mid-level") {
-            return description.includes("mid level") || 
-                   description.includes("intermediate") || 
-                   description.includes("2-5 years");
-          }
-          
-          if (levelName === "Senior") {
-            return description.includes("senior") || 
-                   description.includes("experienced") || 
-                   description.includes("5+ years");
-          }
-          
-          if (levelName === "Executive") {
-            return description.includes("executive") || 
-                   description.includes("director") || 
-                   description.includes("chief") || 
-                   description.includes("head of") ||
-                   description.includes("lead");
-          }
-          
-          return false;
-        });
-      
-      return matchesSearch && matchesJobType && matchesLocation && matchesSalary && matchesCategory && matchesSkills && matchesExperience;
-    });
-  }, [searchTerm, filters, jobs]);
-
-  const totalPages = Math.ceil(filteredJobs.length / ITEMS_PER_PAGE);
-
-  const currentJobs = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredJobs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredJobs, currentPage]);
-
-  const handleFilterChange = (newFilters: JobFiltersType) => {
-    setFilters(newFilters);
-    setCurrentPage(1);
+      return params;
+    }, { replace: true });
   };
 
-  const toggleFavorite = (jobId: string) => {
-    setFavoriteJobs(prev => 
-      prev.includes(jobId) 
-        ? prev.filter(id => id !== jobId) 
-        : [...prev, jobId]
-    );
-
-    const isFavorited = !favoriteJobs.includes(jobId);
-    toast({
-      title: isFavorited ? "Job saved" : "Job removed",
-      description: isFavorited ? "Job added to your saved list" : "Job removed from your saved list",
-      duration: 2000
-    });
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
   };
 
-  const handleRefetch = () => {
-    refetch();
-    toast({
-      title: "Refreshing jobs",
-      description: "Fetching the latest job listings..."
-    });
-  };
-
-  const jobsBySource = useMemo(() => {
-    const grouped = {
-      all: filteredJobs,
-      recent: filteredJobs.filter(job => {
-        const date = job.postedDate?.toLowerCase();
-        return date?.includes('today') || date?.includes('yesterday') || date?.includes('day ago');
-      }),
-      remote: filteredJobs.filter(job => job.remote === true || job.type?.toLowerCase().includes('remote')),
-      featured: filteredJobs.filter(job => job.category === 'Engineering' || job.category === 'Design'),
-      theirstack: filteredJobs.filter(job => job.source === 'theirstack'),
-      firecrawl: filteredJobs.filter(job => job.source === 'firecrawl'),
-      fallback: filteredJobs.filter(job => job.source === 'fallback'),
-      favorites: filteredJobs.filter(job => favoriteJobs.includes(job.id))
-    };
-    return grouped;
-  }, [filteredJobs, favoriteJobs]);
-
-  const getSuggestedSearches = () => {
-    const suggestions = [];
-    
-    if (filters.jobTypes.length > 0 || filters.locations.length > 0) {
-      suggestions.push("Try removing some filters");
-    }
-    
-    if (searchTerm) {
-      suggestions.push("Try using more general keywords");
-      if (searchTerm.toLowerCase().includes('develop')) {
-        suggestions.push("Try searching for 'engineer' instead");
-      }
-    }
-    
-    if (popularSearches.length > 0) {
-      suggestions.push("Try one of our popular searches");
-    }
-    
-    return suggestions.length > 0 ? suggestions : ["Try different search terms"];
-  };
+  const totalPages = Math.ceil(totalJobs / limit);
 
   return (
-    <MainLayout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <SearchHeader 
-          searchTerm={searchTerm} 
-          onSearchChange={(value) => {
-            setSearchTerm(value);
-            setCurrentPage(1);
-          }}
-          popularSearches={popularSearches}
-          filterCounts={filterCounts}
-        />
-        
-        {!searchTerm && filters.jobTypes.length === 0 && filters.categories.length === 0 && (
-          <JobRecommendations 
-            userInterests={userInterests} 
-            limit={3}
-            currentJobId="0"
+    <div className="container mx-auto py-8">
+      <div className="flex justify-between items-center mb-6">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            type="search"
+            placeholder="Search jobs..."
+            className="pl-10"
+            value={searchTerm}
+            onChange={handleSearchChange}
           />
-        )}
-        
-        <RecentlyViewed />
-        
-        <div className="flex flex-col md:flex-row gap-4 items-center mb-8">
-          <JobSourceSelector 
-            selectedSources={dataSources}
-            onSourceChange={(sources) => {
-              setDataSources(sources);
-              refetch();
-            }}
-            onRefresh={handleRefetch}
-            isRefreshing={isRefetching}
-          />
-          
-          <div className="flex gap-2 ml-auto">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" className="flex items-center">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filters
-                  {Object.values(filters).some(f => Array.isArray(f) && f.length > 0) && (
-                    <span className="ml-2 bg-hirely text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
-                      {Object.values(filters)
-                        .reduce((count, filterArray) => count + (Array.isArray(filterArray) ? filterArray.length : 0), 0)}
-                    </span>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                <SheetHeader>
-                  <SheetTitle>Filter Jobs</SheetTitle>
-                  <SheetDescription>
-                    Refine your job search using the filters below
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="py-4">
-                  <JobFilters 
-                    onFilterChange={handleFilterChange} 
-                    inModal={true} 
-                    initialFilters={filters}
-                    filterCounts={filterCounts}
-                  />
-                </div>
-              </SheetContent>
-            </Sheet>
-            
-            <ViewModeToggle 
-              viewMode={viewMode} 
-              onViewModeChange={setViewMode} 
+        </div>
+        <Dialog open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline">
+              Filters
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Filters</DialogTitle>
+              <DialogDescription>
+                Apply filters to narrow down your job search.
+              </DialogDescription>
+            </DialogHeader>
+            <JobFiltersComponent 
+              initialFilters={filters}
+              inModal={isFilterModalOpen}
+              filterCounts={filterCounts}
+              onFilterChange={(newFilters) => setFilters(newFilters)}
             />
-          </div>
-        </div>
-        
-        <ActiveFilters filters={filters} onFilterChange={handleFilterChange} />
-        
-        <div className="mb-6">
-          <p className="text-gray-600">
-            {filteredJobs.length} {filteredJobs.length === 1 ? 'job' : 'jobs'} found
-          </p>
-        </div>
-        
-        {isLoading ? (
-          <div className="flex items-center justify-center p-12 bg-gray-50 rounded-lg">
-            <div className="text-center">
-              <Loader className="animate-spin h-8 w-8 mx-auto text-hirely mb-4" />
-              <p className="text-gray-600">Loading jobs...</p>
-              <p className="text-sm text-gray-500">This may take a moment</p>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {error && (
+        <ApiErrorMessage
+          error={error}
+          onRetry={handleRetry}
+          className="mb-4"
+        />
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading ? (
+          Array.from({ length: limit }).map((_, index) => (
+            <div key={index} className="space-y-3">
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-40 w-full" />
+              <div className="flex gap-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-8 w-20" />
+              </div>
             </div>
-          </div>
-        ) : error ? (
-          <ErrorDisplay
-            title="Error loading jobs"
-            description="We encountered a problem while fetching job listings."
-            error={error instanceof Error ? error : "Unknown error occurred"}
-            retryAction={() => refetch()}
-            icon={<AlertTriangle className="h-10 w-10" />}
-          >
-            <p className="text-sm text-gray-600">
-              We're showing demo job listings instead. You can try again or browse our sample listings.
-            </p>
-          </ErrorDisplay>
+          ))
+        ) : jobs.length > 0 ? (
+          jobs.map((job) => (
+            <JobCard key={job.id} job={job} />
+          ))
         ) : (
-          <>
-            <Tabs defaultValue="all" className="mb-6">
-              <TabsList className="mb-4 flex overflow-x-auto hide-scrollbar">
-                <TabsTrigger value="all">All Jobs</TabsTrigger>
-                <TabsTrigger value="recent">Recently Added</TabsTrigger>
-                <TabsTrigger value="remote">Remote Jobs</TabsTrigger>
-                <TabsTrigger value="featured">Featured</TabsTrigger>
-                {jobsBySource.theirstack.length > 0 && (
-                  <TabsTrigger value="theirstack">API Jobs</TabsTrigger>
-                )}
-                {jobsBySource.firecrawl.length > 0 && (
-                  <TabsTrigger value="firecrawl">Web Scraped</TabsTrigger>
-                )}
-                {favoriteJobs.length > 0 && (
-                  <TabsTrigger value="favorites">Saved Jobs ({favoriteJobs.length})</TabsTrigger>
-                )}
-              </TabsList>
-              
-              <TabsContent value="all">
-                {renderJobList(jobsBySource.all)}
-              </TabsContent>
-              <TabsContent value="recent">
-                {renderJobList(jobsBySource.recent)}
-              </TabsContent>
-              <TabsContent value="remote">
-                {renderJobList(jobsBySource.remote)}
-              </TabsContent>
-              <TabsContent value="featured">
-                {renderJobList(jobsBySource.featured)}
-              </TabsContent>
-              {jobsBySource.theirstack.length > 0 && (
-                <TabsContent value="theirstack">
-                  {renderJobList(jobsBySource.theirstack)}
-                </TabsContent>
-              )}
-              {jobsBySource.firecrawl.length > 0 && (
-                <TabsContent value="firecrawl">
-                  {renderJobList(jobsBySource.firecrawl)}
-                </TabsContent>
-              )}
-              {favoriteJobs.length > 0 && (
-                <TabsContent value="favorites">
-                  {renderJobList(jobsBySource.favorites)}
-                </TabsContent>
-              )}
-            </Tabs>
-          </>
+          <div className="col-span-full text-center py-12">
+            <p className="text-gray-500">No jobs found matching your criteria.</p>
+          </div>
         )}
       </div>
-    </MainLayout>
-  );
-  
-  function renderJobList(jobs: any[]) {
-    if (jobs.length === 0) {
-      return (
-        <EmptyState
-          icon={<SearchX className="h-12 w-12" />}
-          title="No jobs found"
-          description={
-            searchTerm || Object.values(filters).some(f => Array.isArray(f) && f.length > 0)
-              ? "Try adjusting your search terms or filters"
-              : "There are currently no jobs in this category"
-          }
-          action={
-            (searchTerm || Object.values(filters).some(f => Array.isArray(f) && f.length > 0))
-              ? {
-                  label: "Clear filters",
-                  onClick: () => {
-                    setSearchTerm("");
-                    setFilters({
-                      jobTypes: [],
-                      locations: [],
-                      salaryRanges: [],
-                      categories: [],
-                    });
-                  },
-                }
-              : undefined
-          }
-          secondaryAction={
-            popularSearches.length > 0 ? {
-              label: "View popular searches",
-              onClick: () => {
-                setSearchTerm(popularSearches[Math.floor(Math.random() * popularSearches.length)]);
-              }
-            } : undefined
-          }
-        >
-          <div className="mt-4 text-sm text-gray-500">
-            <p>Suggestions:</p>
-            <ul className="list-disc list-inside mt-2 space-y-1">
-              {getSuggestedSearches().map((suggestion, i) => (
-                <li key={i}>{suggestion}</li>
-              ))}
-            </ul>
-          </div>
-        </EmptyState>
-      );
-    }
-    
-    const displayJobs = jobs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-    
-    return (
-      <>
-        {viewMode === 'grid' ? (
-          <JobsGrid 
-            jobs={displayJobs}
-            favoriteJobs={favoriteJobs}
-            onFavorite={toggleFavorite}
-          />
-        ) : (
-          <div className="space-y-4">
-            {displayJobs.map(job => (
-              <JobListItem 
-                key={job.id} 
-                job={job} 
-                onFavorite={toggleFavorite}
-                isFavorite={favoriteJobs.includes(job.id)} 
-              />
+
+      {/* Pagination */}
+      {totalJobs > limit && (
+        <div className="flex justify-center mt-8">
+          <div className="join">
+            <Button
+              className="join-item"
+              disabled={page === 1}
+              onClick={() => handlePageChange(page - 1)}
+            >
+              «
+            </Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
+              <Button
+                key={pageNumber}
+                className="join-item"
+                disabled={page === pageNumber}
+                onClick={() => handlePageChange(pageNumber)}
+              >
+                {pageNumber}
+              </Button>
             ))}
+            <Button
+              className="join-item"
+              disabled={page === totalPages}
+              onClick={() => handlePageChange(page + 1)}
+            >
+              »
+            </Button>
           </div>
-        )}
-        
-        {Math.ceil(jobs.length / ITEMS_PER_PAGE) > 1 && (
-          <Pagination className="mt-8">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious 
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-              
-              {Array.from({ length: Math.ceil(jobs.length / ITEMS_PER_PAGE) }).map((_, index) => {
-                const pageNumber = index + 1;
-                if (
-                  pageNumber === 1 || 
-                  pageNumber === Math.ceil(jobs.length / ITEMS_PER_PAGE) || 
-                  (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
-                ) {
-                  return (
-                    <PaginationItem key={pageNumber}>
-                      <PaginationLink 
-                        onClick={() => setCurrentPage(pageNumber)}
-                        isActive={currentPage === pageNumber}
-                      >
-                        {pageNumber}
-                      </PaginationLink>
-                    </PaginationItem>
-                  );
-                }
-                
-                if (
-                  (pageNumber === 2 && currentPage > 3) ||
-                  (pageNumber === Math.ceil(jobs.length / ITEMS_PER_PAGE) - 1 && currentPage < Math.ceil(jobs.length / ITEMS_PER_PAGE) - 2)
-                ) {
-                  return (
-                    <PaginationItem key={pageNumber}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  );
-                }
-                
-                return null;
-              })}
-              
-              <PaginationItem>
-                <PaginationNext 
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(jobs.length / ITEMS_PER_PAGE)))}
-                  className={currentPage >= Math.ceil(jobs.length / ITEMS_PER_PAGE) ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        )}
-      </>
-    );
-  }
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default Jobs;

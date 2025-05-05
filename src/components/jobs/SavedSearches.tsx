@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -57,17 +56,12 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     setError(null);
     
     try {
-      // Use RPC call or direct query to get saved searches with extended fields
+      // Use direct query instead of RPC for compatibility
       const { data, error } = await supabase
-        .rpc('get_saved_searches', { user_id: userId })
-        .catch(() => {
-          // Fallback to direct query if RPC doesn't exist
-          return supabase
-            .from('saved_searches')
-            .select('*')
-            .eq('profile_id', userId)
-            .order('created_at', { ascending: false });
-        });
+        .from('saved_searches')
+        .select('*')
+        .eq('profile_id', userId)
+        .order('created_at', { ascending: false });
       
       setIsLoading(false);
       
@@ -165,78 +159,30 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
         last_viewed_at: new Date().toISOString()
       };
       
-      // First check if the table has the new fields
-      const { error: tableInfoError, count } = await supabase
+      // Insert the search
+      const { data, error } = await supabase
         .from('saved_searches')
-        .select('id', { count: 'exact', head: true });
-      
-      // Create the insert data object, conditionally adding fields that might not exist
-      let insertData: any = {
-        profile_id: userId,
-        search_name: searchName.trim(),
-        search_params: currentFilters,
-      };
-      
-      // Check if we have the extended schema by querying metadata
-      // If we can't determine, try with the extended fields and catch errors
-      try {
-        // Try to do an insert with all fields
-        const { data, error } = await supabase
-          .from('saved_searches')
-          .insert({
-            ...insertData,
-            notify_new_matches: notifyNewMatches,
-            tags: tags,
-            notification_frequency: frequency,
-            last_viewed_at: new Date().toISOString()
-          })
-          .select();
+        .insert(searchData)
+        .select();
           
-        if (error) throw error;
-        
-        // Transform the database record to our application model
-        const newSearches: SavedSearch[] = (data || []).map((dbRecord: any) => ({
-          id: dbRecord.id,
-          name: dbRecord.search_name || 'Unnamed Search',
-          filters: dbRecord.search_params as JobFiltersType || DEFAULT_FILTERS,
-          notify_new_matches: Boolean(dbRecord.notify_new_matches || false),
-          notification_frequency: dbRecord.notification_frequency || 'daily',
-          tags: dbRecord.tags || [],
-          created_at: dbRecord.created_at,
-          last_viewed_at: dbRecord.last_viewed_at,
-          last_notified_at: dbRecord.last_notified_at
-        }));
-        
-        setSavedSearches([...newSearches, ...savedSearches]);
-        setSaveDialogOpen(false);
-        toast.success('Search saved successfully');
-      } catch (insertError) {
-        // Try again with just the basic fields
-        const { data, error } = await supabase
-          .from('saved_searches')
-          .insert({
-            profile_id: userId,
-            search_name: searchName.trim(),
-            search_params: currentFilters,
-          })
-          .select();
-          
-        if (error) throw error;
-        
-        const newSearches: SavedSearch[] = (data || []).map((dbRecord: any) => ({
-          id: dbRecord.id,
-          name: dbRecord.search_name || 'Unnamed Search',
-          filters: dbRecord.search_params as JobFiltersType || DEFAULT_FILTERS,
-          notify_new_matches: false,
-          notification_frequency: 'daily',
-          tags: [],
-          created_at: dbRecord.created_at
-        }));
-        
-        setSavedSearches([...newSearches, ...savedSearches]);
-        setSaveDialogOpen(false);
-        toast.success('Search saved successfully (basic mode)');
-      }
+      if (error) throw error;
+      
+      // Transform the database record to our application model
+      const newSearches: SavedSearch[] = (data || []).map((dbRecord: any) => ({
+        id: dbRecord.id,
+        name: dbRecord.search_name || 'Unnamed Search',
+        filters: dbRecord.search_params as JobFiltersType || DEFAULT_FILTERS,
+        notify_new_matches: Boolean(dbRecord.notify_new_matches || false),
+        notification_frequency: dbRecord.notification_frequency || 'daily',
+        tags: dbRecord.tags || [],
+        created_at: dbRecord.created_at,
+        last_viewed_at: dbRecord.last_viewed_at,
+        last_notified_at: dbRecord.last_notified_at
+      }));
+      
+      setSavedSearches([...newSearches, ...savedSearches]);
+      setSaveDialogOpen(false);
+      toast.success('Search saved successfully');
     } catch (error: any) {
       console.error('Error saving search:', error);
       setError({
@@ -289,24 +235,19 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     setError(null);
     
     try {
-      // First check if the table has the new column
-      try {
-        const { error } = await supabase
-          .from('saved_searches')
-          .update({ notify_new_matches: notify })
-          .eq('id', id);
+      // Update the notification setting
+      const { error } = await supabase
+        .from('saved_searches')
+        .update({ notify_new_matches: notify })
+        .eq('id', id);
 
-        if (error) throw error;
-        
-        setSavedSearches(savedSearches.map(search => 
-          search.id === id ? { ...search, notify_new_matches: notify } : search
-        ));
-        
-        toast.success(notify ? 'Notifications enabled' : 'Notifications disabled');
-      } catch (columnError) {
-        console.warn('Column notify_new_matches might not exist', columnError);
-        toast.error('This feature requires a database update');
-      }
+      if (error) throw error;
+      
+      setSavedSearches(savedSearches.map(search => 
+        search.id === id ? { ...search, notify_new_matches: notify } : search
+      ));
+      
+      toast.success(notify ? 'Notifications enabled' : 'Notifications disabled');
     } catch (error: any) {
       console.error('Error updating notification settings:', error);
       toast.error('Failed to update notification settings');
@@ -322,24 +263,19 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     setError(null);
     
     try {
-      // First check if the table has the new column
-      try {
-        const { error } = await supabase
-          .from('saved_searches')
-          .update({ notification_frequency: frequency })
-          .eq('id', id);
+      // Update the notification frequency
+      const { error } = await supabase
+        .from('saved_searches')
+        .update({ notification_frequency: frequency })
+        .eq('id', id);
 
-        if (error) throw error;
-        
-        setSavedSearches(savedSearches.map(search => 
-          search.id === id ? { ...search, notification_frequency: frequency } : search
-        ));
-        
-        toast.success(`Notification frequency updated to ${frequency}`);
-      } catch (columnError) {
-        console.warn('Column notification_frequency might not exist', columnError);
-        toast.error('This feature requires a database update');
-      }
+      if (error) throw error;
+      
+      setSavedSearches(savedSearches.map(search => 
+        search.id === id ? { ...search, notification_frequency: frequency } : search
+      ));
+      
+      toast.success(`Notification frequency updated to ${frequency}`);
     } catch (error: any) {
       console.error('Error updating notification frequency:', error);
       toast.error('Failed to update notification settings');
@@ -355,24 +291,19 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     setError(null);
     
     try {
-      // First check if the table has the new column
-      try {
-        const { error } = await supabase
-          .from('saved_searches')
-          .update({ tags: tags })
-          .eq('id', id);
+      // Update the tags
+      const { error } = await supabase
+        .from('saved_searches')
+        .update({ tags: tags })
+        .eq('id', id);
 
-        if (error) throw error;
-        
-        setSavedSearches(savedSearches.map(search => 
-          search.id === id ? { ...search, tags } : search
-        ));
-        
-        toast.success('Tags updated successfully');
-      } catch (columnError) {
-        console.warn('Column tags might not exist', columnError);
-        toast.error('This feature requires a database update');
-      }
+      if (error) throw error;
+      
+      setSavedSearches(savedSearches.map(search => 
+        search.id === id ? { ...search, tags } : search
+      ));
+      
+      toast.success('Tags updated successfully');
     } catch (error: any) {
       console.error('Error updating tags:', error);
       toast.error('Failed to update tags');
@@ -385,61 +316,23 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     if (!userId) return;
     
     try {
-      // Try to update last viewed timestamp in the database
-      try {
-        const { error } = await supabase
-          .from('saved_searches')
-          .update({ last_viewed_at: new Date().toISOString() })
-          .eq('id', id);
+      // Update last viewed timestamp
+      const { error } = await supabase
+        .from('saved_searches')
+        .update({ last_viewed_at: new Date().toISOString() })
+        .eq('id', id);
 
-        if (error) throw error;
-        
-        // Clear new matches count for this search
-        setNewMatches(prev => {
-          const updated = {...prev};
-          delete updated[id];
-          return updated;
-        });
-      } catch (columnError) {
-        console.warn('Column last_viewed_at might not exist', columnError);
-      }
+      if (error) throw error;
+      
+      // Clear new matches count for this search
+      setNewMatches(prev => {
+        const updated = {...prev};
+        delete updated[id];
+        return updated;
+      });
     } catch (error: any) {
       console.error('Error marking search as viewed:', error);
     }
-  };
-
-  const formatFilterSummary = (filters: JobFiltersType) => {
-    const parts = [];
-    
-    if (filters.jobTypes?.length) {
-      parts.push(`${filters.jobTypes.length} job types`);
-    }
-    
-    if (filters.locations?.length) {
-      parts.push(`${filters.locations.length} locations`);
-    }
-    
-    if (filters.categories?.length) {
-      parts.push(`${filters.categories.length} categories`);
-    }
-    
-    if (filters.salaryRanges?.length) {
-      parts.push(`${filters.salaryRanges.length} salary ranges`);
-    }
-    
-    if (filters.skills?.length) {
-      parts.push(`${filters.skills.length} skills`);
-    }
-    
-    if (filters.experienceLevels?.length) {
-      parts.push(`${filters.experienceLevels.length} experience levels`);
-    }
-    
-    return parts.join(', ') || 'No filters';
-  };
-
-  const handleRetry = () => {
-    fetchSavedSearches();
   };
 
   // Define default filters for use in various places

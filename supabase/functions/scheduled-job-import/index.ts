@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -38,34 +39,23 @@ serve(async (req) => {
       try {
         console.log(`Processing schedule: ${schedule.name}`);
         
-        // Get the import config
-        const configResponse = await fetch(`${supabaseUrl}/rest/v1/job_import_configs?select=*&id=eq.${schedule.job_import_config_id}`, {
-          headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
-          }
-        });
+        // Get the search parameters from the schedule
+        const searchParams = schedule.parameters || {};
         
-        if (!configResponse.ok) {
-          throw new Error(`Failed to fetch config: ${configResponse.status}`);
-        }
-        
-        const configs = await configResponse.json();
-        if (configs.length === 0) {
-          throw new Error(`No config found with ID: ${schedule.job_import_config_id}`);
-        }
-        
-        const config = configs[0];
-        
-        // Trigger the import
-        console.log(`Invoking import-jobspy-jobs with config: ${JSON.stringify(config.parameters)}`);
+        // Trigger the import with the parameters from the schedule
         const importResponse = await fetch(`${supabaseUrl}/functions/v1/import-jobspy-jobs`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${supabaseKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(config.parameters)
+          body: JSON.stringify({
+            search: searchParams.search || 'software developer',
+            location: searchParams.location,
+            job_type: searchParams.job_type,
+            limit: searchParams.limit || 25,
+            remote: searchParams.remote || false
+          })
         });
         
         if (!importResponse.ok) {
@@ -94,7 +84,7 @@ serve(async (req) => {
           status: 'success',
           result: importResult
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error processing schedule ${schedule.id}:`, error);
         results.push({
           schedule_id: schedule.id,
@@ -113,7 +103,7 @@ serve(async (req) => {
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in scheduled job import:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,

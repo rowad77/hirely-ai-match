@@ -4,12 +4,17 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, Plus } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 
-// Update the props interface to include the handler with the correct name
+export interface Skill {
+  name: string;
+  required: boolean;
+}
+
+// Update the props interface with the correct types
 export interface SkillsFilterProps {
-  selectedSkills: { name: string; required: boolean }[];
-  onSkillsChange: (skills: { name: string; required: boolean }[]) => void;
+  selectedSkills: Skill[];
+  onSkillsChange: (skills: Skill[]) => void;
 }
 
 const SkillsFilter: React.FC<SkillsFilterProps> = ({ 
@@ -17,7 +22,7 @@ const SkillsFilter: React.FC<SkillsFilterProps> = ({
   onSkillsChange 
 }) => {
   const [newSkill, setNewSkill] = useState('');
-  const [skills, setSkills] = useState(selectedSkills || []);
+  const [skills, setSkills] = useState<Skill[]>(selectedSkills || []);
 
   const addSkill = () => {
     if (newSkill.trim() !== '') {
