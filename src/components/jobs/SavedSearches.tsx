@@ -1,13 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { BookmarkPlus, Search, Bell, Tag, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { JobFiltersComponent, JobFilters as JobFiltersType } from '@/components/JobFilters';
+import { JobFilters as JobFiltersType } from '@/pages/Jobs';
 import SavedSearchForm from './SavedSearchForm';
-import SavedSearchList, { SavedSearch, SavedSearchDB } from './SavedSearchList';
-import { query } from '@/utils/supabase-api';
+import SavedSearchList, { SavedSearch } from './SavedSearchList';
 import { ErrorResponse, ErrorType } from '@/utils/error-handling';
 import { ApiErrorMessage } from '@/components/ui/ApiErrorMessage';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,15 @@ type SavedSearchInsertType = {
   tags?: string[];
   last_notified_at?: string;
   last_viewed_at?: string;
+};
+
+const DEFAULT_FILTERS: JobFiltersType = {
+  jobTypes: [],
+  locations: [],
+  salaryRanges: [],
+  categories: [],
+  skills: [],
+  experienceLevels: []
 };
 
 const SavedSearches: React.FC<SavedSearchesProps> = ({
@@ -335,16 +344,6 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     }
   };
 
-  // Define default filters for use in various places
-  const DEFAULT_FILTERS: JobFiltersType = {
-    jobTypes: [],
-    locations: [],
-    salaryRanges: [],
-    categories: [],
-    skills: [],
-    experienceLevels: []
-  };
-
   const formatFilterSummary = (searchParams: any) => {
     const parts = [];
     
@@ -363,7 +362,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
   };
 
   const handleRetry = async () => {
-    // Implement retry logic
+    await fetchSavedSearches();
     return null;
   };
 

@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,34 +11,44 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    
-    // Create a Supabase client
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Enable the pg_cron and pg_net extensions if they're not already enabled
-    await supabase.rpc('setup_cron_extensions');
-    
-    // Set up a cron job to run daily at midnight
-    await supabase.rpc('create_jobspy_cron_job');
-    
+
+    console.log("Setting up JobSpy scheduled import");
+
+    // Fetch active job import schedules
+    const schedulesResponse = await fetch(`${supabaseUrl}/rest/v1/job_import_schedules?select=*&is_active=eq.true`, {
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+      }
+    });
+
+    if (!schedulesResponse.ok) {
+      throw new Error(`Failed to fetch schedules: ${schedulesResponse.status}`);
+    }
+
+    const schedules = await schedulesResponse.json();
+    console.log(`Found ${schedules.length} active job import schedules`);
+
+    // Success response
     return new Response(JSON.stringify({
       success: true,
-      message: "JobSpy cron job has been set up successfully"
+      message: "JobSpy scheduled import has been set up successfully",
+      schedulesFound: schedules.length
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error setting up cron job:', error);
-    return new Response(JSON.stringify({
+    console.error('Error in setup-jobspy-cron:', error);
+    return new Response(JSON.stringify({ 
       success: false,
-      message: error.message || "An error occurred while setting up the cron job"
+      error: error.message 
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

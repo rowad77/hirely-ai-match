@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -23,7 +24,7 @@ export interface JobFilters {
   locations: string[];
   salaryRanges: string[];
   categories: string[];
-  skills: {name: string; required: boolean}[];
+  skills: string[];
   experienceLevels: string[];
   query: string;
 }
@@ -164,8 +165,8 @@ const Jobs = () => {
 
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <SearchHeader 
-          searchQuery={filters.query} 
-          onSearchChange={(query) => setFilters({...filters, query})}
+          query={filters.query} 
+          onQueryChange={(query) => setFilters({...filters, query})}
           totalJobs={totalJobs}
           isLoading={isLoading}
         />
@@ -180,7 +181,10 @@ const Jobs = () => {
             />
             
             <div className="hidden lg:block">
-              <SavedSearches />
+              <SavedSearches 
+                currentFilters={filters} 
+                onApplySearch={handleFilterChange}
+              />
             </div>
           </div>
           
