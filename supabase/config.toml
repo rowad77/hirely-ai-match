@@ -12,3 +12,4 @@ verify_jwt = false
 
 [functions.jobspy-bridge]
 verify_jwt = true
+

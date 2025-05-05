@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,7 +51,14 @@ const JobImportConfig: React.FC<JobImportConfigProps> = ({ onImportComplete }) =
         if (error) {
           console.error('Error fetching API config:', error);
         } else if (data) {
-          setApiConfig(data.value);
+          // Make sure data.value is handled correctly
+          if (typeof data.value === 'object') {
+            setApiConfig(data.value as {
+              api_key?: string;
+              active_sources?: string[];
+              last_update?: string;
+            });
+          }
         }
       } catch (err) {
         console.error('Error fetching API config:', err);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -43,7 +42,7 @@ const Jobs = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [jobsPerPage] = useState(12);
-	const [totalJobs, setTotalJobs] = useState(0);
+  const [totalJobs, setTotalJobs] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -82,7 +81,6 @@ const Jobs = () => {
           .select('*')
           .order('posted_date', { ascending: false });
 
-        // Apply search query
         if (searchQuery) {
           query = query.ilike('title', `%${searchQuery}%`);
         }
@@ -125,11 +123,9 @@ const Jobs = () => {
 
   const handleFilterChange = (newFilters: JobFilters) => {
     setFilters(newFilters);
-    // Reset to first page when filters change
     if (currentPage !== 1) {
       setCurrentPage(1);
     }
-    // Update query params
     const params = new URLSearchParams();
     if (newFilters.query) params.set('q', newFilters.query);
     setSearchParams(params);
@@ -173,11 +169,9 @@ const Jobs = () => {
         
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1 space-y-6">
-            {/* Pass only the props that JobFilters expects */}
             <JobFilters
-              initialFilters={filters}
-              filterCounts={filterCounts}
               onFilterChange={handleFilterChange}
+              initialFilters={filters}
             />
             
             <div className="hidden lg:block">

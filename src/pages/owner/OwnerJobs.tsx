@@ -33,7 +33,7 @@ import {
   SheetTrigger,
   SheetFooter
 } from '@/components/ui/sheet';
-import { JobImportConfig } from '@/components/owner/JobImportConfig';
+import JobImportConfig from '@/components/owner/JobImportConfig';
 import { useOwnerJobs } from '@/hooks/use-owner-jobs';
 import { Tables } from '@/integrations/supabase/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -223,7 +223,7 @@ const OwnerJobs = () => {
                               <div className="flex items-center mt-1">
                                 <Badge variant={
                                   importItem.status === 'completed' 
-                                    ? 'secondary' 
+                                    ? 'default' 
                                     : importItem.status === 'failed'
                                       ? 'destructive'
                                       : 'outline'
