@@ -95,7 +95,7 @@ function isRetryable(error: any, retryStatusCodes: number[]): boolean {
 }
 
 // Process and standardize errors
-function processError(error: any): ErrorResponse {
+export function processError(error: any): ErrorResponse {
   // Default error response
   const errorResponse: ErrorResponse = {
     type: ErrorType.UNKNOWN,
@@ -104,6 +104,15 @@ function processError(error: any): ErrorResponse {
     originalError: error,
     retryable: false
   };
+  
+  // Handle Edge Functions errors
+  if (error.name === 'FunctionsFetchError' || (error.message && error.message.includes('Edge Function'))) {
+    errorResponse.type = ErrorType.NETWORK;
+    errorResponse.message = error.message || 'Failed to connect to Edge Function';
+    errorResponse.userMessage = 'Unable to connect to the service. Please check your connection and try again.';
+    errorResponse.retryable = true;
+    return errorResponse;
+  }
   
   // Handle Supabase errors
   if (error.error && error.status) {
@@ -130,7 +139,7 @@ function processError(error: any): ErrorResponse {
   }
   
   // Handle network errors
-  if (error.message === 'Network Error') {
+  if (error.message === 'Network Error' || error.message === 'Failed to fetch') {
     errorResponse.type = ErrorType.NETWORK;
     errorResponse.message = 'Network connectivity issue';
     errorResponse.userMessage = 'Please check your internet connection and try again.';

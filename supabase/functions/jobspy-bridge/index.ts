@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -31,11 +30,15 @@ serve(async (req) => {
     
     // If this is just a test request, return success without actual API call
     if (is_test) {
-      console.log("This is a test request. Would have searched for:", { search, location, job_type, limit });
+      console.log("This is a test request. Would have searched for:", { search, location, job_type, limit, remote });
+      
+      // Simulate a short delay to make the test feel realistic
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       return new Response(JSON.stringify({
         success: true,
         message: "JobSpy bridge test successful",
-        parameters: { search, location, job_type, limit }
+        parameters: { search, location, job_type, remote, limit }
       }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -198,6 +201,8 @@ except Exception as e:
     return new Response(JSON.stringify({
       success: false,
       message: error instanceof Error ? error.message : "Unknown error occurred",
+      error_type: error.constructor.name || "Error",  // Include error type for better debugging
+      stack: error.stack ? error.stack.split("\n").slice(0, 3).join("\n") : null  // Include partial stack for debugging
     }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
