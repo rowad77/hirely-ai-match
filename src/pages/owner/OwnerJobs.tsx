@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -224,7 +223,7 @@ const OwnerJobs = () => {
                               <div className="flex items-center mt-1">
                                 <Badge variant={
                                   importItem.status === 'completed' 
-                                    ? 'success' 
+                                    ? 'secondary' 
                                     : importItem.status === 'failed'
                                       ? 'destructive'
                                       : 'outline'

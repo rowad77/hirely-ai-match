@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -68,7 +67,8 @@ const JobImportConfig: React.FC<JobImportConfigProps> = ({ onImportComplete }) =
       if (error) throw error;
       
       if (data && data.value) {
-        const config = data.value as JobSpyConfig;
+        // Fix TypeScript error by casting to the correct type
+        const config = data.value as unknown as JobSpyConfig;
         setApiUrl(config.api_url || '');
         setLastUpdate(config.last_update || null);
         
@@ -132,7 +132,7 @@ const JobImportConfig: React.FC<JobImportConfigProps> = ({ onImportComplete }) =
       const { error } = await supabase
         .from('system_config')
         .update({ 
-          value: valueToSave,
+          value: valueToSave as any, // Cast to any to avoid TypeScript errors
           updated_at: new Date().toISOString()
         })
         .eq('key', 'jobspy_api_config');

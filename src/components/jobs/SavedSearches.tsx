@@ -345,6 +345,28 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     experienceLevels: []
   };
 
+  const formatFilterSummary = (searchParams: any) => {
+    const parts = [];
+    
+    if (searchParams.query) parts.push(`"${searchParams.query}"`);
+    
+    if (searchParams.locations && searchParams.locations.length > 0) {
+      parts.push(`in ${searchParams.locations.join(', ')}`);
+    }
+    
+    if (searchParams.jobTypes && searchParams.jobTypes.length > 0) {
+      parts.push(`${searchParams.jobTypes.join(', ')} roles`);
+    }
+    
+    if (parts.length === 0) return "All jobs";
+    return parts.join(' ');
+  };
+
+  const handleRetry = async () => {
+    // Implement retry logic
+    return null;
+  };
+
   return (
     <div>
       {error && (
