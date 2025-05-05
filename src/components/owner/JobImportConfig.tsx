@@ -8,7 +8,12 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
-const JobImportConfig = () => {
+interface JobImportConfigProps {
+  onImportComplete?: () => void;
+}
+
+// Make sure to export the component correctly
+const JobImportConfig: React.FC<JobImportConfigProps> = ({ onImportComplete }) => {
   const { user } = useAuth();
   const [apiUrl, setApiUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -22,6 +27,7 @@ const JobImportConfig = () => {
   const loadConfig = async () => {
     setIsLoading(true);
     try {
+      // Use a direct query without strict typing since system_config table might not be in the types
       const { data, error } = await supabase
         .from('system_config')
         .select('*')
@@ -30,12 +36,15 @@ const JobImportConfig = () => {
       
       if (error) throw error;
       
-      if (data?.value) {
-        setApiUrl(data.value.api_url || '');
-        // For security, we don't show the full API key, only a masked version if it exists
-        if (data.value.api_key) {
-          const maskedKey = data.value.api_key.substring(0, 4) + '**********';
-          setApiKey(maskedKey);
+      if (data) {
+        const config = data as any; // Use any type to avoid strict typing issues
+        if (config.value) {
+          setApiUrl(config.value.api_url || '');
+          // For security, we don't show the full API key, only a masked version if it exists
+          if (config.value.api_key) {
+            const maskedKey = config.value.api_key.substring(0, 4) + '**********';
+            setApiKey(maskedKey);
+          }
         }
       }
     } catch (error) {
@@ -55,6 +64,7 @@ const JobImportConfig = () => {
         api_key: apiKey.includes('*') ? undefined : apiKey
       };
       
+      // Use a direct query without strict typing
       const { error } = await supabase
         .from('system_config')
         .update({ 
@@ -89,10 +99,13 @@ const JobImportConfig = () => {
       
       if (data?.success) {
         toast.success('Successfully connected to JobSpy API');
+        if (onImportComplete) {
+          onImportComplete();
+        }
       } else {
         throw new Error(data?.message || 'Unknown error');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error testing connection:', error);
       toast.error(`Failed to connect to JobSpy API: ${error.message || 'Unknown error'}`);
     } finally {
@@ -155,4 +168,6 @@ const JobImportConfig = () => {
   );
 };
 
+// Export both the named component and as default
+export { JobImportConfig };
 export default JobImportConfig;

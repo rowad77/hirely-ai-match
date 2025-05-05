@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Accordion, 
@@ -9,21 +10,19 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import SkillsFilter from './jobs/SkillsFilter';
 import ExperienceLevelFilter from './jobs/ExperienceLevelFilter';
 
-// Update JobFilters type to include skills as string[] to match expected type
+// Update JobFilters type to include skills and experienceLevels as arrays of strings
 export type JobFilters = {
-  jobTypes?: string[];
-  locations?: string[];
-  salaryRanges?: string[];
-  categories?: string[];
+  jobTypes: string[];
+  locations: string[];
+  salaryRanges: string[];
+  categories: string[];
   search?: string;
-  skills?: string[];
-  experienceLevels?: string[];
+  skills: string[];
+  experienceLevels: string[];
 };
 
 export type JobFiltersComponentProps = {
@@ -32,20 +31,29 @@ export type JobFiltersComponentProps = {
   showClearButton?: boolean;
 };
 
+const DEFAULT_FILTERS: JobFilters = {
+  jobTypes: [],
+  locations: [],
+  salaryRanges: [],
+  categories: [],
+  skills: [],
+  experienceLevels: []
+};
+
 export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({ 
   initialFilters, 
   onApplyFilters,
   showClearButton = true
 }) => {
-  const [currentFilters, setCurrentFilters] = useState<JobFilters>(initialFilters || {});
+  const [currentFilters, setCurrentFilters] = useState<JobFilters>(initialFilters || DEFAULT_FILTERS);
   const [searchQuery, setSearchQuery] = useState(initialFilters?.search || '');
 
   const handleFilterChange = (filterType: keyof JobFilters, value: string, checked: boolean) => {
-    setFilters(prev => {
-      const currentValues = prev[filterType] || [];
+    setCurrentFilters(prev => {
+      const currentValues = prev[filterType] as string[] || [];
       const newValues = checked
-        ? [...(currentValues as string[]), value]
-        : (currentValues as string[]).filter(item => item !== value);
+        ? [...currentValues, value]
+        : currentValues.filter(item => item !== value);
       return { ...prev, [filterType]: newValues };
     });
   };
@@ -70,40 +78,19 @@ export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({
     setSearchQuery(e.target.value);
   };
 
-  // Update the setFilters function to ensure skills is stored as string[]
-  const setFilters = (newFilters: Partial<JobFilters>) => {
-    setCurrentFilters(prev => {
-      // Convert skills to string[] if it's in another format
-      if (newFilters.skills && Array.isArray(newFilters.skills)) {
-        const stringSkills = newFilters.skills.map(skill => {
-          if (typeof skill === 'string') {
-            return skill;
-          } else if (typeof skill === 'object' && skill !== null && 'name' in skill) {
-            return (skill as any).name;
-          }
-          return String(skill);
-        });
-        
-        return { ...prev, ...newFilters, skills: stringSkills };
-      }
-      
-      return { ...prev, ...newFilters };
-    });
-  };
-
-  // Update handleSkillsChange to convert from skill objects to string array
+  // Update to directly set skills as string array
   const handleSkillsChange = (skills: { name: string; required: boolean }[]) => {
     // Convert the skill objects to a string array of skill names
     const skillNames = skills.map(skill => skill.name);
-    setFilters({ skills: skillNames });
+    setCurrentFilters({ ...currentFilters, skills: skillNames });
   };
 
   const handleExperienceChange = (experienceLevels: string[]) => {
-    setFilters({ experienceLevels });
+    setCurrentFilters({ ...currentFilters, experienceLevels });
   };
 
   const clearFilters = () => {
-    setCurrentFilters({});
+    setCurrentFilters(DEFAULT_FILTERS);
     setSearchQuery('');
     toast.success('Filters cleared');
   };
@@ -116,16 +103,19 @@ export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({
 
   useEffect(() => {
     if (initialFilters) {
-      setCurrentFilters(initialFilters);
+      setCurrentFilters({
+        ...DEFAULT_FILTERS,
+        ...initialFilters
+      });
       setSearchQuery(initialFilters.search || '');
     }
   }, [initialFilters]);
 
   // Convert string skills array to the format expected by SkillsFilter
-  const selectedSkillObjects = currentFilters.skills?.map(skillName => ({
+  const selectedSkillObjects = (currentFilters.skills || []).map(skillName => ({
     name: skillName,
     required: true
-  })) || [];
+  }));
 
   return (
     <div className="space-y-4">
@@ -139,7 +129,7 @@ export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({
           onChange={handleSearchInputChange}
         />
       </div>
-      <Accordion type="multiple" collapsible className="w-full">
+      <Accordion type="multiple" className="w-full">
         <AccordionItem value="jobTypes">
           <AccordionTrigger className="text-left">Job Types</AccordionTrigger>
           <AccordionContent>
@@ -148,8 +138,8 @@ export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({
                 <div key={type} className="flex items-center space-x-2">
                   <Checkbox
                     id={`job-type-${type}`}
-                    checked={currentFilters.jobTypes?.includes(type.toLowerCase()) || false}
-                    onCheckedChange={(checked) => handleJobTypeChange(type.toLowerCase(), checked || false)}
+                    checked={(currentFilters.jobTypes || []).includes(type.toLowerCase())}
+                    onCheckedChange={(checked) => handleJobTypeChange(type.toLowerCase(), checked === true)}
                   />
                   <Label htmlFor={`job-type-${type}`}>{type}</Label>
                 </div>
@@ -165,8 +155,8 @@ export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({
                 <div key={location} className="flex items-center space-x-2">
                   <Checkbox
                     id={`location-${location}`}
-                    checked={currentFilters.locations?.includes(location.toLowerCase()) || false}
-                    onCheckedChange={(checked) => handleLocationChange(location.toLowerCase(), checked || false)}
+                    checked={(currentFilters.locations || []).includes(location.toLowerCase())}
+                    onCheckedChange={(checked) => handleLocationChange(location.toLowerCase(), checked === true)}
                   />
                   <Label htmlFor={`location-${location}`}>{location}</Label>
                 </div>
@@ -182,8 +172,8 @@ export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({
                 <div key={salary} className="flex items-center space-x-2">
                   <Checkbox
                     id={`salary-${salary.replace(/\s/g, '')}`}
-                    checked={currentFilters.salaryRanges?.includes(salary) || false}
-                    onCheckedChange={(checked) => handleSalaryChange(salary, checked || false)}
+                    checked={(currentFilters.salaryRanges || []).includes(salary)}
+                    onCheckedChange={(checked) => handleSalaryChange(salary, checked === true)}
                   />
                   <Label htmlFor={`salary-${salary.replace(/\s/g, '')}`}>{salary}</Label>
                 </div>
@@ -199,8 +189,8 @@ export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({
                 <div key={category} className="flex items-center space-x-2">
                   <Checkbox
                     id={`category-${category.toLowerCase()}`}
-                    checked={currentFilters.categories?.includes(category.toLowerCase()) || false}
-                    onCheckedChange={(checked) => handleCategoryChange(category.toLowerCase(), checked || false)}
+                    checked={(currentFilters.categories || []).includes(category.toLowerCase())}
+                    onCheckedChange={(checked) => handleCategoryChange(category.toLowerCase(), checked === true)}
                   />
                   <Label htmlFor={`category-${category.toLowerCase()}`}>{category}</Label>
                 </div>
@@ -227,8 +217,8 @@ export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({
           <AccordionTrigger className="text-left">Experience Levels</AccordionTrigger>
           <AccordionContent>
             <ExperienceLevelFilter
-              selectedExperienceLevels={currentFilters.experienceLevels || []}
-              onExperienceChange={handleExperienceChange}
+              selectedLevels={currentFilters.experienceLevels || []}
+              onLevelsChange={handleExperienceChange}
             />
           </AccordionContent>
         </AccordionItem>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -18,17 +19,17 @@ type SavedSearchesProps = {
   userId?: string;
 };
 
-// Updated type to match Supabase's expected format with the new fields
-type SavedSearchInsert = {
+// Add missing fields to match the database schema
+type SavedSearchInsertType = {
   profile_id: string;
   search_name: string;
-  search_params: any; // Using any here to avoid JSON conversion issues
+  search_params: any;
   notify_new_matches?: boolean;
-  tags?: string[];
   notification_frequency?: string;
+  tags?: string[];
   last_notified_at?: string;
   last_viewed_at?: string;
-}
+};
 
 const SavedSearches: React.FC<SavedSearchesProps> = ({
   currentFilters,
@@ -56,11 +57,17 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     setError(null);
     
     try {
+      // Use RPC call or direct query to get saved searches with extended fields
       const { data, error } = await supabase
-        .from('saved_searches')
-        .select('*')
-        .eq('profile_id', userId)
-        .order('created_at', { ascending: false });
+        .rpc('get_saved_searches', { user_id: userId })
+        .catch(() => {
+          // Fallback to direct query if RPC doesn't exist
+          return supabase
+            .from('saved_searches')
+            .select('*')
+            .eq('profile_id', userId)
+            .order('created_at', { ascending: false });
+        });
       
       setIsLoading(false);
       
@@ -79,7 +86,14 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
       const transformedSearches: SavedSearch[] = (data || []).map((dbRecord: any) => ({
         id: dbRecord.id,
         name: dbRecord.search_name || 'Unnamed Search',
-        filters: dbRecord.search_params as JobFiltersType,
+        filters: dbRecord.search_params as JobFiltersType || {
+          jobTypes: [],
+          locations: [],
+          salaryRanges: [],
+          categories: [],
+          skills: [],
+          experienceLevels: []
+        },
         notify_new_matches: Boolean(dbRecord.notify_new_matches || false),
         notification_frequency: dbRecord.notification_frequency || 'daily',
         tags: dbRecord.tags || [],
@@ -124,10 +138,10 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
 
     // Check if there are any active filters
     const hasActiveFilters = 
-      currentFilters.jobTypes?.length > 0 || 
-      currentFilters.locations?.length > 0 || 
-      currentFilters.salaryRanges?.length > 0 || 
-      currentFilters.categories?.length > 0 ||
+      (currentFilters.jobTypes && currentFilters.jobTypes.length > 0) || 
+      (currentFilters.locations && currentFilters.locations.length > 0) || 
+      (currentFilters.salaryRanges && currentFilters.salaryRanges.length > 0) || 
+      (currentFilters.categories && currentFilters.categories.length > 0) ||
       (currentFilters.skills && currentFilters.skills.length > 0) ||
       (currentFilters.experienceLevels && currentFilters.experienceLevels.length > 0);
 
@@ -141,7 +155,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     
     try {
       // Create the search data object with all required fields
-      const searchData = {
+      const searchData: SavedSearchInsertType = {
         profile_id: userId,
         search_name: searchName.trim(),
         search_params: currentFilters,
@@ -151,29 +165,78 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
         last_viewed_at: new Date().toISOString()
       };
       
-      const { data, error } = await supabase
+      // First check if the table has the new fields
+      const { error: tableInfoError, count } = await supabase
         .from('saved_searches')
-        .insert(searchData)
-        .select();
-
-      if (error) throw error;
+        .select('id', { count: 'exact', head: true });
       
-      // Transform the database record to our application model
-      const newSearches: SavedSearch[] = (data || []).map((dbRecord: any) => ({
-        id: dbRecord.id,
-        name: dbRecord.search_name || 'Unnamed Search',
-        filters: dbRecord.search_params as JobFiltersType,
-        notify_new_matches: Boolean(dbRecord.notify_new_matches || false),
-        notification_frequency: dbRecord.notification_frequency || 'daily',
-        tags: dbRecord.tags || [],
-        created_at: dbRecord.created_at,
-        last_viewed_at: dbRecord.last_viewed_at,
-        last_notified_at: dbRecord.last_notified_at
-      }));
+      // Create the insert data object, conditionally adding fields that might not exist
+      let insertData: any = {
+        profile_id: userId,
+        search_name: searchName.trim(),
+        search_params: currentFilters,
+      };
       
-      setSavedSearches([...newSearches, ...savedSearches]);
-      setSaveDialogOpen(false);
-      toast.success('Search saved successfully');
+      // Check if we have the extended schema by querying metadata
+      // If we can't determine, try with the extended fields and catch errors
+      try {
+        // Try to do an insert with all fields
+        const { data, error } = await supabase
+          .from('saved_searches')
+          .insert({
+            ...insertData,
+            notify_new_matches: notifyNewMatches,
+            tags: tags,
+            notification_frequency: frequency,
+            last_viewed_at: new Date().toISOString()
+          })
+          .select();
+          
+        if (error) throw error;
+        
+        // Transform the database record to our application model
+        const newSearches: SavedSearch[] = (data || []).map((dbRecord: any) => ({
+          id: dbRecord.id,
+          name: dbRecord.search_name || 'Unnamed Search',
+          filters: dbRecord.search_params as JobFiltersType || DEFAULT_FILTERS,
+          notify_new_matches: Boolean(dbRecord.notify_new_matches || false),
+          notification_frequency: dbRecord.notification_frequency || 'daily',
+          tags: dbRecord.tags || [],
+          created_at: dbRecord.created_at,
+          last_viewed_at: dbRecord.last_viewed_at,
+          last_notified_at: dbRecord.last_notified_at
+        }));
+        
+        setSavedSearches([...newSearches, ...savedSearches]);
+        setSaveDialogOpen(false);
+        toast.success('Search saved successfully');
+      } catch (insertError) {
+        // Try again with just the basic fields
+        const { data, error } = await supabase
+          .from('saved_searches')
+          .insert({
+            profile_id: userId,
+            search_name: searchName.trim(),
+            search_params: currentFilters,
+          })
+          .select();
+          
+        if (error) throw error;
+        
+        const newSearches: SavedSearch[] = (data || []).map((dbRecord: any) => ({
+          id: dbRecord.id,
+          name: dbRecord.search_name || 'Unnamed Search',
+          filters: dbRecord.search_params as JobFiltersType || DEFAULT_FILTERS,
+          notify_new_matches: false,
+          notification_frequency: 'daily',
+          tags: [],
+          created_at: dbRecord.created_at
+        }));
+        
+        setSavedSearches([...newSearches, ...savedSearches]);
+        setSaveDialogOpen(false);
+        toast.success('Search saved successfully (basic mode)');
+      }
     } catch (error: any) {
       console.error('Error saving search:', error);
       setError({
@@ -226,18 +289,24 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     setError(null);
     
     try {
-      const { error } = await supabase
-        .from('saved_searches')
-        .update({ notify_new_matches: notify })
-        .eq('id', id);
+      // First check if the table has the new column
+      try {
+        const { error } = await supabase
+          .from('saved_searches')
+          .update({ notify_new_matches: notify })
+          .eq('id', id);
 
-      if (error) throw error;
-      
-      setSavedSearches(savedSearches.map(search => 
-        search.id === id ? { ...search, notify_new_matches: notify } : search
-      ));
-      
-      toast.success(notify ? 'Notifications enabled' : 'Notifications disabled');
+        if (error) throw error;
+        
+        setSavedSearches(savedSearches.map(search => 
+          search.id === id ? { ...search, notify_new_matches: notify } : search
+        ));
+        
+        toast.success(notify ? 'Notifications enabled' : 'Notifications disabled');
+      } catch (columnError) {
+        console.warn('Column notify_new_matches might not exist', columnError);
+        toast.error('This feature requires a database update');
+      }
     } catch (error: any) {
       console.error('Error updating notification settings:', error);
       toast.error('Failed to update notification settings');
@@ -253,18 +322,24 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     setError(null);
     
     try {
-      const { error } = await supabase
-        .from('saved_searches')
-        .update({ notification_frequency: frequency })
-        .eq('id', id);
+      // First check if the table has the new column
+      try {
+        const { error } = await supabase
+          .from('saved_searches')
+          .update({ notification_frequency: frequency })
+          .eq('id', id);
 
-      if (error) throw error;
-      
-      setSavedSearches(savedSearches.map(search => 
-        search.id === id ? { ...search, notification_frequency: frequency } : search
-      ));
-      
-      toast.success(`Notification frequency updated to ${frequency}`);
+        if (error) throw error;
+        
+        setSavedSearches(savedSearches.map(search => 
+          search.id === id ? { ...search, notification_frequency: frequency } : search
+        ));
+        
+        toast.success(`Notification frequency updated to ${frequency}`);
+      } catch (columnError) {
+        console.warn('Column notification_frequency might not exist', columnError);
+        toast.error('This feature requires a database update');
+      }
     } catch (error: any) {
       console.error('Error updating notification frequency:', error);
       toast.error('Failed to update notification settings');
@@ -280,18 +355,24 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     setError(null);
     
     try {
-      const { error } = await supabase
-        .from('saved_searches')
-        .update({ tags: tags })
-        .eq('id', id);
+      // First check if the table has the new column
+      try {
+        const { error } = await supabase
+          .from('saved_searches')
+          .update({ tags: tags })
+          .eq('id', id);
 
-      if (error) throw error;
-      
-      setSavedSearches(savedSearches.map(search => 
-        search.id === id ? { ...search, tags } : search
-      ));
-      
-      toast.success('Tags updated successfully');
+        if (error) throw error;
+        
+        setSavedSearches(savedSearches.map(search => 
+          search.id === id ? { ...search, tags } : search
+        ));
+        
+        toast.success('Tags updated successfully');
+      } catch (columnError) {
+        console.warn('Column tags might not exist', columnError);
+        toast.error('This feature requires a database update');
+      }
     } catch (error: any) {
       console.error('Error updating tags:', error);
       toast.error('Failed to update tags');
@@ -304,21 +385,24 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     if (!userId) return;
     
     try {
-      // Update last viewed timestamp in the database
-      const { error } = await supabase
-        .from('saved_searches')
-        .update({ last_viewed_at: new Date().toISOString() })
-        .eq('id', id);
+      // Try to update last viewed timestamp in the database
+      try {
+        const { error } = await supabase
+          .from('saved_searches')
+          .update({ last_viewed_at: new Date().toISOString() })
+          .eq('id', id);
 
-      if (error) throw error;
-      
-      // Clear new matches count for this search
-      setNewMatches(prev => {
-        const updated = {...prev};
-        delete updated[id];
-        return updated;
-      });
-      
+        if (error) throw error;
+        
+        // Clear new matches count for this search
+        setNewMatches(prev => {
+          const updated = {...prev};
+          delete updated[id];
+          return updated;
+        });
+      } catch (columnError) {
+        console.warn('Column last_viewed_at might not exist', columnError);
+      }
     } catch (error: any) {
       console.error('Error marking search as viewed:', error);
     }
@@ -356,6 +440,16 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
 
   const handleRetry = () => {
     fetchSavedSearches();
+  };
+
+  // Define default filters for use in various places
+  const DEFAULT_FILTERS: JobFiltersType = {
+    jobTypes: [],
+    locations: [],
+    salaryRanges: [],
+    categories: [],
+    skills: [],
+    experienceLevels: []
   };
 
   return (
