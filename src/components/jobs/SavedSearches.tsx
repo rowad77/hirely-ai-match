@@ -17,6 +17,9 @@ interface SavedSearchesProps {
   onApplySearch: (filters: JobFilters) => void;
 }
 
+// Import SavedSearchCard component
+import SavedSearchCard from './SavedSearchCard';
+
 const SavedSearches: React.FC<SavedSearchesProps> = ({ currentFilters, onApplySearch }) => {
   const [savedSearches, setSavedSearches] = useState<Tables<'saved_searches'>[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,11 +74,14 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({ currentFilters, onApplySe
     }
 
     try {
+      // Convert JobFilters to plain object to store as JSON
+      const searchParamsJson = JSON.stringify(currentFilters);
+      
       const { data, error } = await supabase
         .from('saved_searches')
         .insert({
           search_name: newSearchName.trim(),
-          search_params: currentFilters,
+          search_params: JSON.parse(searchParamsJson),
           notify_new_matches: notifyNewMatches
         })
         .select();

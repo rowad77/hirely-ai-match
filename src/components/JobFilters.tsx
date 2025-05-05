@@ -20,15 +20,16 @@ export type JobFilters = {
   locations: string[];
   salaryRanges: string[];
   categories: string[];
-  search?: string;
   skills: string[];
   experienceLevels: string[];
+  query?: string;
 };
 
 export type JobFiltersComponentProps = {
   initialFilters?: JobFilters;
   onApplyFilters: (filters: JobFilters) => void;
   showClearButton?: boolean;
+  onFilterChange?: (filters: JobFilters) => void;
 };
 
 const DEFAULT_FILTERS: JobFilters = {
@@ -43,10 +44,11 @@ const DEFAULT_FILTERS: JobFilters = {
 export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({ 
   initialFilters, 
   onApplyFilters,
+  onFilterChange,
   showClearButton = true
 }) => {
   const [currentFilters, setCurrentFilters] = useState<JobFilters>(initialFilters || DEFAULT_FILTERS);
-  const [searchQuery, setSearchQuery] = useState(initialFilters?.search || '');
+  const [searchQuery, setSearchQuery] = useState(initialFilters?.query || '');
 
   const handleFilterChange = (filterType: keyof JobFilters, value: string, checked: boolean) => {
     setCurrentFilters(prev => {
@@ -54,7 +56,15 @@ export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({
       const newValues = checked
         ? [...currentValues, value]
         : currentValues.filter(item => item !== value);
-      return { ...prev, [filterType]: newValues };
+      
+      const updatedFilters = { ...prev, [filterType]: newValues };
+      
+      // Call onFilterChange if provided
+      if (onFilterChange) {
+        onFilterChange(updatedFilters);
+      }
+      
+      return updatedFilters;
     });
   };
 
@@ -82,21 +92,38 @@ export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({
   const handleSkillsChange = (skills: { name: string; required: boolean }[]) => {
     // Convert the skill objects to a string array of skill names
     const skillNames = skills.map(skill => skill.name);
-    setCurrentFilters({ ...currentFilters, skills: skillNames });
+    const updatedFilters = { ...currentFilters, skills: skillNames };
+    setCurrentFilters(updatedFilters);
+    
+    // Call onFilterChange if provided
+    if (onFilterChange) {
+      onFilterChange(updatedFilters);
+    }
   };
 
   const handleExperienceChange = (experienceLevels: string[]) => {
-    setCurrentFilters({ ...currentFilters, experienceLevels });
+    const updatedFilters = { ...currentFilters, experienceLevels };
+    setCurrentFilters(updatedFilters);
+    
+    // Call onFilterChange if provided
+    if (onFilterChange) {
+      onFilterChange(updatedFilters);
+    }
   };
 
   const clearFilters = () => {
     setCurrentFilters(DEFAULT_FILTERS);
     setSearchQuery('');
     toast.success('Filters cleared');
+    
+    // Call onFilterChange if provided
+    if (onFilterChange) {
+      onFilterChange(DEFAULT_FILTERS);
+    }
   };
 
   const applyFilters = () => {
-    const filtersToApply = { ...currentFilters, search: searchQuery };
+    const filtersToApply = { ...currentFilters, query: searchQuery };
     onApplyFilters(filtersToApply);
     toast.success('Filters applied');
   };
@@ -107,7 +134,7 @@ export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({
         ...DEFAULT_FILTERS,
         ...initialFilters
       });
-      setSearchQuery(initialFilters.search || '');
+      setSearchQuery(initialFilters.query || '');
     }
   }, [initialFilters]);
 

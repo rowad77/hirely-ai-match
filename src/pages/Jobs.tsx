@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
-import JobFilters from '@/components/JobFilters';
+import JobFilters, { JobFilters as JobFiltersType } from '@/components/JobFilters';
 import JobCard from '@/components/jobs/JobCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -16,6 +17,19 @@ import SearchHeader from '@/components/jobs/SearchHeader';
 import JobsGrid from '@/components/jobs/JobsGrid';
 import ViewModeToggle from '@/components/jobs/ViewModeToggle';
 import SavedSearches from '@/components/jobs/SavedSearches';
+
+// Define job type for JobsGrid
+export interface Job {
+  id: number | string;
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  salary: string | null;
+  postedDate: string;
+  description: string;
+  category: string;
+}
 
 // Define job filter types
 export interface JobFilters {
@@ -38,7 +52,7 @@ export type FilterCounts = {
 };
 
 const Jobs = () => {
-  const [jobs, setJobs] = useState<Tables<'jobs'>[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [jobsPerPage] = useState(12);
@@ -93,8 +107,21 @@ const Jobs = () => {
         if (error) {
           toast.error('Error fetching jobs', { description: error.message });
           setJobs([]);
-        } else {
-          setJobs(data || []);
+        } else if (data) {
+          // Convert Supabase jobs to our Job interface
+          const formattedJobs: Job[] = data.map(job => ({
+            id: job.id,
+            title: job.title,
+            company: job.company_id || 'Unknown Company', // You might want to fetch company names separately
+            location: job.location || 'Remote',
+            type: job.type || 'Full-time',
+            salary: job.salary,
+            postedDate: new Date(job.posted_date).toLocaleDateString(),
+            description: job.description,
+            category: job.category || 'Uncategorized'
+          }));
+          
+          setJobs(formattedJobs);
         }
       } catch (err) {
         toast.error('Unexpected error', { description: String(err) });
@@ -170,8 +197,9 @@ const Jobs = () => {
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1 space-y-6">
             <JobFilters
-              onFilterChange={handleFilterChange}
               initialFilters={filters}
+              onApplyFilters={handleFilterChange}
+              onFilterChange={handleFilterChange}
             />
             
             <div className="hidden lg:block">
