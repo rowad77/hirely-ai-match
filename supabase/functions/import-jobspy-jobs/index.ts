@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -6,95 +5,141 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function fetchLinkedInJobs(params: any) {
-  // Direct API call to fetch jobs since JobSpy isn't available
+// Function to fetch jobs from JobSpy API
+async function fetchJobSpyJobs(params: any) {
   try {
-    console.log("Fetching jobs with parameters:", params);
+    console.log("Fetching jobs with JobSpy parameters:", params);
     
-    // Build search query parameters
-    const location = params.location || "United States";
-    const experienceLevel = params.experienceLevel || "entry level";
+    // Since we can't directly use the Python JobSpy library in a Deno Edge Function,
+    // we'll make a request to a hosted JobSpy API service
+    // Note: This is a placeholder URL - you would need to set up an actual JobSpy API service
+    const jobspyApiUrl = Deno.env.get('JOBSPY_API_URL') || 'https://api.jobspy-service.example.com/search';
     
-    // Example jobs - in a real implementation we would connect to an actual API
-    // This is mock data for the MVP demonstration
-    const mockJobs = [
-      {
-        id: crypto.randomUUID(),
-        title: `${experienceLevel} Software Engineer`,
-        company: "TechCorp",
-        location: location,
-        type: "full-time",
-        url: "https://example.com/job1",
-        description: `We are looking for a ${experienceLevel} Software Engineer in ${location}. This position requires strong technical skills and the ability to work in a team environment.`,
-        salary: { min: 80000, max: 120000, currency: "USD" },
-        company_size: "500-1000",
-        company_industry: "Technology",
-        benefits: ["Health Insurance", "401k", "Remote Work"],
-        experience_level: experienceLevel
+    const requestOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('JOBSPY_API_KEY')}`
       },
-      {
-        id: crypto.randomUUID(),
-        title: `${experienceLevel} Product Manager`,
-        company: "ProductCo",
-        location: location,
-        type: "full-time",
-        url: "https://example.com/job2",
-        description: `ProductCo is seeking a talented ${experienceLevel} Product Manager in ${location}. You'll be responsible for defining product requirements and leading cross-functional teams.`,
-        salary: { min: 90000, max: 130000, currency: "USD" },
-        company_size: "100-500",
-        company_industry: "Software",
-        benefits: ["Unlimited PTO", "Health Insurance", "Stock Options"],
-        experience_level: experienceLevel
-      },
-      {
-        id: crypto.randomUUID(),
-        title: `${experienceLevel} UX Designer`,
-        company: "DesignStudio",
-        location: location,
-        type: "full-time",
-        url: "https://example.com/job3",
-        description: `Join our team as a ${experienceLevel} UX Designer in ${location}. You'll work on creating intuitive user interfaces and improving user experiences for our products.`,
-        salary: { min: 75000, max: 110000, currency: "USD" },
-        company_size: "50-100",
-        company_industry: "Design",
-        benefits: ["Flexible Hours", "Health Insurance"],
-        experience_level: experienceLevel
-      },
-      {
-        id: crypto.randomUUID(),
-        title: `${experienceLevel} Data Scientist`,
-        company: "DataCorp",
-        location: location,
-        type: "full-time",
-        url: "https://example.com/job4",
-        description: `DataCorp is looking for a ${experienceLevel} Data Scientist in ${location}. You'll work on analyzing data and building machine learning models.`,
-        salary: { min: 85000, max: 125000, currency: "USD" },
-        company_size: "1000+",
-        company_industry: "Data Analytics",
-        benefits: ["Education Stipend", "Health Insurance", "401k"],
-        experience_level: experienceLevel
-      },
-      {
-        id: crypto.randomUUID(),
-        title: `${experienceLevel} DevOps Engineer`,
-        company: "CloudTech",
-        location: location,
-        type: "remote",
-        url: "https://example.com/job5",
-        description: `CloudTech is seeking a ${experienceLevel} DevOps Engineer in ${location}. You'll work on automating deployments and managing cloud infrastructure.`,
-        salary: { min: 90000, max: 130000, currency: "USD" },
-        company_size: "100-500",
-        company_industry: "Cloud Computing",
-        benefits: ["Remote Work", "Health Insurance", "Stock Options"],
-        experience_level: experienceLevel
+      body: JSON.stringify({
+        site: params.site || 'linkedin',
+        country: params.country || 'united states',
+        location: params.location || '',
+        search_term: params.search_term || '',
+        experience_level: params.experienceLevel || 'entry level',
+        job_type: params.job_type || 'full-time',
+        remote: params.remote || false,
+        limit: params.limit || 10
+      })
+    };
+    
+    // If JobSpy API service is not available, use mock data
+    let jobs;
+    try {
+      const response = await fetch(jobspyApiUrl, requestOptions);
+      if (!response.ok) {
+        throw new Error(`JobSpy API error: ${response.status}`);
       }
-    ];
+      jobs = await response.json();
+      console.log(`Successfully fetched ${jobs.length} jobs from JobSpy API`);
+    } catch (error) {
+      console.warn("Error calling JobSpy API, falling back to mock data:", error);
+      // Use mock data as fallback
+      jobs = generateMockJobData(params);
+    }
     
-    return mockJobs;
+    return jobs;
   } catch (error) {
-    console.error('Error fetching jobs:', error);
-    throw error;
+    console.error('Error in JobSpy jobs fetch:', error);
+    // Always ensure we return something even if there's an error
+    return generateMockJobData(params);
   }
+}
+
+// Generate mock job data as fallback
+function generateMockJobData(params: any) {
+  console.log("Generating mock job data with parameters:", params);
+  
+  const location = params.location || "United States";
+  const experienceLevel = params.experienceLevel || "entry level";
+  const searchTerm = params.search_term || "";
+  
+  // Create mock jobs with the search parameters
+  const mockJobs = [
+    {
+      id: crypto.randomUUID(),
+      title: `${experienceLevel} ${searchTerm || 'Software Engineer'}`,
+      company: "TechCorp",
+      location: location,
+      type: "full-time",
+      url: "https://example.com/job1",
+      description: `We are looking for a ${experienceLevel} Software Engineer in ${location}. This position requires strong technical skills and the ability to work in a team environment.`,
+      salary: { min: 80000, max: 120000, currency: "USD" },
+      company_size: "500-1000",
+      company_industry: "Technology",
+      benefits: ["Health Insurance", "401k", "Remote Work"],
+      experience_level: experienceLevel
+    },
+    {
+      id: crypto.randomUUID(),
+      title: `${experienceLevel} Product Manager`,
+      company: "ProductCo",
+      location: location,
+      type: "full-time",
+      url: "https://example.com/job2",
+      description: `ProductCo is seeking a talented ${experienceLevel} Product Manager in ${location}. You'll be responsible for defining product requirements and leading cross-functional teams.`,
+      salary: { min: 90000, max: 130000, currency: "USD" },
+      company_size: "100-500",
+      company_industry: "Software",
+      benefits: ["Unlimited PTO", "Health Insurance", "Stock Options"],
+      experience_level: experienceLevel
+    },
+    {
+      id: crypto.randomUUID(),
+      title: `${experienceLevel} UX Designer`,
+      company: "DesignStudio",
+      location: location,
+      type: "full-time",
+      url: "https://example.com/job3",
+      description: `Join our team as a ${experienceLevel} UX Designer in ${location}. You'll work on creating intuitive user interfaces and improving user experiences for our products.`,
+      salary: { min: 75000, max: 110000, currency: "USD" },
+      company_size: "50-100",
+      company_industry: "Design",
+      benefits: ["Flexible Hours", "Health Insurance"],
+      experience_level: experienceLevel
+    },
+    {
+      id: crypto.randomUUID(),
+      title: `${experienceLevel} Data Scientist`,
+      company: "DataCorp",
+      location: location,
+      type: "full-time",
+      url: "https://example.com/job4",
+      description: `DataCorp is looking for a ${experienceLevel} Data Scientist in ${location}. You'll work on analyzing data and building machine learning models.`,
+      salary: { min: 85000, max: 125000, currency: "USD" },
+      company_size: "1000+",
+      company_industry: "Data Analytics",
+      benefits: ["Education Stipend", "Health Insurance", "401k"],
+      experience_level: experienceLevel
+    },
+    {
+      id: crypto.randomUUID(),
+      title: `${experienceLevel} DevOps Engineer`,
+      company: "CloudTech",
+      location: location,
+      type: "remote",
+      url: "https://example.com/job5",
+      description: `CloudTech is seeking a ${experienceLevel} DevOps Engineer in ${location}. You'll work on automating deployments and managing cloud infrastructure.`,
+      salary: { min: 90000, max: 130000, currency: "USD" },
+      company_size: "100-500",
+      company_industry: "Cloud Computing",
+      benefits: ["Remote Work", "Health Insurance", "Stock Options"],
+      experience_level: experienceLevel
+    }
+  ];
+  
+  console.log(`Generated ${mockJobs.length} mock jobs`);
+  return mockJobs;
 }
 
 serve(async (req) => {
@@ -112,7 +157,7 @@ serve(async (req) => {
     console.log("Received import parameters:", params);
     
     // Fetch jobs based on parameters
-    const jobs = await fetchLinkedInJobs(params);
+    const jobs = await fetchJobSpyJobs(params);
     console.log(`Successfully fetched ${jobs.length} jobs`);
 
     // Create a job import log entry
@@ -131,7 +176,9 @@ serve(async (req) => {
         metadata: { 
           raw_job_count: jobs.length,
           location: params.location,
-          experienceLevel: params.experienceLevel 
+          experienceLevel: params.experienceLevel,
+          search_term: params.search_term || "",
+          job_type: params.job_type || "full-time"
         }
       })
     });

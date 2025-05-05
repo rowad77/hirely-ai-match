@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { ExperienceLevelFilter } from '@/components/jobs/ExperienceLevelFilter';
-import { SkillsFilter } from '@/components/jobs/SkillsFilter';
+import ExperienceLevelFilter from '@/components/jobs/ExperienceLevelFilter';
+import SkillsFilter from '@/components/jobs/SkillsFilter';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FilterIcon, X } from 'lucide-react';
 
