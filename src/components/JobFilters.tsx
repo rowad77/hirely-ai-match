@@ -1,297 +1,254 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from '@/components/ui/accordion';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
-import ExperienceLevelFilter from '@/components/jobs/ExperienceLevelFilter';
-import SkillsFilter from '@/components/jobs/SkillsFilter';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { FilterIcon, X } from 'lucide-react';
+import { XCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import SkillsFilter from './jobs/SkillsFilter';
+import ExperienceLevelFilter from './jobs/ExperienceLevelFilter';
 
-export interface JobFilters {
-  jobTypes: { name: string; required: boolean }[];
-  locations: { name: string; required: boolean }[];
-  categories: { name: string; required: boolean }[];
-  salaryRanges: { name: string; required: boolean }[];
-  skills?: { name: string; required: boolean }[];
-  experienceLevels?: { name: string; required: boolean }[];
-}
+// Update JobFilters type to include skills as string[] to match expected type
+export type JobFilters = {
+  jobTypes?: string[];
+  locations?: string[];
+  salaryRanges?: string[];
+  categories?: string[];
+  search?: string;
+  skills?: string[];
+  experienceLevels?: string[];
+};
 
-interface JobFiltersProps {
-  onFilterChange: (filters: JobFilters) => void;
+export type JobFiltersComponentProps = {
   initialFilters?: JobFilters;
-  inModal?: boolean;
-  filterCounts?: {[key: string]: number};
-}
+  onApplyFilters: (filters: JobFilters) => void;
+  showClearButton?: boolean;
+};
 
-export const JobFiltersComponent: React.FC<JobFiltersProps> = ({
-  onFilterChange,
-  initialFilters,
-  inModal = false,
-  filterCounts = {}
+export const JobFiltersComponent: React.FC<JobFiltersComponentProps> = ({ 
+  initialFilters, 
+  onApplyFilters,
+  showClearButton = true
 }) => {
-  const [filters, setFilters] = useState<JobFilters>({
-    jobTypes: initialFilters?.jobTypes || [],
-    locations: initialFilters?.locations || [],
-    categories: initialFilters?.categories || [],
-    salaryRanges: initialFilters?.salaryRanges || [],
-    skills: initialFilters?.skills || [],
-    experienceLevels: initialFilters?.experienceLevels || []
-  });
+  const [currentFilters, setCurrentFilters] = useState<JobFilters>(initialFilters || {});
+  const [searchQuery, setSearchQuery] = useState(initialFilters?.search || '');
 
-  // Common filter options
-  const jobTypeOptions = [
-    'Full-time', 
-    'Part-time', 
-    'Contract', 
-    'Remote', 
-    'Freelance', 
-    'Internship'
-  ];
-  
-  const locationOptions = [
-    'New York', 
-    'San Francisco', 
-    'London', 
-    'Berlin', 
-    'Toronto', 
-    'Remote'
-  ];
-  
-  const categoryOptions = [
-    'Engineering', 
-    'Design', 
-    'Marketing', 
-    'Sales', 
-    'Customer Support', 
-    'Finance'
-  ];
-  
-  const salaryRangeOptions = [
-    'Under $50k', 
-    '$50k - $100k', 
-    '$100k - $150k', 
-    '$150k+'
-  ];
+  const handleFilterChange = (filterType: keyof JobFilters, value: string, checked: boolean) => {
+    setFilters(prev => {
+      const currentValues = prev[filterType] || [];
+      const newValues = checked
+        ? [...(currentValues as string[]), value]
+        : (currentValues as string[]).filter(item => item !== value);
+      return { ...prev, [filterType]: newValues };
+    });
+  };
 
-  useEffect(() => {
-    if (initialFilters) {
-      setFilters(initialFilters);
-    }
-  }, [initialFilters]);
+  const handleSalaryChange = (value: string, checked: boolean) => {
+    handleFilterChange('salaryRanges', value, checked);
+  };
 
-  const updateFilter = (filterType: keyof JobFilters, name: string, add: boolean, required: boolean = false) => {
-    setFilters(prevFilters => {
-      const currentFilters = prevFilters[filterType] || [];
-      let updatedFilters;
-      
-      if (add) {
-        // Only add if it doesn't already exist
-        if (!currentFilters.some(item => item.name === name)) {
-          updatedFilters = [...currentFilters, { name, required }];
-        } else {
-          updatedFilters = currentFilters;
-        }
-      } else {
-        // Remove the filter
-        updatedFilters = currentFilters.filter(item => item.name !== name);
+  const handleCategoryChange = (value: string, checked: boolean) => {
+    handleFilterChange('categories', value, checked);
+  };
+
+  const handleJobTypeChange = (value: string, checked: boolean) => {
+    handleFilterChange('jobTypes', value, checked);
+  };
+
+  const handleLocationChange = (value: string, checked: boolean) => {
+    handleFilterChange('locations', value, checked);
+  };
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
+  // Update the setFilters function to ensure skills is stored as string[]
+  const setFilters = (newFilters: Partial<JobFilters>) => {
+    setCurrentFilters(prev => {
+      // Convert skills to string[] if it's in another format
+      if (newFilters.skills && Array.isArray(newFilters.skills)) {
+        const stringSkills = newFilters.skills.map(skill => {
+          if (typeof skill === 'string') {
+            return skill;
+          } else if (typeof skill === 'object' && skill !== null && 'name' in skill) {
+            return (skill as any).name;
+          }
+          return String(skill);
+        });
+        
+        return { ...prev, ...newFilters, skills: stringSkills };
       }
       
-      const newFilters = {
-        ...prevFilters,
-        [filterType]: updatedFilters
-      };
-      
-      onFilterChange(newFilters);
-      return newFilters;
+      return { ...prev, ...newFilters };
     });
   };
 
-  const isSelected = (filterType: keyof JobFilters, name: string) => {
-    return filters[filterType]?.some(filter => filter.name === name) || false;
-  };
-
-  const renderFilterCount = (type: string) => {
-    const count = filterCounts[type.toLowerCase()];
-    if (!count) return null;
-    
-    return <span className="text-xs text-gray-500 ml-1">({count})</span>;
-  };
-
+  // Update handleSkillsChange to convert from skill objects to string array
   const handleSkillsChange = (skills: { name: string; required: boolean }[]) => {
-    setFilters(prev => {
-      const newFilters = {
-        ...prev,
-        skills
-      };
-      onFilterChange(newFilters);
-      return newFilters;
-    });
+    // Convert the skill objects to a string array of skill names
+    const skillNames = skills.map(skill => skill.name);
+    setFilters({ skills: skillNames });
   };
 
-  const handleExperienceLevelsChange = (experienceLevels: { name: string; required: boolean }[]) => {
-    setFilters(prev => {
-      const newFilters = {
-        ...prev,
-        experienceLevels
-      };
-      onFilterChange(newFilters);
-      return newFilters;
-    });
+  const handleExperienceChange = (experienceLevels: string[]) => {
+    setFilters({ experienceLevels });
   };
 
   const clearFilters = () => {
-    const emptyFilters = {
-      jobTypes: [],
-      locations: [],
-      salaryRanges: [],
-      categories: [],
-      skills: [],
-      experienceLevels: []
-    };
-    setFilters(emptyFilters);
-    onFilterChange(emptyFilters);
+    setCurrentFilters({});
+    setSearchQuery('');
+    toast.success('Filters cleared');
   };
 
-  const activeFilterCount = Object.values(filters).reduce(
-    (count, filterArray) => count + (filterArray?.length || 0), 
-    0
-  );
+  const applyFilters = () => {
+    const filtersToApply = { ...currentFilters, search: searchQuery };
+    onApplyFilters(filtersToApply);
+    toast.success('Filters applied');
+  };
 
-  const filterContent = (
-    <div className={`space-y-6 ${inModal ? 'p-1' : 'p-4'}`}>
-      <div className="flex justify-between items-center">
-        <h3 className="font-medium flex items-center">
-          <FilterIcon className="h-4 w-4 mr-2" />
-          Filters
-          {activeFilterCount > 0 && (
-            <Badge className="ml-2" variant="secondary">{activeFilterCount}</Badge>
-          )}
-        </h3>
-        {activeFilterCount > 0 && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-xs">
-            Clear all
-          </Button>
-        )}
-      </div>
-      
-      <div>
-        <h4 className="text-sm font-medium mb-2">Job Type {renderFilterCount('jobtype')}</h4>
-        <div className="space-y-2">
-          {jobTypeOptions.map(jobType => (
-            <div key={jobType} className="flex items-center">
-              <Checkbox
-                id={`jobType-${jobType}`}
-                checked={isSelected('jobTypes', jobType)}
-                onCheckedChange={(checked) => updateFilter('jobTypes', jobType, !!checked)}
-              />
-              <label
-                htmlFor={`jobType-${jobType}`}
-                className="ml-2 text-sm cursor-pointer"
-              >
-                {jobType}
-              </label>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      <Separator />
-      
-      <div>
-        <h4 className="text-sm font-medium mb-2">Location {renderFilterCount('location')}</h4>
-        <div className="space-y-2">
-          {locationOptions.map(location => (
-            <div key={location} className="flex items-center">
-              <Checkbox
-                id={`location-${location}`}
-                checked={isSelected('locations', location)}
-                onCheckedChange={(checked) => updateFilter('locations', location, !!checked)}
-              />
-              <label
-                htmlFor={`location-${location}`}
-                className="ml-2 text-sm cursor-pointer"
-              >
-                {location}
-              </label>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      <Separator />
-      
-      <div>
-        <h4 className="text-sm font-medium mb-2">Category {renderFilterCount('category')}</h4>
-        <div className="space-y-2">
-          {categoryOptions.map(category => (
-            <div key={category} className="flex items-center">
-              <Checkbox
-                id={`category-${category}`}
-                checked={isSelected('categories', category)}
-                onCheckedChange={(checked) => updateFilter('categories', category, !!checked)}
-              />
-              <label
-                htmlFor={`category-${category}`}
-                className="ml-2 text-sm cursor-pointer"
-              >
-                {category}
-              </label>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      <Separator />
-      
-      <div>
-        <h4 className="text-sm font-medium mb-2">Salary Range</h4>
-        <div className="space-y-2">
-          {salaryRangeOptions.map(range => (
-            <div key={range} className="flex items-center">
-              <Checkbox
-                id={`salary-${range}`}
-                checked={isSelected('salaryRanges', range)}
-                onCheckedChange={(checked) => updateFilter('salaryRanges', range, !!checked)}
-              />
-              <label
-                htmlFor={`salary-${range}`}
-                className="ml-2 text-sm cursor-pointer"
-              >
-                {range}
-              </label>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      <Separator />
-      
-      <SkillsFilter 
-        selectedSkills={filters.skills || []} 
-        onChange={handleSkillsChange}
-      />
-      
-      <Separator />
-      
-      <ExperienceLevelFilter
-        selectedLevels={filters.experienceLevels || []}
-        onChange={handleExperienceLevelsChange}
-      />
-    </div>
-  );
+  useEffect(() => {
+    if (initialFilters) {
+      setCurrentFilters(initialFilters);
+      setSearchQuery(initialFilters.search || '');
+    }
+  }, [initialFilters]);
 
-  if (inModal) {
-    return filterContent;
-  }
+  // Convert string skills array to the format expected by SkillsFilter
+  const selectedSkillObjects = currentFilters.skills?.map(skillName => ({
+    name: skillName,
+    required: true
+  })) || [];
 
   return (
-    <Card>
-      <ScrollArea className="h-[calc(100vh-200px)]">
-        {filterContent}
-      </ScrollArea>
-    </Card>
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="search">Search</Label>
+        <Input
+          type="text"
+          id="search"
+          placeholder="Search jobs..."
+          value={searchQuery}
+          onChange={handleSearchInputChange}
+        />
+      </div>
+      <Accordion type="multiple" collapsible className="w-full">
+        <AccordionItem value="jobTypes">
+          <AccordionTrigger className="text-left">Job Types</AccordionTrigger>
+          <AccordionContent>
+            <div className="grid gap-2">
+              {['Full-time', 'Part-time', 'Contract', 'Remote', 'Internship'].map(type => (
+                <div key={type} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`job-type-${type}`}
+                    checked={currentFilters.jobTypes?.includes(type.toLowerCase()) || false}
+                    onCheckedChange={(checked) => handleJobTypeChange(type.toLowerCase(), checked || false)}
+                  />
+                  <Label htmlFor={`job-type-${type}`}>{type}</Label>
+                </div>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="locations">
+          <AccordionTrigger className="text-left">Locations</AccordionTrigger>
+          <AccordionContent>
+            <div className="grid gap-2">
+              {['New York', 'San Francisco', 'Los Angeles', 'Chicago', 'Austin'].map(location => (
+                <div key={location} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`location-${location}`}
+                    checked={currentFilters.locations?.includes(location.toLowerCase()) || false}
+                    onCheckedChange={(checked) => handleLocationChange(location.toLowerCase(), checked || false)}
+                  />
+                  <Label htmlFor={`location-${location}`}>{location}</Label>
+                </div>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="salaries">
+          <AccordionTrigger className="text-left">Salary Ranges</AccordionTrigger>
+          <AccordionContent>
+            <div className="grid gap-2">
+              {['$40,000 - $60,000', '$60,000 - $80,000', '$80,000 - $100,000', '$100,000+'].map(salary => (
+                <div key={salary} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`salary-${salary.replace(/\s/g, '')}`}
+                    checked={currentFilters.salaryRanges?.includes(salary) || false}
+                    onCheckedChange={(checked) => handleSalaryChange(salary, checked || false)}
+                  />
+                  <Label htmlFor={`salary-${salary.replace(/\s/g, '')}`}>{salary}</Label>
+                </div>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="categories">
+          <AccordionTrigger className="text-left">Categories</AccordionTrigger>
+          <AccordionContent>
+            <div className="grid gap-2">
+              {['Technology', 'Marketing', 'Sales', 'Finance', 'Human Resources'].map(category => (
+                <div key={category} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`category-${category.toLowerCase()}`}
+                    checked={currentFilters.categories?.includes(category.toLowerCase()) || false}
+                    onCheckedChange={(checked) => handleCategoryChange(category.toLowerCase(), checked || false)}
+                  />
+                  <Label htmlFor={`category-${category.toLowerCase()}`}>{category}</Label>
+                </div>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+      
+      <Accordion type="single" collapsible defaultValue="skills" className="w-full">
+        <AccordionItem value="skills">
+          <AccordionTrigger className="text-left">Skills</AccordionTrigger>
+          <AccordionContent>
+            <SkillsFilter 
+              selectedSkills={selectedSkillObjects} 
+              onSkillsChange={handleSkillsChange} 
+            />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+      
+      <Accordion type="single" collapsible defaultValue="experience" className="w-full">
+        <AccordionItem value="experience">
+          <AccordionTrigger className="text-left">Experience Levels</AccordionTrigger>
+          <AccordionContent>
+            <ExperienceLevelFilter
+              selectedExperienceLevels={currentFilters.experienceLevels || []}
+              onExperienceChange={handleExperienceChange}
+            />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+      
+      <div className="flex justify-between pt-4">
+        {showClearButton && (
+          <Button 
+            variant="outline" 
+            onClick={clearFilters}
+            className="border-gray-300"
+          >
+            Clear Filters
+          </Button>
+        )}
+        <Button onClick={applyFilters}>
+          Apply Filters
+        </Button>
+      </div>
+    </div>
   );
 };
 

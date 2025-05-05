@@ -1,30 +1,30 @@
-
 import React from 'react';
 import SavedSearchCard from './SavedSearchCard';
 import { JobFilters } from '@/components/JobFilters';
 
-export type SavedSearch = {
+// Include the SavedSearchDB type to match the now updated saved_searches table schema
+export type SavedSearchDB = {
   id: string;
-  name: string;
-  filters: JobFilters;
-  notify_new_matches: boolean;
+  profile_id?: string;
+  search_name: string;
+  search_params: any;
+  created_at?: string;
+  notify_new_matches?: boolean;
   notification_frequency?: string;
   tags?: string[];
-  created_at: string;
   last_viewed_at?: string;
   last_notified_at?: string;
 };
 
-// Database mapping type that represents how data is stored in Supabase
-export type SavedSearchDB = {
+// Update the SavedSearch model to include the notification fields
+export type SavedSearch = {
   id: string;
-  profile_id: string;
-  search_name: string; // Maps to 'name' in our app
-  search_params: JobFilters; // Maps to 'filters' in our app
+  name: string;
+  filters: any;
+  created_at?: string;
   notify_new_matches: boolean;
-  notification_frequency?: string;
-  tags?: string[];
-  created_at: string;
+  notification_frequency: string;
+  tags: string[];
   last_viewed_at?: string;
   last_notified_at?: string;
 };

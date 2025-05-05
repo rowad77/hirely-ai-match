@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -19,7 +18,7 @@ type SavedSearchesProps = {
   userId?: string;
 };
 
-// Type to match Supabase's expected format
+// Updated type to match Supabase's expected format with the new fields
 type SavedSearchInsert = {
   profile_id: string;
   search_name: string;
@@ -141,7 +140,8 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     setError(null);
     
     try {
-      const searchData: SavedSearchInsert = {
+      // Create the search data object with all required fields
+      const searchData = {
         profile_id: userId,
         search_name: searchName.trim(),
         search_params: currentFilters,
