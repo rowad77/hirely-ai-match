@@ -30,7 +30,19 @@ export function useNotificationState() {
         getUnreadCount(user.id)
       ]);
       
-      setNotifications(notificationsData);
+      // Type assertion to match the expected Notification[] type
+      const typedNotifications = notificationsData.map(item => ({
+        id: item.id,
+        title: item.title,
+        message: item.message,
+        type: item.type,
+        read: item.read,
+        created_at: item.created_at,
+        metadata: item.metadata as Record<string, any>,
+        user_id: item.user_id
+      })) as Notification[];
+      
+      setNotifications(typedNotifications);
       setUnreadCount(count);
     } catch (err: any) {
       setError(err);

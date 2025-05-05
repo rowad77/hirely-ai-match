@@ -1,4 +1,6 @@
 
+import React, { useState, useEffect } from 'react';
+
 export interface JobFilters {
   jobTypes: { name: string; required: boolean }[];
   locations: { name: string; required: boolean }[];
@@ -15,7 +17,7 @@ interface JobFiltersProps {
   filterCounts?: {[key: string]: number};
 }
 
-const JobFiltersComponent: React.FC<JobFiltersProps> = ({
+export const JobFiltersComponent: React.FC<JobFiltersProps> = ({
   onFilterChange,
   initialFilters,
   inModal = false,

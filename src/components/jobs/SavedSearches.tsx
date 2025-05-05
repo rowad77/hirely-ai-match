@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { BookmarkPlus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { JobFilters } from '@/components/JobFilters';
+import { JobFiltersComponent as JobFilters, JobFilters as JobFiltersType } from '@/components/JobFilters';
 import SavedSearchForm from './SavedSearchForm';
 import SavedSearchList, { SavedSearch, SavedSearchDB } from './SavedSearchList';
 import { query } from '@/utils/supabase-api';
@@ -12,8 +12,8 @@ import { ErrorResponse, ErrorType } from '@/utils/error-handling';
 import { ApiErrorMessage } from '@/components/ui/ApiErrorMessage';
 
 type SavedSearchesProps = {
-  currentFilters: JobFilters;
-  onApplySearch: (filters: JobFilters) => void;
+  currentFilters: JobFiltersType;
+  onApplySearch: (filters: JobFiltersType) => void;
   userId?: string;
 };
 
@@ -65,7 +65,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
       const transformedSearches: SavedSearch[] = (data || []).map((dbRecord: any) => ({
         id: dbRecord.id,
         name: dbRecord.search_name || 'Unnamed Search',
-        filters: dbRecord.search_params as JobFilters,
+        filters: dbRecord.search_params as JobFiltersType,
         notify_new_matches: Boolean(dbRecord.notify_new_matches),
         created_at: dbRecord.created_at
       }));
@@ -117,7 +117,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
         .insert({
           profile_id: userId,
           search_name: searchName.trim(),
-          search_params: currentFilters as any,
+          search_params: currentFilters,
           notify_new_matches: notifyNewMatches
         })
         .select();
@@ -128,7 +128,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
       const newSearches: SavedSearch[] = (data || []).map((dbRecord: any) => ({
         id: dbRecord.id,
         name: dbRecord.search_name || 'Unnamed Search',
-        filters: dbRecord.search_params as JobFilters,
+        filters: dbRecord.search_params as JobFiltersType,
         notify_new_matches: Boolean(dbRecord.notify_new_matches),
         created_at: dbRecord.created_at
       }));
@@ -175,7 +175,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     }
   };
 
-  const applySearch = (filters: JobFilters) => {
+  const applySearch = (filters: JobFiltersType) => {
     onApplySearch(filters);
     setManageDialogOpen(false);
     toast.success('Search applied');
@@ -208,7 +208,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     }
   };
 
-  const formatFilterSummary = (filters: JobFilters) => {
+  const formatFilterSummary = (filters: JobFiltersType) => {
     const parts = [];
     
     if (filters.jobTypes?.length) {

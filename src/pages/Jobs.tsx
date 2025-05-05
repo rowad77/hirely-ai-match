@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import MainLayout from '../components/layout/MainLayout';
-import JobFilters, { JobFilters as JobFiltersType } from '@/components/JobFilters';
+import { JobFiltersComponent as JobFilters, JobFilters as JobFiltersType } from '@/components/JobFilters';
 import { fetchJobs } from '@/data/jobs';
 import JobListItem from '@/components/JobListItem';
 import SearchHeader from '@/components/jobs/SearchHeader';
@@ -21,6 +21,18 @@ import { ErrorDisplay } from '@/components/ui/error-display';
 import JobRecommendations from '@/components/jobs/JobRecommendations';
 
 const ITEMS_PER_PAGE = 6;
+
+// Define the JobFilter type to match what fetchJobs expects
+interface JobFilter {
+  search?: string;
+  sources?: string[];
+  jobTypes?: string[];
+  locations?: string[];
+  salaryRanges?: string[];
+  categories?: string[];
+  skills?: string[];
+  experienceLevels?: string[];
+}
 
 const Jobs = () => {
   const { toast } = useToast();
@@ -66,11 +78,19 @@ const Jobs = () => {
   const { data: jobs = [], isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['jobs', currentPage, filters, searchTerm, dataSources],
     queryFn: async () => {
-      const result = await fetchJobs(currentPage, {
-        ...filters,
+      // Convert filters from object arrays to string arrays for the API
+      const jobFilter: JobFilter = {
         search: searchTerm,
-        sources: dataSources
-      });
+        sources: dataSources,
+        jobTypes: filters.jobTypes.map(item => item.name),
+        locations: filters.locations.map(item => item.name),
+        salaryRanges: filters.salaryRanges.map(item => item.name),
+        categories: filters.categories.map(item => item.name),
+        skills: filters.skills?.map(item => item.name),
+        experienceLevels: filters.experienceLevels?.map(item => item.name),
+      };
+      
+      const result = await fetchJobs(currentPage, jobFilter);
       
       if (result.length > 0 && result.some(job => job.source === 'fallback')) {
         setIsUsingFallback(true);
@@ -124,21 +144,22 @@ const Jobs = () => {
         (job.description && job.description.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesJobType = filters.jobTypes.length === 0 || 
-        filters.jobTypes.some(type => job.type === type);
+        filters.jobTypes.some(type => job.type === type.name);
       
       const matchesLocation = filters.locations.length === 0 || 
-        filters.locations.some(location => job.location?.includes(location));
+        filters.locations.some(location => job.location?.includes(location.name));
       
       const matchesCategory = filters.categories.length === 0 ||
-        filters.categories.some(category => job.category === category);
+        filters.categories.some(category => job.category === category.name);
       
       const matchesSalary = filters.salaryRanges.length === 0 || 
         filters.salaryRanges.some(range => {
           const jobSalary = job.salary ? parseInt(job.salary.replace(/[^0-9]/g, '')) : 0;
-          if (range === "Under $50k") return jobSalary < 50000;
-          if (range === "$50k - $100k") return jobSalary >= 50000 && jobSalary < 100000;
-          if (range === "$100k - $150k") return jobSalary >= 100000 && jobSalary < 150000;
-          if (range === "$150k+") return jobSalary >= 150000;
+          const rangeName = range.name;
+          if (rangeName === "Under $50k") return jobSalary < 50000;
+          if (rangeName === "$50k - $100k") return jobSalary >= 50000 && jobSalary < 100000;
+          if (rangeName === "$100k - $150k") return jobSalary >= 100000 && jobSalary < 150000;
+          if (rangeName === "$150k+") return jobSalary >= 150000;
           return true;
         });
       
@@ -156,28 +177,29 @@ const Jobs = () => {
       // Match experience level if any are selected
       const matchesExperience = !filters.experienceLevels || filters.experienceLevels.length === 0 ||
         filters.experienceLevels.some(level => {
+          const levelName = level.name;
           const description = job.description?.toLowerCase() || '';
           
-          if (level === "Entry-level") {
+          if (levelName === "Entry-level") {
             return description.includes("entry level") || 
                    description.includes("junior") || 
                    description.includes("beginner") ||
                    description.includes("0-2 years");
           }
           
-          if (level === "Mid-level") {
+          if (levelName === "Mid-level") {
             return description.includes("mid level") || 
                    description.includes("intermediate") || 
                    description.includes("2-5 years");
           }
           
-          if (level === "Senior") {
+          if (levelName === "Senior") {
             return description.includes("senior") || 
                    description.includes("experienced") || 
                    description.includes("5+ years");
           }
           
-          if (level === "Executive") {
+          if (levelName === "Executive") {
             return description.includes("executive") || 
                    description.includes("director") || 
                    description.includes("chief") || 
