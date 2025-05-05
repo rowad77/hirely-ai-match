@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Notification {
@@ -11,6 +10,14 @@ export interface Notification {
   metadata?: Record<string, any>;
   user_id: string;
 }
+
+export type NotificationType = 
+  | 'message' 
+  | 'application_update' 
+  | 'job_match'
+  | 'interview_request'
+  | 'alert'
+  | 'saved_search_match'; // New type for saved search matches
 
 export async function getNotifications(userId: string) {
   try {

@@ -1,21 +1,35 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { BookmarkPlus, Search } from 'lucide-react';
+import { BookmarkPlus, Search, Bell, Tag, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { JobFiltersComponent as JobFilters, JobFilters as JobFiltersType } from '@/components/JobFilters';
+import { JobFiltersComponent, JobFilters as JobFiltersType } from '@/components/JobFilters';
 import SavedSearchForm from './SavedSearchForm';
 import SavedSearchList, { SavedSearch, SavedSearchDB } from './SavedSearchList';
 import { query } from '@/utils/supabase-api';
 import { ErrorResponse, ErrorType } from '@/utils/error-handling';
 import { ApiErrorMessage } from '@/components/ui/ApiErrorMessage';
+import { Badge } from '@/components/ui/badge';
 
 type SavedSearchesProps = {
   currentFilters: JobFiltersType;
   onApplySearch: (filters: JobFiltersType) => void;
   userId?: string;
 };
+
+// Type to match Supabase's expected format
+type SavedSearchInsert = {
+  profile_id: string;
+  search_name: string;
+  search_params: any; // Using any here to avoid JSON conversion issues
+  notify_new_matches?: boolean;
+  tags?: string[];
+  notification_frequency?: string;
+  last_notified_at?: string;
+  last_viewed_at?: string;
+}
 
 const SavedSearches: React.FC<SavedSearchesProps> = ({
   currentFilters,
@@ -27,7 +41,8 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [error, setError] = useState<ErrorResponse | null>(null);
-
+  const [newMatches, setNewMatches] = useState<Record<string, number>>({});
+  
   // Fetch saved searches when component mounts or userId changes
   useEffect(() => {
     if (userId) {
@@ -66,11 +81,25 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
         id: dbRecord.id,
         name: dbRecord.search_name || 'Unnamed Search',
         filters: dbRecord.search_params as JobFiltersType,
-        notify_new_matches: Boolean(dbRecord.notify_new_matches),
-        created_at: dbRecord.created_at
+        notify_new_matches: Boolean(dbRecord.notify_new_matches || false),
+        notification_frequency: dbRecord.notification_frequency || 'daily',
+        tags: dbRecord.tags || [],
+        created_at: dbRecord.created_at,
+        last_viewed_at: dbRecord.last_viewed_at,
+        last_notified_at: dbRecord.last_notified_at
       }));
       
       setSavedSearches(transformedSearches);
+      
+      // Calculate new matches for each saved search (mock implementation)
+      const mockNewMatches: Record<string, number> = {};
+      transformedSearches.forEach(search => {
+        // Simulate some searches having new matches
+        if (Math.random() > 0.5) {
+          mockNewMatches[search.id] = Math.floor(Math.random() * 10) + 1;
+        }
+      });
+      setNewMatches(mockNewMatches);
     } catch (error: any) {
       setIsLoading(false);
       setError({
@@ -83,7 +112,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     }
   };
 
-  const saveSearch = async (searchName: string, notifyNewMatches: boolean) => {
+  const saveSearch = async (searchName: string, notifyNewMatches: boolean, tags: string[] = [], frequency: string = 'daily') => {
     if (!userId) {
       toast.error('You must be logged in to save searches');
       return;
@@ -112,14 +141,19 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     setError(null);
     
     try {
+      const searchData: SavedSearchInsert = {
+        profile_id: userId,
+        search_name: searchName.trim(),
+        search_params: currentFilters,
+        notify_new_matches: notifyNewMatches,
+        tags: tags,
+        notification_frequency: frequency,
+        last_viewed_at: new Date().toISOString()
+      };
+      
       const { data, error } = await supabase
         .from('saved_searches')
-        .insert({
-          profile_id: userId,
-          search_name: searchName.trim(),
-          search_params: currentFilters,
-          notify_new_matches: notifyNewMatches
-        })
+        .insert(searchData)
         .select();
 
       if (error) throw error;
@@ -129,8 +163,12 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
         id: dbRecord.id,
         name: dbRecord.search_name || 'Unnamed Search',
         filters: dbRecord.search_params as JobFiltersType,
-        notify_new_matches: Boolean(dbRecord.notify_new_matches),
-        created_at: dbRecord.created_at
+        notify_new_matches: Boolean(dbRecord.notify_new_matches || false),
+        notification_frequency: dbRecord.notification_frequency || 'daily',
+        tags: dbRecord.tags || [],
+        created_at: dbRecord.created_at,
+        last_viewed_at: dbRecord.last_viewed_at,
+        last_notified_at: dbRecord.last_notified_at
       }));
       
       setSavedSearches([...newSearches, ...savedSearches]);
@@ -208,6 +246,84 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
     }
   };
 
+  const updateNotificationFrequency = async (id: string, frequency: string) => {
+    if (!userId) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { error } = await supabase
+        .from('saved_searches')
+        .update({ notification_frequency: frequency })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setSavedSearches(savedSearches.map(search => 
+        search.id === id ? { ...search, notification_frequency: frequency } : search
+      ));
+      
+      toast.success(`Notification frequency updated to ${frequency}`);
+    } catch (error: any) {
+      console.error('Error updating notification frequency:', error);
+      toast.error('Failed to update notification settings');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateTags = async (id: string, tags: string[]) => {
+    if (!userId) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { error } = await supabase
+        .from('saved_searches')
+        .update({ tags: tags })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setSavedSearches(savedSearches.map(search => 
+        search.id === id ? { ...search, tags } : search
+      ));
+      
+      toast.success('Tags updated successfully');
+    } catch (error: any) {
+      console.error('Error updating tags:', error);
+      toast.error('Failed to update tags');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const markAsViewed = async (id: string) => {
+    if (!userId) return;
+    
+    try {
+      // Update last viewed timestamp in the database
+      const { error } = await supabase
+        .from('saved_searches')
+        .update({ last_viewed_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      // Clear new matches count for this search
+      setNewMatches(prev => {
+        const updated = {...prev};
+        delete updated[id];
+        return updated;
+      });
+      
+    } catch (error: any) {
+      console.error('Error marking search as viewed:', error);
+    }
+  };
+
   const formatFilterSummary = (filters: JobFiltersType) => {
     const parts = [];
     
@@ -267,7 +383,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
             <SavedSearchForm
               currentFilters={currentFilters}
               formatFilterSummary={formatFilterSummary}
-              onSave={(name, notifyMatches) => saveSearch(name, notifyMatches)}
+              onSave={(name, notifyMatches, tags, frequency) => saveSearch(name, notifyMatches, tags, frequency)}
               onCancel={() => setSaveDialogOpen(false)}
               isLoading={isLoading}
             />
@@ -289,9 +405,17 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
               <SavedSearchList
                 searches={savedSearches}
                 formatFilterSummary={formatFilterSummary}
-                onApplySearch={applySearch}
+                onApplySearch={(filters) => {
+                  applySearch(filters);
+                  // Find the search id by matching filters
+                  const searchId = savedSearches.find(s => s.filters === filters)?.id;
+                  if (searchId) markAsViewed(searchId);
+                }}
                 onToggleNotification={toggleNotification}
                 onDeleteSearch={deleteSearch}
+                onUpdateTags={updateTags}
+                onUpdateFrequency={updateNotificationFrequency}
+                newMatches={newMatches}
               />
             </div>
           </DialogContent>

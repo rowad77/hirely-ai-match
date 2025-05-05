@@ -8,7 +8,11 @@ export type SavedSearch = {
   name: string;
   filters: JobFilters;
   notify_new_matches: boolean;
+  notification_frequency?: string;
+  tags?: string[];
   created_at: string;
+  last_viewed_at?: string;
+  last_notified_at?: string;
 };
 
 // Database mapping type that represents how data is stored in Supabase
@@ -18,7 +22,11 @@ export type SavedSearchDB = {
   search_name: string; // Maps to 'name' in our app
   search_params: JobFilters; // Maps to 'filters' in our app
   notify_new_matches: boolean;
+  notification_frequency?: string;
+  tags?: string[];
   created_at: string;
+  last_viewed_at?: string;
+  last_notified_at?: string;
 };
 
 interface SavedSearchListProps {
@@ -27,6 +35,9 @@ interface SavedSearchListProps {
   onApplySearch: (filters: JobFilters) => void;
   onToggleNotification: (id: string, notify: boolean) => void;
   onDeleteSearch: (id: string) => void;
+  onUpdateTags?: (id: string, tags: string[]) => void;
+  onUpdateFrequency?: (id: string, frequency: string) => void;
+  newMatches?: Record<string, number>;
 }
 
 const SavedSearchList: React.FC<SavedSearchListProps> = ({
@@ -34,7 +45,10 @@ const SavedSearchList: React.FC<SavedSearchListProps> = ({
   formatFilterSummary,
   onApplySearch,
   onToggleNotification,
-  onDeleteSearch
+  onDeleteSearch,
+  onUpdateTags,
+  onUpdateFrequency,
+  newMatches = {}
 }) => {
   if (searches.length === 0) {
     return (
@@ -53,10 +67,15 @@ const SavedSearchList: React.FC<SavedSearchListProps> = ({
           name={search.name}
           filters={search.filters}
           notifyNewMatches={search.notify_new_matches}
+          notificationFrequency={search.notification_frequency}
+          tags={search.tags || []}
           formatFilterSummary={formatFilterSummary}
           onApply={onApplySearch}
           onToggleNotification={onToggleNotification}
           onDelete={onDeleteSearch}
+          onUpdateTags={onUpdateTags}
+          onUpdateFrequency={onUpdateFrequency}
+          newMatchesCount={newMatches[search.id] || 0}
         />
       ))}
     </div>

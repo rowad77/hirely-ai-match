@@ -1,6 +1,6 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Language, Direction } from '@/types/translations';
+import { preloadFonts, preloadNextLanguageFonts, optimizeFontDisplay } from '@/utils/font-preload';
 
 // Cache version to invalidate when translations change
 const CACHE_VERSION = '1.0.0';
@@ -175,10 +175,18 @@ export const useTranslationState = () => {
     };
   }, [langSyncChannel]);
 
-  // Safely change language with proper state tracking
+  // Apply font optimization when the hook is first used
+  useEffect(() => {
+    optimizeFontDisplay();
+  }, []);
+
+  // Safely change language with proper state tracking and font preloading
   const changeLanguage = useCallback((newLanguage: Language) => {
     setIsChangingLanguage(true);
     setLanguageState(newLanguage);
+    
+    // Preload fonts for the new language
+    preloadFonts(newLanguage);
     
     // Clear translation cache when language changes
     translationCacheRef.current = {};
@@ -209,6 +217,10 @@ export const useTranslationState = () => {
     // Artificial delay to ensure smooth transitions
     setTimeout(() => {
       setIsChangingLanguage(false);
+      
+      // After language change is complete, preload the other language
+      // for faster switching next time
+      preloadNextLanguageFonts(newLanguage);
     }, 300);
   }, [langSyncChannel]);
 
@@ -217,14 +229,24 @@ export const useTranslationState = () => {
     try {
       const savedLanguage = localStorage.getItem('language') as Language;
       if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'ar')) {
+        // Preload fonts before changing language
+        preloadFonts(savedLanguage);
         changeLanguage(savedLanguage);
       } else {
         const browserLanguage = navigator.language.startsWith('ar') ? 'ar' : 'en';
+        preloadFonts(browserLanguage);
         changeLanguage(browserLanguage);
       }
+      
+      // Preload other language fonts for faster switching
+      setTimeout(() => {
+        const otherLanguage = savedLanguage === 'en' ? 'ar' : 'en';
+        preloadNextLanguageFonts(otherLanguage);
+      }, 3000); // Delay to prioritize current language resources
     } catch (error) {
       console.warn('Failed to initialize language from localStorage', error);
       // Use a fallback if localStorage fails
+      preloadFonts('en');
       changeLanguage('en');
     }
     
