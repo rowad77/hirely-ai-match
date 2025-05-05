@@ -1,25 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
-import JobFilters from '@/components/JobFilters';
-import JobCard from '@/components/jobs/JobCard';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Loader2, Search } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { Tables } from '@/integrations/supabase/types';
-import { toast } from 'sonner';
 
 // Import components
 import SearchHeader from '@/components/jobs/SearchHeader';
-import JobsGrid from '@/components/jobs/JobsGrid';
-import ViewModeToggle from '@/components/jobs/ViewModeToggle';
-import SavedSearches from '@/components/jobs/SavedSearches';
+import FilterPanel from '@/components/jobs/FilterPanel';
+import JobsContainer from '@/components/jobs/JobsContainer';
+import { useJobs } from '@/hooks/use-jobs';
 
 // Define job type for JobsGrid
 export interface Job {
-  id: string; // Changed from number | string to just string
+  id: string;
   title: string;
   company: string;
   location: string;
@@ -38,7 +30,7 @@ export interface JobFilters {
   categories: string[];
   skills: string[];
   experienceLevels: string[];
-  query: string;
+  query?: string;
 }
 
 export type FilterCounts = {
@@ -51,90 +43,11 @@ export type FilterCounts = {
 };
 
 const Jobs = () => {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [jobsPerPage] = useState(12);
-  const [totalJobs, setTotalJobs] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get('q');
-
-  useEffect(() => {
-    document.title = "Job Listings | SpeedyApply";
-  }, []);
-
-  useEffect(() => {
-    const fetchTotalJobs = async () => {
-      try {
-        const { count, error } = await supabase
-          .from('jobs')
-          .select('*', { count: 'exact', head: true });
-
-        if (error) {
-          toast.error('Error fetching total jobs', { description: error.message });
-        } else {
-          setTotalJobs(count || 0);
-        }
-      } catch (err) {
-        toast.error('Unexpected error', { description: String(err) });
-      }
-    };
-
-    fetchTotalJobs();
-  }, []);
-
-  useEffect(() => {
-    const fetchJobs = async () => {
-      setIsLoading(true);
-      try {
-        let query = supabase
-          .from('jobs')
-          .select('*')
-          .order('posted_date', { ascending: false });
-
-        if (searchQuery) {
-          query = query.ilike('title', `%${searchQuery}%`);
-        }
-
-        const startIndex = (currentPage - 1) * jobsPerPage;
-        const endIndex = startIndex + jobsPerPage - 1;
-
-        const { data, error } = await query.range(startIndex, endIndex);
-
-        if (error) {
-          toast.error('Error fetching jobs', { description: error.message });
-          setJobs([]);
-        } else if (data) {
-          // Convert Supabase jobs to our Job interface
-          const formattedJobs: Job[] = data.map(job => ({
-            id: String(job.id), // Ensure ID is always a string
-            title: job.title,
-            company: job.company_id || 'Unknown Company', // You might want to fetch company names separately
-            location: job.location || 'Remote',
-            type: job.type || 'Full-time',
-            salary: job.salary,
-            postedDate: new Date(job.posted_date).toLocaleDateString(),
-            description: job.description,
-            category: job.category || 'Uncategorized'
-          }));
-          
-          setJobs(formattedJobs);
-        }
-      } catch (err) {
-        toast.error('Unexpected error', { description: String(err) });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchJobs();
-  }, [currentPage, jobsPerPage, searchQuery]);
-
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
 
   // Filter state for the job search
   const [filters, setFilters] = useState<JobFilters>({
@@ -147,6 +60,17 @@ const Jobs = () => {
     query: searchQuery || ''
   });
 
+  // Fetch jobs using our custom hook
+  const { jobs, isLoading, totalJobs } = useJobs(searchQuery, currentPage, jobsPerPage);
+
+  useEffect(() => {
+    document.title = "Job Listings | SpeedyApply";
+  }, []);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
   const handleFilterChange = (newFilters: JobFilters) => {
     setFilters(newFilters);
     if (currentPage !== 1) {
@@ -156,19 +80,6 @@ const Jobs = () => {
     if (newFilters.query) params.set('q', newFilters.query);
     setSearchParams(params);
   };
-
-  // Calculate counts for active filters
-  const filterCounts: FilterCounts = {
-    jobTypes: filters.jobTypes.length,
-    locations: filters.locations.length,
-    salaryRanges: filters.salaryRanges.length,
-    categories: filters.categories.length,
-    skills: filters.skills.length,
-    experienceLevels: filters.experienceLevels.length
-  };
-
-  // Add up all filters to get total count
-  const totalFilterCount = Object.values(filterCounts).reduce((a, b) => a + b, 0);
 
   return (
     <MainLayout>
@@ -194,29 +105,16 @@ const Jobs = () => {
         />
         
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-1 space-y-6">
-            <JobFilters
-              initialFilters={filters}
-              onApplyFilters={handleFilterChange}
-            />
-            
-            <div className="hidden lg:block">
-              <SavedSearches 
-                currentFilters={filters} 
-                onApplySearch={handleFilterChange}
-              />
-            </div>
-          </div>
+          <FilterPanel 
+            filters={filters}
+            onApplyFilters={handleFilterChange}
+          />
           
-          <div className="lg:col-span-3">
-            <JobsGrid 
-              jobs={jobs} 
-              isLoading={isLoading} 
-              viewMode={viewMode} 
-              favoriteJobs={[]}
-              onFavorite={() => {}}
-            />
-          </div>
+          <JobsContainer 
+            jobs={jobs}
+            isLoading={isLoading}
+            viewMode={viewMode}
+          />
         </div>
       </div>
     </MainLayout>
