@@ -4,8 +4,15 @@ import OwnerLayout from '@/components/layout/OwnerLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { AdminUserAttributes } from '@supabase/supabase-js';
 import { useLanguage } from '@/context/LanguageContext';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table';
 
 type CompanyRequest = {
   id: string;
@@ -95,10 +102,15 @@ const CompanyApprovals = () => {
       
       // Filter and map the company users
       const companyUsers = data.users
-        .filter(user => 
-          user.user_metadata && typeof user.user_metadata === 'object' && user.user_metadata.role === 'company'
-        )
+        .filter(user => {
+          // Make sure user_metadata exists and is an object before checking it
+          if (!user.user_metadata || typeof user.user_metadata !== 'object') {
+            return false;
+          }
+          return user.user_metadata.role === 'company';
+        })
         .map(user => {
+          // Now we've verified user_metadata exists and is an object
           const metadata = user.user_metadata as Record<string, any> || {};
           return {
             id: user.id,
@@ -120,7 +132,7 @@ const CompanyApprovals = () => {
   };
 
   return (
-    <OwnerLayout>
+    <OwnerLayout title={t('companyRequests')}>
       <div className="container mx-auto py-8 px-4">
         <h1 className="text-2xl font-bold mb-6">{t('companyRequests')}</h1>
         
@@ -133,30 +145,30 @@ const CompanyApprovals = () => {
           </div>
         ) : companyRequests.length > 0 ? (
           <div className="bg-white shadow overflow-hidden rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {companyRequests.map((request) => (
-                  <tr key={request.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <TableRow key={request.id} className="hover:bg-gray-50">
+                    <TableCell>
                       <div className="flex items-center">
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{request.company_name}</div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell>
                       <div className="text-sm text-gray-500">{request.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell>
                       <span 
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                           ${request.status === 'approved' ? 'bg-green-100 text-green-800' : 
@@ -165,11 +177,11 @@ const CompanyApprovals = () => {
                       >
                         {request.status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-500">
                       {new Date(request.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    </TableCell>
+                    <TableCell className="text-right">
                       {request.status === 'pending' && (
                         <div className="flex justify-end gap-2">
                           <Button 
@@ -193,11 +205,11 @@ const CompanyApprovals = () => {
                       {request.status !== 'pending' && (
                         <span className="text-gray-500 italic">Processed</span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         ) : (
           <div className="bg-white shadow overflow-hidden sm:rounded-lg p-8 text-center">
