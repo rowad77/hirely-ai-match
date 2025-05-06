@@ -68,7 +68,7 @@ export interface LanguageContextType {
     en: Record<string, string>;
     ar: Record<string, string>;
   }) => void;
-  direction?: 'ltr' | 'rtl'; // Optional direction property with default LTR
+  direction: 'ltr'; // Since we've removed RTL, we only support LTR now
 }
 
 // Utility type for validating translation completeness

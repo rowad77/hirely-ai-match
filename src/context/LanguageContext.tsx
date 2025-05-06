@@ -103,8 +103,8 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     return result;
   }, [language, customTranslations, trackKeyUsage, translationCacheRef]);
   
-  // Calculate text direction based on language - always LTR since we removed RTL
-  const direction = 'ltr';
+  // Since we removed RTL, we always use 'ltr' as the direction
+  const direction: 'ltr' = 'ltr';
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({

@@ -77,7 +77,7 @@ export function createCachedTranslator(
 
 /**
  * Check if a language needs RTL support
- * Note: We always return false now since RTL has been removed
+ * Note: Always returns 'ltr' now since RTL has been removed
  */
 export function isRtlLanguage(language: string): boolean {
   return false; // RTL support has been removed

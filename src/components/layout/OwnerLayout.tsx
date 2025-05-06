@@ -15,7 +15,7 @@ type OwnerLayoutProps = {
 const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
   const location = useLocation();
   const { logout } = useAuth();
-  const { t, direction = 'ltr' } = useLanguage(); // Provide default ltr value
+  const { t } = useLanguage(); // No need for direction anymore, removed it
   
   const isActiveRoute = (path: string) => {
     // For exact matches
@@ -50,7 +50,7 @@ const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
     logout();
   };
 
-  // Always use left margin for icons in LTR mode
+  // Always use left margin for icons
   const marginClass = "mr-3";
 
   return (

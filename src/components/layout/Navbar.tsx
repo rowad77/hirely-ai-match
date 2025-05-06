@@ -30,7 +30,7 @@ import { Tables } from '@/integrations/supabase/types';
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut, userRole } = useAuth();
-  const { t, direction = 'ltr' } = useLanguage(); // Provide default ltr value
+  const { t } = useLanguage();
   const [profile, setProfile] = useState<Partial<Tables<'profiles'>> | null>(null);
 
   useEffect(() => {
