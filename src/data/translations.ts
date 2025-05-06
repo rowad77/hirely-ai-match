@@ -24,7 +24,7 @@ export const enTranslations: Translations = {
   fullName: "Full Name",
   companyName: "Company Name",
   individual: "Individual",
-  company: "Company",
+  companyAccount: "Company", // Changed from 'company' to 'companyAccount'
   accountType: "Account Type",
   signupAs: "Sign up as",
   pendingApproval: "Pending Approval",

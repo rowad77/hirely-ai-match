@@ -25,7 +25,7 @@ export interface Translations {
   fullName: string;
   companyName: string;
   individual: string;
-  company: string;
+  companyAccount: string; // Changed from 'company' to 'companyAccount'
   accountType: string;
   signupAs: string;
   pendingApproval: string;
@@ -40,7 +40,7 @@ export interface Translations {
   // Jobs
   jobs: string;
   jobTitle: string;
-  company: string;
+  company: string; // This one can stay as 'company' as it refers to the company field in jobs
   location: string;
   salary: string;
   jobType: string;

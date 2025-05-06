@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -191,7 +190,7 @@ const Signup = () => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="company" id="company" />
-                    <Label htmlFor="company" className="cursor-pointer">{t('company')}</Label>
+                    <Label htmlFor="company" className="cursor-pointer">{t('companyAccount')}</Label>
                   </div>
                 </RadioGroup>
               </div>

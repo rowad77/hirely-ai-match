@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,29 +53,29 @@ const CompanyApprovals = () => {
     setLoading(true);
     try {
       // First get all users with role 'company'
-      const { data: users, error } = await supabase.auth.admin.listUsers();
+      const { data, error } = await supabase.auth.admin.listUsers();
       
       if (error) {
         throw error;
       }
 
-      if (!users) {
+      if (!data) {
         setCompanyRequests([]);
         return;
       }
       
       // Filter and map the company users
-      const companyUsers = users.users
+      const companyUsers = data.users
         .filter(user => 
-          user.user_metadata.role === 'company'
+          user.user_metadata && user.user_metadata.role === 'company'
         )
         .map(user => ({
           id: user.id,
           email: user.email || '',
-          company_name: user.user_metadata.full_name || '',
+          company_name: user.user_metadata ? user.user_metadata.full_name || '' : '',
           created_at: user.created_at,
-          status: user.user_metadata.approval_status || 'pending',
-          role: user.user_metadata.role
+          status: user.user_metadata && user.user_metadata.approval_status ? user.user_metadata.approval_status : 'pending',
+          role: user.user_metadata && user.user_metadata.role ? user.user_metadata.role : ''
         }));
 
       setCompanyRequests(companyUsers);
