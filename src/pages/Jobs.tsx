@@ -6,7 +6,7 @@ import MainLayout from '@/components/layout/MainLayout';
 // Import components
 import SearchHeader from '@/components/jobs/SearchHeader';
 import FilterPanel from '@/components/jobs/FilterPanel';
-import JobsContainer from '@/components/jobs/JobsContainer';
+import EnhancedJobsContainer from '@/components/jobs/EnhancedJobsContainer';
 import { useJobs } from '@/hooks/use-jobs';
 
 // Define job type for JobsGrid
@@ -61,7 +61,13 @@ const Jobs = () => {
   });
 
   // Fetch jobs using our custom hook
-  const { jobs, isLoading, totalJobs } = useJobs(searchQuery, currentPage, jobsPerPage);
+  const { 
+    jobs, 
+    isLoading, 
+    totalJobs, 
+    recentlyViewed, 
+    saveToRecentlyViewed 
+  } = useJobs(searchQuery, currentPage, jobsPerPage);
 
   useEffect(() => {
     document.title = "Job Listings | SpeedyApply";
@@ -83,13 +89,13 @@ const Jobs = () => {
 
   return (
     <MainLayout>
-      <div className="bg-gray-100 py-12">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 py-12">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="text-center">
-            <h1 className="text-3xl font-semibold text-gray-900">
+            <h1 className="text-3xl font-semibold text-white">
               Find Your Dream Job
             </h1>
-            <p className="mt-2 text-lg text-gray-600">
+            <p className="mt-2 text-lg text-white/90">
               Explore thousands of job opportunities and find the perfect fit for your skills and experience.
             </p>
           </div>
@@ -110,10 +116,12 @@ const Jobs = () => {
             onApplyFilters={handleFilterChange}
           />
           
-          <JobsContainer 
+          <EnhancedJobsContainer 
             jobs={jobs}
             isLoading={isLoading}
             viewMode={viewMode}
+            recentlyViewed={recentlyViewed}
+            saveToRecentlyViewed={saveToRecentlyViewed}
           />
         </div>
       </div>

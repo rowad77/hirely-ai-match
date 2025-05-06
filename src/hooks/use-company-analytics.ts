@@ -17,6 +17,20 @@ interface AnalyticsData {
     name: string;
     count: number;
   }[];
+  hiringFunnel: {
+    stage: string;
+    count: number;
+  }[];
+  engagementMetrics: {
+    category: string;
+    value: number;
+    average: number;
+  }[];
+  timeToHire: number;
+  applicationsByDemographic: {
+    name: string;
+    value: number;
+  }[];
 }
 
 export const useCompanyAnalytics = (dateRange: '7d' | '30d' | '90d' = '30d') => {
@@ -60,13 +74,17 @@ export const useCompanyAnalytics = (dateRange: '7d' | '30d' | '90d' = '30d') => 
         // Process applications data into time series
         const applicationsByDate = new Map();
         const interviewsByDate = new Map();
+        const applicationsByStatus = new Map();
 
         applicationsData.forEach(app => {
           const date = new Date(app.created_at).toLocaleDateString();
           applicationsByDate.set(date, (applicationsByDate.get(date) || 0) + 1);
+          
           if (app.status === 'interview_scheduled') {
             interviewsByDate.set(date, (interviewsByDate.get(date) || 0) + 1);
           }
+          
+          applicationsByStatus.set(app.status, (applicationsByStatus.get(app.status) || 0) + 1);
         });
 
         // Fetch application sources
@@ -117,6 +135,36 @@ export const useCompanyAnalytics = (dateRange: '7d' | '30d' | '90d' = '30d') => 
             });
           }
         });
+        
+        // Calculate time to hire (mock data for now)
+        const timeToHire = Math.floor(Math.random() * 10) + 12; // 12-21 days
+        
+        // Create hiring funnel data
+        const hiringFunnel = [
+          { stage: 'Applied', count: applicationsData.length },
+          { stage: 'Screened', count: Math.floor(applicationsData.length * 0.7) },
+          { stage: 'Interview', count: Math.floor(applicationsData.length * 0.4) },
+          { stage: 'Technical', count: Math.floor(applicationsData.length * 0.25) },
+          { stage: 'Offer', count: Math.floor(applicationsData.length * 0.15) },
+          { stage: 'Hired', count: Math.floor(applicationsData.length * 0.1) },
+        ];
+        
+        // Create engagement metrics data (mock data)
+        const engagementMetrics = [
+          { category: 'Response Rate', value: 75, average: 62 },
+          { category: 'Interview Accept', value: 68, average: 55 },
+          { category: 'Offer Accept', value: 82, average: 70 },
+          { category: 'Profile Views', value: 95, average: 80 },
+        ];
+        
+        // Mock demographic data
+        const applicationsByDemographic = [
+          { name: 'Frontend', value: 35 },
+          { name: 'Backend', value: 30 },
+          { name: 'Fullstack', value: 20 },
+          { name: 'DevOps', value: 10 },
+          { name: 'Design', value: 5 },
+        ];
 
         // Format data for charts
         setData({
@@ -135,7 +183,11 @@ export const useCompanyAnalytics = (dateRange: '7d' | '30d' | '90d' = '30d') => 
             .map(([name, count]) => ({
               name,
               count: count as number
-            }))
+            })),
+          hiringFunnel,
+          engagementMetrics,
+          timeToHire,
+          applicationsByDemographic
         });
 
       } catch (err: any) {

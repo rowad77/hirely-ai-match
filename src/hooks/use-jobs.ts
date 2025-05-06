@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Job } from '@/pages/Jobs';
@@ -8,6 +8,9 @@ export const useJobs = (searchQuery: string | null, currentPage: number, jobsPer
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalJobs, setTotalJobs] = useState(0);
+  const [isImporting, setIsImporting] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<Job[]>([]);
 
   // Fetch total job count
   useEffect(() => {
@@ -30,6 +33,68 @@ export const useJobs = (searchQuery: string | null, currentPage: number, jobsPer
     };
 
     fetchTotalJobs();
+  }, []);
+
+  // Fetch available job categories for filtering
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('jobs')
+          .select('category')
+          .not('category', 'is', null);
+
+        if (error) {
+          console.error('Error fetching categories:', error);
+        } else if (data) {
+          // Extract unique categories
+          const uniqueCategories = [...new Set(data.map(job => job.category).filter(Boolean))];
+          setCategoryOptions(uniqueCategories as string[]);
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Load recently viewed jobs from local storage
+  useEffect(() => {
+    const loadRecentlyViewed = () => {
+      try {
+        const savedItems = localStorage.getItem('recentlyViewedJobs');
+        if (savedItems) {
+          setRecentlyViewed(JSON.parse(savedItems));
+        }
+      } catch (err) {
+        console.error('Error loading recently viewed jobs:', err);
+      }
+    };
+    
+    loadRecentlyViewed();
+  }, []);
+
+  // Save job to recently viewed
+  const saveToRecentlyViewed = useCallback((job: Job) => {
+    try {
+      // Get current list
+      const current = JSON.parse(localStorage.getItem('recentlyViewedJobs') || '[]');
+      
+      // Remove if already exists (to move to top)
+      const filtered = current.filter((item: Job) => item.id !== job.id);
+      
+      // Add to beginning of array and limit to 5 items
+      const updated = [job, ...filtered].slice(0, 5);
+      
+      // Save to localStorage
+      localStorage.setItem('recentlyViewedJobs', JSON.stringify(updated));
+      
+      // Update state
+      setRecentlyViewed(updated);
+    } catch (err) {
+      console.error('Error saving recently viewed job:', err);
+    }
   }, []);
 
   // Fetch jobs based on current filters and pagination
@@ -91,6 +156,7 @@ export const useJobs = (searchQuery: string | null, currentPage: number, jobsPer
   // Function to import jobs from JobSpy API when no results found
   const importJobsFromJobSpy = async (search: string) => {
     try {
+      setIsImporting(true);
       toast.info('No jobs found. Searching external sources...', {
         duration: 3000
       });
@@ -109,15 +175,29 @@ export const useJobs = (searchQuery: string | null, currentPage: number, jobsPer
       
       if (data?.jobs?.length > 0) {
         toast.success(`Found ${data.jobs.length} jobs from external sources!`, {
-          description: 'Refresh to see the imported jobs.'
+          description: 'Refresh to see the imported jobs.',
+          action: {
+            label: 'Refresh Now',
+            onClick: () => window.location.reload(),
+          },
         });
       } else {
         toast.info('No jobs found from external sources.');
       }
     } catch (err) {
       console.error('Error importing jobs:', err);
+    } finally {
+      setIsImporting(false);
     }
   };
 
-  return { jobs, isLoading, totalJobs };
+  return { 
+    jobs, 
+    isLoading, 
+    totalJobs, 
+    isImporting,
+    categoryOptions,
+    recentlyViewed,
+    saveToRecentlyViewed
+  };
 };
