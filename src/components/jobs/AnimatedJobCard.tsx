@@ -16,9 +16,9 @@ interface AnimatedJobCardProps {
 
 const AnimatedJobCard: React.FC<AnimatedJobCardProps> = ({ job, onSaveToRecentlyViewed }) => {
   const navigate = useNavigate();
-  const { savedJobs, toggleSavedJob, isSaving } = useSavedJobs();
+  const { savedJobs, toggleSavedJob, isLoading } = useSavedJobs();
   
-  const isSaved = savedJobs.some(savedJob => savedJob.id === job.id);
+  const isSaved = savedJobs.includes(job.id);
 
   const handleJobClick = () => {
     onSaveToRecentlyViewed(job);
@@ -56,9 +56,9 @@ const AnimatedJobCard: React.FC<AnimatedJobCardProps> = ({ job, onSaveToRecently
             className="h-8 w-8"
             onClick={(e) => {
               e.stopPropagation();
-              toggleSavedJob(job);
+              toggleSavedJob(job.id);
             }}
-            disabled={isSaving}
+            disabled={isLoading}
           >
             <Bookmark 
               className={`h-5 w-5 ${isSaved ? 'fill-blue-500 text-blue-500' : 'text-gray-400'}`} 
