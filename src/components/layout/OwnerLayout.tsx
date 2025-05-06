@@ -15,7 +15,7 @@ type OwnerLayoutProps = {
 const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
   const location = useLocation();
   const { logout } = useAuth();
-  const { t, direction } = useLanguage();
+  const { t, direction = 'ltr' } = useLanguage(); // Provide default ltr value
   
   const isActiveRoute = (path: string) => {
     // For exact matches
@@ -50,7 +50,8 @@ const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
     logout();
   };
 
-  const marginClass = direction === 'rtl' ? 'ml-3' : 'mr-3';
+  // Always use left margin for icons in LTR mode
+  const marginClass = "mr-3";
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -60,7 +61,7 @@ const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
         <div className="hidden md:flex md:w-64 md:flex-col">
           <div className="flex flex-col flex-grow border-r border-gray-200 bg-white pt-5 pb-4 overflow-y-auto">
             <div className="flex items-center flex-shrink-0 px-4 mb-5">
-              <Shield className={`h-6 w-6 text-purple-600 ${direction === 'rtl' ? 'ml-2' : 'mr-2'}`} />
+              <Shield className="h-6 w-6 text-purple-600 mr-2" />
               <span className="text-xl font-medium text-gray-900">{t('adminPanel')}</span>
             </div>
             <div className="mt-5 flex-grow flex flex-col">
@@ -94,7 +95,7 @@ const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
                     className="w-full group flex items-center px-2 py-2 text-sm font-medium rounded-md text-red-600 hover:bg-red-50"
                     onClick={handleLogout}
                   >
-                    <LogOut className={`${marginClass} flex-shrink-0 h-5 w-5 text-red-400`} />
+                    <LogOut className="mr-3 flex-shrink-0 h-5 w-5 text-red-400" />
                     {t('logout')}
                   </button>
                 </div>

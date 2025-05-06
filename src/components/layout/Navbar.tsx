@@ -30,7 +30,7 @@ import { Tables } from '@/integrations/supabase/types';
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut, userRole } = useAuth();
-  const { t, direction } = useLanguage();
+  const { t, direction = 'ltr' } = useLanguage(); // Provide default ltr value
   const [profile, setProfile] = useState<Partial<Tables<'profiles'>> | null>(null);
 
   useEffect(() => {
@@ -124,30 +124,30 @@ const Navbar = () => {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align={direction === 'rtl' ? 'start' : 'end'} className="w-56">
+              <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>{t('dashboard')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard">
-                    <LayoutDashboard className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
                     <span>{t('dashboard')}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/profile">
-                    <UserRound className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                    <UserRound className="mr-2 h-4 w-4" />
                     <span>{t('profile')}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/application-history">
-                    <History className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                    <History className="mr-2 h-4 w-4" />
                     <span>{t('applications')}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer">
-                  <LogOut className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                  <LogOut className="mr-2 h-4 w-4" />
                   <span>{t('logout')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>

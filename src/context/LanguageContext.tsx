@@ -11,6 +11,7 @@ const defaultContextValue: LanguageContextType = {
   t: (key) => String(key),
   isChangingLanguage: false,
   setCustomTranslations: () => console.warn('LanguageContext not initialized'),
+  direction: 'ltr', // Default to LTR
 };
 
 const LanguageContext = createContext<LanguageContextType>(defaultContextValue);
@@ -102,6 +103,9 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     return result;
   }, [language, customTranslations, trackKeyUsage, translationCacheRef]);
   
+  // Calculate text direction based on language - always LTR since we removed RTL
+  const direction = 'ltr';
+
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
     language,
@@ -109,7 +113,8 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     t,
     isChangingLanguage,
     setCustomTranslations,
-  }), [language, setLanguage, t, isChangingLanguage, setCustomTranslations]);
+    direction,
+  }), [language, setLanguage, t, isChangingLanguage, setCustomTranslations, direction]);
 
   return (
     <LanguageContext.Provider value={contextValue}>
