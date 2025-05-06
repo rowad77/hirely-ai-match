@@ -1,6 +1,5 @@
 
 export type Language = 'en' | 'ar';
-export type Direction = 'ltr' | 'rtl';
 
 // Define translation keys
 export interface Translations {
@@ -62,7 +61,6 @@ export interface Translations {
 
 export interface LanguageContextType {
   language: Language;
-  direction: Direction;
   setLanguage: (lang: Language) => void;
   t: (key: keyof Translations) => string;
   isChangingLanguage: boolean;

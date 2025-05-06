@@ -7,7 +7,6 @@ import { LanguageContextType, Translations, Language } from '@/types/translation
 // Create a context with a meaningful default value for better type safety
 const defaultContextValue: LanguageContextType = {
   language: 'en',
-  direction: 'ltr',
   setLanguage: () => console.warn('LanguageContext not initialized'),
   t: (key) => String(key),
   isChangingLanguage: false,
@@ -20,7 +19,6 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
   const {
     language,
     setLanguage,
-    direction,
     isChangingLanguage,
     customTranslations,
     setCustomTranslations,
@@ -107,12 +105,11 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
     language,
-    direction,
     setLanguage,
     t,
     isChangingLanguage,
     setCustomTranslations,
-  }), [language, direction, setLanguage, t, isChangingLanguage, setCustomTranslations]);
+  }), [language, setLanguage, t, isChangingLanguage, setCustomTranslations]);
 
   return (
     <LanguageContext.Provider value={contextValue}>

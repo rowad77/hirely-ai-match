@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -24,15 +24,8 @@
     
     <style>
       /* Critical rendering path styles to avoid FOUC */
-      html[dir="rtl"] {
-        font-family: 'IBM Plex Sans Arabic', sans-serif;
-      }
-      html[dir="ltr"] {
+      html {
         font-family: 'IBM Plex Sans', sans-serif;
-      }
-      /* Smooth transitions for direction changes */
-      .dir-transition * {
-        transition: transform 0.3s ease, margin 0.3s ease, padding 0.3s ease;
       }
       
       /* Add a pre-loading state */
@@ -75,13 +68,11 @@
     </style>
     
     <script>
-      // Initialize language and direction from localStorage
+      // Initialize language from localStorage
       (function() {
         try {
           const savedLanguage = localStorage.getItem('language') || 'en';
-          const direction = savedLanguage === 'ar' ? 'rtl' : 'ltr';
           document.documentElement.lang = savedLanguage;
-          document.documentElement.dir = direction;
           
           // Check for theme preference
           const theme = localStorage.getItem('vite-react-theme') || 'system';
@@ -98,7 +89,6 @@
           console.error('Error initializing language/theme:', e);
           // Fallback to defaults
           document.documentElement.lang = 'en';
-          document.documentElement.dir = 'ltr';
         }
       })();
     </script>

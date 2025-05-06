@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const LanguageToggle: React.FC = () => {
-  const { language, setLanguage, t, direction, isChangingLanguage } = useLanguage();
+  const { language, setLanguage, t, isChangingLanguage } = useLanguage();
   const [isHovered, setIsHovered] = React.useState(false);
   
   // Enhanced toggle with fallback
@@ -35,11 +35,9 @@ const LanguageToggle: React.FC = () => {
             onBlur={() => setIsHovered(false)}
             className={cn(
               "relative transition-all duration-300 flex items-center gap-1",
-              direction === 'rtl' ? 'flex-row-reverse' : '',
               isChangingLanguage && "opacity-70 pointer-events-none"
             )}
             aria-label={t('switchLanguage')}
-            flipIconRtl
             disabled={isChangingLanguage}
           >
             {isChangingLanguage ? (
@@ -55,7 +53,7 @@ const LanguageToggle: React.FC = () => {
             </span>
           </Button>
         </TooltipTrigger>
-        <TooltipContent side={direction === 'rtl' ? 'right' : 'left'}>
+        <TooltipContent side="left">
           <p>{t('switchLanguage')}</p>
         </TooltipContent>
       </Tooltip>

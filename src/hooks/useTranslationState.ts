@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Language, Direction } from '@/types/translations';
+import { Language } from '@/types/translations';
 import { preloadFonts, preloadNextLanguageFonts, optimizeFontDisplay } from '@/utils/font-preload';
 
 // Cache version to invalidate when translations change
@@ -104,7 +105,6 @@ const storageEventEmitter = {
 export const useTranslationState = () => {
   // Initialize state
   const [language, setLanguageState] = useState<Language>('en');
-  const [direction, setDirection] = useState<Direction>('ltr');
   const [isChangingLanguage, setIsChangingLanguage] = useState(false);
   const [customTranslations, setCustomTranslations] = useState<{
     en: Record<string, string>;
@@ -276,53 +276,30 @@ export const useTranslationState = () => {
     };
   }, [changeLanguage, language, langSyncChannel]);
 
-  // Update direction and HTML attributes when language changes
+  // Update HTML attributes when language changes
   useEffect(() => {
-    const dir = language === 'ar' ? 'rtl' : 'ltr';
-    setDirection(dir);
-    
     // Update HTML document attributes
-    document.documentElement.dir = dir;
     document.documentElement.lang = language;
 
-    // Add or remove the RTL class on the body for global styling
-    if (dir === 'rtl') {
-      document.body.classList.add('rtl');
+    // Add or remove the font family based on language
+    if (language === 'ar') {
       document.body.style.fontFamily = "'IBM Plex Sans Arabic', sans-serif";
       
       // Preload Arabic font if needed
-      if (language === 'ar') {
-        const link = document.createElement('link');
-        link.rel = 'preload';
-        link.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap';
-        link.as = 'style';
-        document.head.appendChild(link);
-        
-        const styleLink = document.createElement('link');
-        styleLink.rel = 'stylesheet';
-        styleLink.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap';
-        document.head.appendChild(styleLink);
-      }
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap';
+      link.as = 'style';
+      document.head.appendChild(link);
+      
+      const styleLink = document.createElement('link');
+      styleLink.rel = 'stylesheet';
+      styleLink.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap';
+      document.head.appendChild(styleLink);
     } else {
-      document.body.classList.remove('rtl');
       document.body.style.fontFamily = "'IBM Plex Sans', sans-serif";
     }
     
-    // Add the CSS transition class for smooth direction changes
-    document.body.classList.add('dir-transition');
-    
-    // Add containment properties to minimize layout thrashing
-    document.body.style.contain = 'layout';
-    
-    // Remove transition class after animation completes to avoid affecting other animations
-    const timeoutId = setTimeout(() => {
-      document.body.classList.remove('dir-transition');
-      document.body.style.contain = '';
-    }, 300);
-    
-    return () => {
-      clearTimeout(timeoutId);
-    };
   }, [language]);
 
   const trackKeyUsage = useCallback((key: string) => {
@@ -350,7 +327,6 @@ export const useTranslationState = () => {
   return {
     language,
     setLanguage: changeLanguage,
-    direction,
     isChangingLanguage,
     customTranslations,
     setCustomTranslations,

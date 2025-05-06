@@ -39,41 +39,19 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
-  flipIconRtl?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, flipIconRtl = false, children, ...props }, ref) => {
-    const { direction } = useLanguage();
+  ({ className, variant, size, asChild = false, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
-    
-    // Add RTL specific classes when needed
-    const rtlClasses = direction === 'rtl' && flipIconRtl ? 'rtl-flip' : '';
-    
-    // Apply RTL-aware styles for icons if needed
-    const contentWithRtlAwareIcons = React.useMemo(() => {
-      if (!flipIconRtl || direction === 'ltr') {
-        return children;
-      }
-      
-      // No children to process
-      if (!children) return null;
-      
-      // For simple children (not an array), just return as is
-      if (!Array.isArray(children) && typeof children !== 'object') {
-        return children;
-      }
-      
-      return children;
-    }, [children, flipIconRtl, direction]);
     
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }), rtlClasses)}
+        className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}
       >
-        {contentWithRtlAwareIcons}
+        {children}
       </Comp>
     )
   }

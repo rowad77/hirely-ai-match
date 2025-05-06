@@ -67,13 +67,8 @@ export const optimizeFontDisplay = () => {
       font-display: swap;
     }
     
-    /* Add containment to minimize layout thrashing during language changes */
-    body.dir-transition * {
-      contain: layout style;
-    }
-    
     /* Smooth transitions for language changes */
-    .dir-transition {
+    .language-transition {
       transition: all 0.3s ease-in-out;
     }
   `;
