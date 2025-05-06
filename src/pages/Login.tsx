@@ -7,10 +7,15 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
+import { useLanguage } from '@/context/LanguageContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const Login = () => {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -23,16 +28,23 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
 
     try {
       await login(email, password);
-      toast.success("Login successful", {
+      toast.success(t('login') + " successful", {
         description: "Welcome back to Hirely!",
       });
       navigate('/dashboard');
     } catch (error) {
-      toast.error("Login failed", {
-        description: error instanceof Error ? error.message : "Please check your credentials and try again.",
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Please check your credentials and try again.";
+        
+      setError(errorMessage);
+      
+      toast.error(t('login') + " failed", {
+        description: errorMessage,
       });
     }
   };
@@ -43,21 +55,28 @@ const Login = () => {
         <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24 bg-gray-50">
           <div className="mx-auto w-full max-w-sm lg:w-96">
             <div>
-              <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Sign in to your account</h2>
+              <h2 className="mt-6 text-3xl font-extrabold text-gray-900">{t('login')}</h2>
               <p className="mt-2 text-sm text-gray-600">
-                Don't have an account?{' '}
+                {t('signup')} {' '}
                 <Link to="/signup" className="font-medium text-hirely hover:text-hirely-dark">
-                  Sign up
+                  {t('signup')}
                 </Link>
               </p>
             </div>
 
             <div className="mt-8">
               <div className="mt-6">
+                {error && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                
                 <form className="space-y-6" onSubmit={handleLogin}>
                   <div>
                     <Label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                      Email address
+                      {t('email')}
                     </Label>
                     <div className="mt-1">
                       <Input
@@ -75,7 +94,7 @@ const Login = () => {
 
                   <div>
                     <Label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                      Password
+                      {t('password')}
                     </Label>
                     <div className="mt-1">
                       <Input
@@ -105,7 +124,7 @@ const Login = () => {
                       className="w-full flex justify-center py-2 px-4 bg-hirely hover:bg-hirely-dark"
                       disabled={isLoading}
                     >
-                      {isLoading ? 'Signing in...' : 'Sign in'}
+                      {isLoading ? t('loading') : t('login')}
                     </Button>
                   </div>
                 </form>

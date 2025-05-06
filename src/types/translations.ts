@@ -19,6 +19,23 @@ export interface Translations {
   companyPortal: string;
   adminPanel: string;
   loading: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  fullName: string;
+  companyName: string;
+  individual: string;
+  company: string;
+  accountType: string;
+  signupAs: string;
+  pendingApproval: string;
+  approved: string;
+  rejected: string;
+  approve: string;
+  reject: string;
+  approvalStatus: string;
+  userManagement: string;
+  companyRequests: string;
   
   // Jobs
   jobs: string;

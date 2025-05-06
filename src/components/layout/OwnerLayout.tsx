@@ -1,7 +1,7 @@
 
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Briefcase, Settings, LogOut, Home, BarChart3, Shield, Database, LayoutDashboard, Globe, Menu } from 'lucide-react';
+import { Users, Briefcase, Settings, LogOut, Home, BarChart3, Shield, Database, LayoutDashboard, Globe, Menu, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -41,7 +41,8 @@ const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
   const navItems = [
     { name: t('dashboard'), path: '/owner', icon: LayoutDashboard },
     { name: t('companies'), path: '/owner/companies', icon: Briefcase },
-    { name: t('totalUsers'), path: '/owner/users', icon: Users },
+    { name: t('companyRequests'), path: '/owner/company-approvals', icon: CheckSquare },
+    { name: t('userManagement'), path: '/owner/users', icon: Users },
     { name: t('jobs'), path: '/owner/jobs', icon: Database },
     { name: t('analytics'), path: '/owner/analytics', icon: BarChart3 },
     { name: t('languageManagement'), path: '/owner/languages', icon: Globe },

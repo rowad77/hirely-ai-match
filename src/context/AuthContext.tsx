@@ -12,6 +12,7 @@ export type UserProfile = {
   avatar_url: string | null;
   role: 'owner' | 'company' | 'candidate';
   company_id?: string | null;
+  approval_status?: 'pending' | 'approved' | 'rejected';
 };
 
 type AuthContextType = {
@@ -25,6 +26,9 @@ type AuthContextType = {
   isCompany: boolean;
   isCandidate: boolean;
   isOwner: boolean;
+  isApproved: boolean; 
+  isPending: boolean;
+  isRejected: boolean;
   userRole: 'owner' | 'company' | 'candidate' | null; // Added userRole
   session: Session | null;
 };
@@ -86,19 +90,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (error) {
-        toast.error('Failed to fetch user profile');
         console.error('Error fetching user profile:', error);
         return;
       }
 
       if (!data) {
-        toast.error('User profile not found');
+        console.error('User profile not found');
         return;
       }
 
-      setProfile(data as UserProfile);
+      const userProfile = {
+        ...data,
+        approval_status: user?.user_metadata?.approval_status || 'approved'
+      } as UserProfile;
+      
+      setProfile(userProfile);
     } catch (error) {
-      toast.error('An unexpected error occurred');
       console.error('Error in fetchUserProfile:', error);
     }
   };
@@ -112,11 +119,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        toast.error(error.message || 'Failed to login');
         throw error;
       }
 
-      toast.success('Logged in successfully');
+      // Check approval status for company users
+      if (data.user?.user_metadata?.role === 'company' && 
+          data.user?.user_metadata?.approval_status === 'pending') {
+        await logout(); // Log out the user
+        throw new Error('Your company account is pending approval. You will be notified when your account is approved.');
+      }
+
+      if (data.user?.user_metadata?.role === 'company' && 
+          data.user?.user_metadata?.approval_status === 'rejected') {
+        await logout(); // Log out the user
+        throw new Error('Your company account has been rejected. Please contact support for more information.');
+      }
 
       // Log activity
       if (data.user) {
@@ -151,12 +168,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       await supabase.auth.signOut();
-      toast.success('Logged out successfully');
     } catch (error) {
       console.error('Error during logout:', error);
       toast.error('Error during logout');
     }
   };
+  
+  // Determine approval status
+  const isApproved = profile?.approval_status === 'approved' || user?.user_metadata?.approval_status === 'approved';
+  const isPending = profile?.approval_status === 'pending' || user?.user_metadata?.approval_status === 'pending';
+  const isRejected = profile?.approval_status === 'rejected' || user?.user_metadata?.approval_status === 'rejected';
 
   return (
     <AuthContext.Provider
@@ -171,6 +192,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isCompany: profile?.role === 'company',
         isCandidate: profile?.role === 'candidate',
         isOwner: profile?.role === 'owner',
+        isApproved,
+        isPending,
+        isRejected,
         userRole: profile?.role || null, // Add userRole property
         session,
       }}
