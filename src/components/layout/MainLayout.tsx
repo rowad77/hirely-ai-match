@@ -17,13 +17,15 @@ const MainLayout = ({ children, withFooter = true, fullWidth = false }: MainLayo
       <div className="sticky top-0 z-50">
         <Navbar />
         <div className="bg-gray-50 py-2 px-4">
-          <div className={`${fullWidth ? '' : 'max-w-7xl mx-auto'}`}>
+          <div className={`${fullWidth ? 'px-4 w-full' : 'max-w-7xl mx-auto px-4 sm:px-6'}`}>
             <BreadcrumbNav />
           </div>
         </div>
       </div>
-      <main className={`flex-grow ${fullWidth ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'}`}>
-        {children}
+      <main className={`flex-grow ${fullWidth ? 'px-4 w-full' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'} py-6`}>
+        <div className="w-full">
+          {children}
+        </div>
       </main>
       {withFooter && <Footer />}
     </div>

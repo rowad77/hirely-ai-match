@@ -1,11 +1,12 @@
 
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Briefcase, Settings, LogOut, Home, BarChart3, Shield, Database, LayoutDashboard, Globe } from 'lucide-react';
+import { Users, Briefcase, Settings, LogOut, Home, BarChart3, Shield, Database, LayoutDashboard, Globe, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import Navbar from './Navbar';
+import { useMediaQuery } from '@/hooks/use-media-query';
 
 type OwnerLayoutProps = {
   children: ReactNode;
@@ -16,6 +17,7 @@ const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
   const location = useLocation();
   const { logout } = useAuth();
   const { t } = useLanguage(); // No need for direction anymore, removed it
+  const isMobile = useMediaQuery("(max-width: 768px)");
   
   const isActiveRoute = (path: string) => {
     // For exact matches
@@ -77,7 +79,7 @@ const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
                         active
                           ? 'bg-purple-600 text-white'
                           : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
-                        'group flex items-center px-2 py-2 text-sm font-medium rounded-md'
+                        'group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors duration-200'
                       )}
                     >
                       <Icon
@@ -92,7 +94,7 @@ const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
                 })}
                 <div className="pt-8">
                   <button 
-                    className="w-full group flex items-center px-2 py-2 text-sm font-medium rounded-md text-red-600 hover:bg-red-50"
+                    className="w-full group flex items-center px-3 py-2.5 text-sm font-medium rounded-md text-red-600 hover:bg-red-50 transition-colors duration-200"
                     onClick={handleLogout}
                   >
                     <LogOut className="mr-3 flex-shrink-0 h-5 w-5 text-red-400" />
@@ -106,12 +108,19 @@ const OwnerLayout = ({ children, title }: OwnerLayoutProps) => {
         
         {/* Main content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <main className="flex-1 overflow-y-auto p-6">
+          <main className="flex-1 overflow-y-auto p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
-              <div className="pb-5 border-b border-gray-200 mb-5">
-                <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+              <div className="pb-5 border-b border-gray-200 mb-5 flex items-center justify-between">
+                <h1 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h1>
+                {isMobile && (
+                  <button className="md:hidden bg-white p-2 rounded-md shadow-sm border border-gray-200">
+                    <Menu className="h-5 w-5 text-gray-500" />
+                  </button>
+                )}
               </div>
-              {children}
+              <div className="space-y-6">
+                {children}
+              </div>
             </div>
           </main>
         </div>
