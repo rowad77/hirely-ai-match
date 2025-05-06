@@ -58,64 +58,6 @@ export const enTranslations: Translations = {
   switchLanguage: "Switch Language"
 };
 
-export const arTranslations: Translations = {
-  // Common
-  login: "تسجيل الدخول",
-  signup: "إنشاء حساب",
-  logout: "تسجيل الخروج",
-  dashboard: "لوحة التحكم",
-  profile: "الملف الشخصي",
-  settings: "الإعدادات",
-  search: "بحث",
-  home: "الرئيسية",
-  findJobs: "البحث عن وظائف",
-  save: "حفظ",
-  cancel: "إلغاء",
-  applications: "الطلبات",
-  companyPortal: "بوابة الشركة",
-  adminPanel: "لوحة المسؤول",
-  loading: "جارٍ التحميل...",
-  
-  // Jobs
-  jobs: "الوظائف",
-  jobTitle: "عنوان الوظيفة",
-  company: "الشركة",
-  location: "الموقع",
-  salary: "الراتب",
-  jobType: "نوع الوظيفة",
-  appliedJobs: "الوظائف المتقم لها",
-  savedJobs: "الوظائف المحفوظة",
-  applyNow: "تقدم الآن",
-  application: "طلب التوظيف",
-  
-  // Owner Dashboard
-  totalCompanies: "إجمالي الشركات",
-  totalJobs: "إجمالي الوظائف",
-  totalUsers: "إجمالي المستخدمين",
-  cvUploads: "السير الذاتية المرفوعة",
-  companies: "الشركات",
-  
-  // Settings
-  generalSettings: "الإعدادات العامة",
-  securitySettings: "إعدادات الأمان",
-  emailSettings: "إعدادات البريد الإلكتروني",
-  featureSettings: "إعدادات الميزات",
-  apiSettings: "إعدادات API",
-  
-  // Company
-  candidates: "المرشحون",
-  interviews: "المقابلات",
-  analytics: "التحليلات",
-  
-  // Language Management
-  languageManagement: "إدارة اللغات",
-  downloadTranslations: "تنزيل الترجمات",
-  uploadTranslations: "رفع الترجمات",
-  currentLanguage: "اللغة الحالية",
-  switchLanguage: "تغيير اللغة"
-};
-
 export const translations = {
   en: enTranslations,
-  ar: arTranslations,
 };

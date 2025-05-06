@@ -7,38 +7,32 @@ import { Translations, TranslationCompleteness, Language } from '@/types/transla
  */
 export function checkTranslationCompleteness(): TranslationCompleteness {
   const result: TranslationCompleteness = {
-    en: { missingKeys: [], completionPercentage: 100 },
-    ar: { missingKeys: [], completionPercentage: 100 }
+    en: { missingKeys: [], completionPercentage: 100 }
   };
   
   // Get all possible keys from the Translations interface
   const allKeys: (keyof Translations)[] = [];
   
-  // Collect all keys from all languages
-  Object.values(translations).forEach((langTranslations) => {
-    Object.keys(langTranslations).forEach((key) => {
-      if (!allKeys.includes(key as keyof Translations)) {
-        allKeys.push(key as keyof Translations);
-      }
-    });
+  // Collect all keys
+  Object.keys(translations.en).forEach((key) => {
+    if (!allKeys.includes(key as keyof Translations)) {
+      allKeys.push(key as keyof Translations);
+    }
   });
   
   // Check each language for missing keys
-  Object.keys(translations).forEach((langKey) => {
-    const lang = langKey as Language;
-    const langTranslations = translations[lang];
-    
-    allKeys.forEach((key) => {
-      if (!langTranslations[key]) {
-        result[lang].missingKeys.push(key);
-      }
-    });
-    
-    // Calculate completion percentage
-    const totalKeys = allKeys.length;
-    const missingCount = result[lang].missingKeys.length;
-    result[lang].completionPercentage = Math.round(((totalKeys - missingCount) / totalKeys) * 100);
+  const langTranslations = translations.en;
+  
+  allKeys.forEach((key) => {
+    if (!langTranslations[key]) {
+      result.en.missingKeys.push(key);
+    }
   });
+  
+  // Calculate completion percentage
+  const totalKeys = allKeys.length;
+  const missingCount = result.en.missingKeys.length;
+  result.en.completionPercentage = Math.round(((totalKeys - missingCount) / totalKeys) * 100);
   
   return result;
 }
@@ -77,8 +71,7 @@ export function createCachedTranslator(
 
 /**
  * Check if a language needs RTL support
- * Note: Always returns 'ltr' now since RTL has been removed
  */
-export function isRtlLanguage(language: string): boolean {
-  return false; // RTL support has been removed
+export function isRtlLanguage(): boolean {
+  return false; // Only supporting English which is LTR
 }

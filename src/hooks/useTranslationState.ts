@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Language } from '@/types/translations';
-import { preloadFonts, preloadNextLanguageFonts, optimizeFontDisplay } from '@/utils/font-preload';
+import { optimizeFontDisplay } from '@/utils/font-preload';
 
 // Cache version to invalidate when translations change
 const CACHE_VERSION = '1.0.0';
@@ -108,8 +108,7 @@ export const useTranslationState = () => {
   const [isChangingLanguage, setIsChangingLanguage] = useState(false);
   const [customTranslations, setCustomTranslations] = useState<{
     en: Record<string, string>;
-    ar: Record<string, string>;
-  }>({ en: {}, ar: {} });
+  }>({ en: {} });
   
   // Create broadcast channel reference for language sync
   const [langSyncChannel, setLangSyncChannel] = useState(() => 
@@ -180,13 +179,10 @@ export const useTranslationState = () => {
     optimizeFontDisplay();
   }, []);
 
-  // Safely change language with proper state tracking and font preloading
+  // Safely change language with proper state tracking
   const changeLanguage = useCallback((newLanguage: Language) => {
     setIsChangingLanguage(true);
     setLanguageState(newLanguage);
-    
-    // Preload fonts for the new language
-    preloadFonts(newLanguage);
     
     // Clear translation cache when language changes
     translationCacheRef.current = {};
@@ -217,36 +213,21 @@ export const useTranslationState = () => {
     // Artificial delay to ensure smooth transitions
     setTimeout(() => {
       setIsChangingLanguage(false);
-      
-      // After language change is complete, preload the other language
-      // for faster switching next time
-      preloadNextLanguageFonts(newLanguage);
     }, 300);
   }, [langSyncChannel]);
 
-  // Initialize from localStorage or browser preference
+  // Always initialize with English
   useEffect(() => {
     try {
       const savedLanguage = localStorage.getItem('language') as Language;
-      if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'ar')) {
-        // Preload fonts before changing language
-        preloadFonts(savedLanguage);
+      if (savedLanguage === 'en') {
         changeLanguage(savedLanguage);
       } else {
-        const browserLanguage = navigator.language.startsWith('ar') ? 'ar' : 'en';
-        preloadFonts(browserLanguage);
-        changeLanguage(browserLanguage);
+        changeLanguage('en');
       }
-      
-      // Preload other language fonts for faster switching
-      setTimeout(() => {
-        const otherLanguage = savedLanguage === 'en' ? 'ar' : 'en';
-        preloadNextLanguageFonts(otherLanguage);
-      }, 3000); // Delay to prioritize current language resources
     } catch (error) {
       console.warn('Failed to initialize language from localStorage', error);
       // Use a fallback if localStorage fails
-      preloadFonts('en');
       changeLanguage('en');
     }
     
@@ -280,26 +261,7 @@ export const useTranslationState = () => {
   useEffect(() => {
     // Update HTML document attributes
     document.documentElement.lang = language;
-
-    // Add or remove the font family based on language
-    if (language === 'ar') {
-      document.body.style.fontFamily = "'IBM Plex Sans Arabic', sans-serif";
-      
-      // Preload Arabic font if needed
-      const link = document.createElement('link');
-      link.rel = 'preload';
-      link.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap';
-      link.as = 'style';
-      document.head.appendChild(link);
-      
-      const styleLink = document.createElement('link');
-      styleLink.rel = 'stylesheet';
-      styleLink.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap';
-      document.head.appendChild(styleLink);
-    } else {
-      document.body.style.fontFamily = "'IBM Plex Sans', sans-serif";
-    }
-    
+    document.body.style.fontFamily = "'IBM Plex Sans', sans-serif";
   }, [language]);
 
   const trackKeyUsage = useCallback((key: string) => {
@@ -311,14 +273,9 @@ export const useTranslationState = () => {
     return trackKeyUsage;
   }, [trackKeyUsage]);
 
-  // Clear cache for a specific language
-  const clearLanguageCache = useCallback((lang: Language) => {
-    // Filter out cache entries for the specified language
-    Object.keys(translationCacheRef.current).forEach(key => {
-      if (key.startsWith(`${lang}:`)) {
-        delete translationCacheRef.current[key];
-      }
-    });
+  // Clear cache
+  const clearLanguageCache = useCallback(() => {
+    translationCacheRef.current = {};
     
     // Also update localStorage
     storageHelper.set('translation_cache', translationCacheRef.current);

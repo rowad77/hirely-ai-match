@@ -1,30 +1,21 @@
 
 /**
- * Utility for advanced font loading strategies to improve language switching performance
+ * Utility for font loading strategies to improve performance
  */
 
-// Predefined fonts that might be needed for different languages
+// Predefined fonts for English
 const languageFonts = {
-  ar: [
-    'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap'
-  ],
   en: [
     'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap'
   ]
 };
 
 /**
- * Preloads fonts for a specific language
- * @param language Language code to preload fonts for
+ * Preloads fonts for English
  */
-export const preloadFonts = (language: string) => {
-  if (!languageFonts[language as keyof typeof languageFonts]) {
-    console.warn(`No predefined fonts for language: ${language}`);
-    return;
-  }
-
+export const preloadFonts = () => {
   // Create preload links for each font
-  languageFonts[language as keyof typeof languageFonts].forEach(fontUrl => {
+  languageFonts.en.forEach(fontUrl => {
     // Check if this link already exists
     const existingLink = document.querySelector(`link[href="${fontUrl}"]`);
     if (existingLink) return;
@@ -46,17 +37,6 @@ export const preloadFonts = (language: string) => {
 };
 
 /**
- * Preloads font for the next language that might be selected
- * e.g., If current language is English, preload Arabic fonts
- * @param currentLanguage Current active language
- */
-export const preloadNextLanguageFonts = (currentLanguage: string) => {
-  // If current language is English, preload Arabic fonts and vice versa
-  const nextLanguage = currentLanguage === 'en' ? 'ar' : 'en';
-  preloadFonts(nextLanguage);
-};
-
-/**
  * Apply optimized font-display strategy to improve perceived performance
  */
 export const optimizeFontDisplay = () => {
@@ -66,11 +46,9 @@ export const optimizeFontDisplay = () => {
     @font-face {
       font-display: swap;
     }
-    
-    /* Smooth transitions for language changes */
-    .language-transition {
-      transition: all 0.3s ease-in-out;
-    }
   `;
   document.head.appendChild(style);
 };
+
+// These functions are no longer needed but kept as empty stubs to prevent any errors
+export const preloadNextLanguageFonts = () => {};

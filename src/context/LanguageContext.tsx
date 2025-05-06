@@ -11,7 +11,7 @@ const defaultContextValue: LanguageContextType = {
   t: (key) => String(key),
   isChangingLanguage: false,
   setCustomTranslations: () => console.warn('LanguageContext not initialized'),
-  direction: 'ltr', // Default to LTR
+  direction: 'ltr',
 };
 
 const LanguageContext = createContext<LanguageContextType>(defaultContextValue);
@@ -24,34 +24,8 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     customTranslations,
     setCustomTranslations,
     translationCacheRef,
-    trackKeyUsage,
-    getTranslationTracker
+    trackKeyUsage
   } = useTranslationState();
-
-  // Preload commonly used translations for faster switching
-  useEffect(() => {
-    // Identify the "other" language to preload
-    const otherLanguage: Language = language === 'en' ? 'ar' : 'en';
-    
-    // Get a list of frequently used keys (mock implementation - in reality this would be based on usage)
-    const commonKeys = ['login', 'signup', 'search', 'settings', 'dashboard'];
-    
-    // Preload translations in a non-blocking way
-    setTimeout(() => {
-      commonKeys.forEach(key => {
-        if (translations[otherLanguage] && translations[otherLanguage][key as keyof Translations]) {
-          const cacheKey = `${otherLanguage}:${String(key)}`;
-          if (!translationCacheRef.current[cacheKey]) {
-            translationCacheRef.current[cacheKey] = {
-              value: translations[otherLanguage][key as keyof Translations],
-              timestamp: Date.now(),
-              version: '1.0.0'
-            };
-          }
-        }
-      });
-    }, 1000); // Delay preloading to not interfere with initial rendering
-  }, [language, translationCacheRef]);
 
   // Optimized translation function with better fallback handling and caching
   const t = useCallback((key: keyof Translations): string => {
@@ -76,20 +50,12 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     else if (translations[language] && translations[language][key]) {
       result = translations[language][key];
     }
-    // If we can't find in current language, try English as fallback
-    else if (language !== 'en' && translations.en && translations.en[key]) {
-      result = translations.en[key];
-      // Log missing translation in development
-      if (process.env.NODE_ENV === 'development') {
-        console.warn(`Translation missing for key: ${String(key)} in ${language}, falling back to English`);
-      }
-    }
     // Final fallback to key
     else {
       result = String(key);
       // Log missing translation in development
       if (process.env.NODE_ENV === 'development') {
-        console.warn(`Translation missing for key: ${String(key)} in both ${language} and fallback language`);
+        console.warn(`Translation missing for key: ${String(key)} in ${language}`);
       }
     }
     
@@ -103,7 +69,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     return result;
   }, [language, customTranslations, trackKeyUsage, translationCacheRef]);
   
-  // Since we removed RTL, we always use 'ltr' as the direction
+  // Always use 'ltr' as the direction
   const direction: 'ltr' = 'ltr';
 
   // Memoize context value to prevent unnecessary re-renders

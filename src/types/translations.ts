@@ -1,5 +1,5 @@
 
-export type Language = 'en' | 'ar';
+export type Language = 'en';
 
 // Define translation keys
 export interface Translations {
@@ -18,7 +18,7 @@ export interface Translations {
   applications: string;
   companyPortal: string;
   adminPanel: string;
-  loading: string; // Added missing loading key
+  loading: string;
   
   // Jobs
   jobs: string;
@@ -66,9 +66,8 @@ export interface LanguageContextType {
   isChangingLanguage: boolean;
   setCustomTranslations: (translations: {
     en: Record<string, string>;
-    ar: Record<string, string>;
   }) => void;
-  direction: 'ltr'; // Since we've removed RTL, we only support LTR now
+  direction: 'ltr';
 }
 
 // Utility type for validating translation completeness
