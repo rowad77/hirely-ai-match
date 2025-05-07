@@ -12,11 +12,25 @@ interface JobData {
   company_id: string;
   location?: string;
   description: string;
-  type: string;
+  type?: string;
   salary?: string;
   category?: string;
   url?: string;
+  [key: string]: any;
 }
+
+interface ErrorResponse {
+  error: string;
+  details?: any;
+}
+
+interface SuccessResponse {
+  success: boolean;
+  message: string;
+  jobIds?: string[];
+}
+
+type ApiResponse = SuccessResponse | ErrorResponse;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -56,7 +70,7 @@ serve(async (req) => {
       company_id: job.company_id,
       description: job.description,
       location: job.location || null,
-      type: job.type,
+      type: job.type || 'full-time',
       salary: job.salary || null,
       category: job.category || null,
       url: job.url || null,
@@ -73,11 +87,12 @@ serve(async (req) => {
       .select('id');
       
     if (error) {
-      throw error;
+      console.error('Database error inserting jobs:', error);
+      throw new Error(`Database error: ${error.message}`);
     }
     
     // Update import record
-    await supabaseClient
+    const { error: updateError } = await supabaseClient
       .from('job_imports')
       .update({
         status: 'completed',
@@ -85,6 +100,11 @@ serve(async (req) => {
         completed_at: new Date().toISOString()
       })
       .eq('id', importId);
+      
+    if (updateError) {
+      console.error('Error updating import record:', updateError);
+      // Continue despite update error, just log it
+    }
     
     return new Response(
       JSON.stringify({ 
@@ -97,8 +117,14 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error processing jobs:', error);
     
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const errorResponse: ErrorResponse = { 
+      error: errorMessage,
+      details: error instanceof Error ? { name: error.name, stack: error.stack } : undefined
+    };
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify(errorResponse),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -119,7 +145,14 @@ function createClient(supabaseUrl: string, supabaseKey: string) {
               'Prefer': 'return=representation'
             },
             body: JSON.stringify(data)
-          }).then(res => res.json())
+          }).then(res => {
+            if (!res.ok) {
+              return res.json().then(error => {
+                throw new Error(`API error: ${JSON.stringify(error)}`);
+              });
+            }
+            return res.json();
+          })
       }),
       update: (data: any) => ({
         eq: (column: string, value: any) =>
@@ -132,7 +165,14 @@ function createClient(supabaseUrl: string, supabaseKey: string) {
               'Prefer': 'return=representation'
             },
             body: JSON.stringify(data)
-          }).then(res => res.json())
+          }).then(res => {
+            if (!res.ok) {
+              return res.json().then(error => {
+                throw new Error(`API error: ${JSON.stringify(error)}`);
+              });
+            }
+            return res.json();
+          })
       })
     })
   };

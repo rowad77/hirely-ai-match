@@ -34,8 +34,8 @@ export const useOwnerJobs = () => {
         // Extract company name from the nested companies object
         if (job.companies) {
           // Handle potential types
-          const companies = job.companies as unknown as { name: string };
-          jobWithCompany.company_name = companies.name;
+          const companiesData = job.companies as any;
+          jobWithCompany.company_name = companiesData.name;
           delete jobWithCompany.companies;
         }
         
