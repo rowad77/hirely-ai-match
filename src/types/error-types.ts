@@ -3,7 +3,7 @@
  * Custom error event interface that extends the standard ErrorEvent 
  * with additional properties we need for error tracking
  */
-export interface CustomErrorEvent extends ErrorEvent {
+export interface CustomErrorEvent extends Omit<ErrorEvent, 'filename' | 'lineno' | 'colno'> {
   error?: Error;
   filename?: string;
   lineno?: number;

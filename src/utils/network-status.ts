@@ -11,6 +11,7 @@ const hasOnlineSupport = typeof navigator !== 'undefined' && 'onLine' in navigat
 
 // Initialize network status monitoring
 if (typeof window !== 'undefined') {
+  // Set up base online/offline event listeners
   window.addEventListener('online', () => notifySubscribers(true));
   window.addEventListener('offline', () => notifySubscribers(false));
   
@@ -26,6 +27,58 @@ if (typeof window !== 'undefined') {
         throw error;
       });
   };
+  
+  // Set up periodic connectivity checks if the page is active
+  let connectivityCheckInterval: number | null = null;
+  
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      // Start periodic checks when the page is visible
+      if (!connectivityCheckInterval) {
+        connectivityCheckInterval = window.setInterval(checkConnectivity, 30000); // Check every 30 seconds
+      }
+    } else {
+      // Stop checks when the page is hidden
+      if (connectivityCheckInterval) {
+        window.clearInterval(connectivityCheckInterval);
+        connectivityCheckInterval = null;
+      }
+    }
+  });
+  
+  // Initial connectivity check
+  checkConnectivity();
+}
+
+/**
+ * Perform a lightweight connectivity check
+ * This helps detect cases where the browser thinks it's online but can't actually reach the network
+ */
+async function checkConnectivity() {
+  if (!navigator.onLine) return; // Already known to be offline
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    // Use a reliable endpoint that returns a small 204 response
+    // Google's connectivity check endpoint is widely used for this purpose
+    await fetch('https://www.gstatic.com/generate_204', { 
+      method: 'HEAD',
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    // Successfully fetched, we're definitely online
+    notifySubscribers(true);
+  } catch (error) {
+    // Failed to fetch despite navigator.onLine reporting true
+    if (navigator.onLine) {
+      console.warn('Connectivity check failed despite browser reporting online status');
+      notifySubscribers(false);
+    }
+  }
 }
 
 /**
@@ -78,6 +131,7 @@ export function isNetworkError(error: unknown): boolean {
     errorMessage.includes('offline') ||
     errorMessage.includes('internet') ||
     errorMessage.includes('timeout') ||
+    errorMessage.includes('cors') ||
     !isOnline()
   );
 }
@@ -97,13 +151,14 @@ interface QueuedRequest {
 class OfflineQueue {
   private storageKey = 'hirely_offline_queue';
   private queue: QueuedRequest[] = [];
+  private isSyncing = false;
   
   constructor() {
     this.loadQueue();
     
     // Process queue when we come back online
     subscribeToNetworkStatus((online) => {
-      if (online && this.queue.length > 0) {
+      if (online && this.queue.length > 0 && !this.isSyncing) {
         this.processQueue();
       }
     });
@@ -141,8 +196,9 @@ class OfflineQueue {
   }
   
   async processQueue(): Promise<void> {
-    if (this.queue.length === 0) return;
+    if (this.queue.length === 0 || this.isSyncing) return;
     
+    this.isSyncing = true;
     console.log(`Processing offline queue: ${this.queue.length} items`);
     
     // Process each item in the queue
@@ -179,6 +235,7 @@ class OfflineQueue {
     // Remove successful requests from queue
     this.queue = this.queue.filter(item => !successfulIds.includes(item.id));
     this.saveQueue();
+    this.isSyncing = false;
   }
   
   getQueueSize(): number {
@@ -188,6 +245,10 @@ class OfflineQueue {
   clearQueue(): void {
     this.queue = [];
     this.saveQueue();
+  }
+  
+  isProcessing(): boolean {
+    return this.isSyncing;
   }
 }
 

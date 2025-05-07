@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,8 +9,10 @@ import { useAuth } from '@/context/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { useLanguage } from '@/context/LanguageContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Mail, Lock, WifiOff } from 'lucide-react';
-import { isNetworkError, isOnline } from '@/utils/network-status';
+import { AlertCircle, Mail, Lock, WifiOff, RefreshCw } from 'lucide-react';
+import { isNetworkError, isOnline, subscribeToNetworkStatus } from '@/utils/network-status';
+import { NetworkStatusIndicator } from '@/components/ui/NetworkStatusIndicator';
+import { trackAuthError } from '@/utils/error-tracking';
 
 const Login = () => {
   const { t } = useLanguage();
@@ -17,22 +20,24 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(!isOnline());
+  const [isChecking, setIsChecking] = useState(false);
   const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
   // Monitor network status
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
+    const unsubscribe = subscribeToNetworkStatus((online) => {
+      setIsOffline(!online);
+      
+      // If coming back online and there was an error, clear it
+      if (online && error && error.includes('offline')) {
+        setError(null);
+        toast.info("You're back online!");
+      }
+    });
     
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+    return unsubscribe;
+  }, [error]);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -40,6 +45,36 @@ const Login = () => {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
+
+  const checkConnection = async () => {
+    setIsChecking(true);
+    try {
+      // Try to fetch a small resource to check connection
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch('https://www.gstatic.com/generate_204', { 
+        method: 'HEAD',
+        signal: controller.signal 
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        setIsOffline(false);
+        setError(null);
+        toast.success("Connection restored!");
+      } else {
+        setIsOffline(true);
+        setError("Network issues persist. Please try again later.");
+      }
+    } catch (e) {
+      setIsOffline(true);
+      setError("Unable to connect to the server. Please check your internet connection.");
+    } finally {
+      setIsChecking(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -61,6 +96,8 @@ const Login = () => {
       });
       navigate('/dashboard');
     } catch (error) {
+      console.error("Login error:", error);
+      
       // Check if it's a network error for better user feedback
       const networkProblem = error instanceof Error && isNetworkError(error);
       
@@ -69,7 +106,10 @@ const Login = () => {
       const errorMessage = error instanceof Error 
         ? error.message 
         : "Please check your credentials and try again.";
-        
+      
+      // Track auth error for monitoring
+      trackAuthError('login', { message: errorMessage, networkIssue: networkProblem });
+      
       setError(errorMessage);
       
       if (networkProblem) {
@@ -102,13 +142,27 @@ const Login = () => {
               </p>
             </div>
 
+            <div className="absolute top-4 right-4">
+              <NetworkStatusIndicator />
+            </div>
+
             <div className="mt-8">
               <div className="mt-6">
                 {isOffline && (
                   <Alert variant="destructive" className="mb-4 animate-fade-in">
                     <WifiOff className="h-4 w-4" />
-                    <AlertDescription>
-                      Network connection error. Please check your internet connection and try again.
+                    <AlertDescription className="flex flex-col gap-2">
+                      <span>Network connection error. Please check your internet connection and try again.</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={checkConnection}
+                        disabled={isChecking}
+                        className="self-start flex items-center gap-1"
+                      >
+                        <RefreshCw className={`h-3 w-3 ${isChecking ? 'animate-spin' : ''}`} /> 
+                        {isChecking ? 'Checking...' : 'Check connection'}
+                      </Button>
                     </AlertDescription>
                   </Alert>
                 )}
@@ -139,7 +193,7 @@ const Login = () => {
                         onChange={(e) => setEmail(e.target.value)}
                         className="pl-10 focus:ring-hirely focus:border-hirely transition-all duration-200"
                         placeholder="you@example.com"
-                        disabled={isOffline}
+                        disabled={isOffline || isLoading}
                       />
                     </div>
                   </div>
@@ -162,7 +216,7 @@ const Login = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         className="pl-10 focus:ring-hirely focus:border-hirely transition-all duration-200"
                         placeholder="••••••••"
-                        disabled={isOffline}
+                        disabled={isOffline || isLoading}
                       />
                     </div>
                   </div>

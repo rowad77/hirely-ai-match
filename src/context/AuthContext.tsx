@@ -1,8 +1,11 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { Database } from '@/integrations/supabase/types';
+import { isNetworkError } from '@/utils/network-status';
+import { trackAuthError } from '@/utils/error-tracking';
 
 export type UserProfile = {
   id: string;
@@ -120,13 +123,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!navigator.onLine) {
         throw new Error('You appear to be offline. Please check your internet connection and try again.');
       }
+
+      // Add a timeout to prevent hanging on network issues
+      const loginPromise = supabase.auth.signInWithPassword({ email, password });
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Login request timed out. Please check your connection and try again.')), 10000);
       });
+      
+      // Race between login and timeout
+      const { data, error } = await Promise.race([
+        loginPromise,
+        timeoutPromise.then(() => { throw new Error('Login request timed out'); })
+      ]) as any;
 
       if (error) {
+        // Track auth error
+        trackAuthError('login_error', error);
         throw error;
       }
 
@@ -158,6 +172,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return Promise.resolve();
     } catch (error) {
+      // Enhance error with network information
+      const enhancedError = error instanceof Error 
+        ? error 
+        : new Error('An unknown error occurred');
+        
+      // Check if it's a network error
+      if (isNetworkError(enhancedError)) {
+        trackAuthError('login_network_error', enhancedError);
+        
+        // Make the error message more user-friendly
+        const networkError = new Error("Network connection error. Please check your internet connection and try again.");
+        return Promise.reject(networkError);
+      }
+      
       return Promise.reject(error);
     } finally {
       setIsLoading(false);
