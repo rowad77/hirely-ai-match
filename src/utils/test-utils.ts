@@ -2,6 +2,7 @@
 /**
  * Test utilities for component and function testing
  */
+import { jest } from '@jest/globals';
 
 // Mock implementations for browser APIs
 export const mockLocalStorage = () => {

@@ -2,19 +2,10 @@
 /**
  * Error tracking utility for monitoring and reporting client-side errors
  */
-
-interface ErrorEvent {
-  type: 'api' | 'runtime' | 'render' | 'auth' | 'network' | 'other';
-  message: string;
-  context?: Record<string, any>;
-  stack?: string;
-  timestamp: number;
-  url: string;
-  userId?: string | null;
-}
+import { CustomErrorEvent, ErrorTrackingEvent } from '../types/error-types';
 
 class ErrorTracker {
-  private errors: ErrorEvent[] = [];
+  private errors: ErrorTrackingEvent[] = [];
   private maxErrors = 50;
   private storageKey = 'hirely_error_log';
   
@@ -23,7 +14,7 @@ class ErrorTracker {
     
     // Automatically track unhandled errors
     if (typeof window !== 'undefined') {
-      window.addEventListener('error', this.handleGlobalError);
+      window.addEventListener('error', this.handleGlobalError as EventListener);
       window.addEventListener('unhandledrejection', this.handleUnhandledRejection);
     }
   }
@@ -48,15 +39,16 @@ class ErrorTracker {
     }
   }
   
-  private handleGlobalError = (event: ErrorEvent): void => {
+  private handleGlobalError = (event: Event): void => {
+    const errorEvent = event as CustomErrorEvent;
     this.trackError({
       type: 'runtime',
-      message: event.message || 'Unknown error',
-      stack: event.error?.stack,
+      message: errorEvent.message || 'Unknown error',
+      stack: errorEvent.error?.stack,
       context: {
-        fileName: event.filename,
-        lineNumber: event.lineno,
-        columnNumber: event.colno
+        fileName: errorEvent.filename,
+        lineNumber: errorEvent.lineno,
+        columnNumber: errorEvent.colno
       }
     });
   };
@@ -80,12 +72,12 @@ class ErrorTracker {
     stack, 
     context = {} 
   }: {
-    type: ErrorEvent['type'];
+    type: ErrorTrackingEvent['type'];
     message: string;
     stack?: string;
     context?: Record<string, any>;
   }): void {
-    const errorEvent: ErrorEvent = {
+    const errorEvent: ErrorTrackingEvent = {
       type,
       message,
       stack,
@@ -113,7 +105,7 @@ class ErrorTracker {
   /**
    * Get all tracked errors
    */
-  getErrors(): ErrorEvent[] {
+  getErrors(): ErrorTrackingEvent[] {
     return [...this.errors];
   }
   
@@ -144,7 +136,7 @@ class ErrorTracker {
   /**
    * Report error to monitoring service (placeholder)
    */
-  private reportToMonitoring(errorEvent: ErrorEvent): void {
+  private reportToMonitoring(errorEvent: ErrorTrackingEvent): void {
     // This would send to a monitoring service like Sentry in production
     if (process.env.NODE_ENV === 'production') {
       // Example: send to your monitoring service
