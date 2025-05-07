@@ -1,416 +1,390 @@
 
-import { useState, useEffect } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, FileText, Upload, CheckCircle, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { Upload, Check, X, AlertCircle, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { useSupabaseFunction } from '@/hooks/use-supabase-function';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
+import { useDropzone } from 'react-dropzone';
 import Papa from 'papaparse';
-import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CsvJobUploadProps {
-  onUploadComplete: () => void;
-}
-
-interface ProcessingStatus {
-  total: number;
-  processed: number;
-  successful: number;
-  failed: number;
+  onUploadComplete?: () => void;
 }
 
 interface JobData {
   title: string;
-  company_name?: string; 
-  company_id: string;
+  company_name?: string;
+  company_id?: string;
   location?: string;
   description: string;
-  type: string;
+  type?: string;
   salary?: string;
   category?: string;
   url?: string;
+  [key: string]: any;
 }
 
-interface ImportRecord {
-  id: string;
+interface ResponseData {
+  success: boolean;
+  message: string;
+  jobIds?: string[];
+  error?: string;
 }
 
-const CsvJobUpload: React.FC<CsvJobUploadProps> = ({ onUploadComplete }) => {
-  const [file, setFile] = useState<File | null>(null);
-  const [parsedData, setParsedData] = useState<any[]>([]);
-  const [errors, setErrors] = useState<string[]>([]);
+export function CsvJobUpload({ onUploadComplete }: CsvJobUploadProps) {
+  const [csvData, setCsvData] = useState<JobData[]>([]);
+  const [isValidating, setIsValidating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [status, setStatus] = useState<ProcessingStatus>({
-    total: 0,
-    processed: 0,
-    successful: 0,
-    failed: 0
-  });
-  const { invokeFunction } = useSupabaseFunction();
-  const [userId, setUserId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [importId, setImportId] = useState<string | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    // Get the current user ID when component mounts
-    const fetchUserId = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data?.user) {
-        setUserId(data.user.id);
-      }
-    };
-    
-    fetchUserId();
-  }, []);
-
+  // Use react-dropzone for file drag and drop
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
       'text/csv': ['.csv'],
       'application/vnd.ms-excel': ['.csv'],
     },
     maxFiles: 1,
-    onDrop: (acceptedFiles) => {
-      setErrors([]);
-      const selectedFile = acceptedFiles[0];
-      if (selectedFile) {
-        if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
-          setErrors(['File size exceeds 10MB limit']);
-          return;
-        }
-        setFile(selectedFile);
-        parseCsv(selectedFile);
-      }
-    }
+    onDrop: handleFileDrop,
   });
 
-  const parseCsv = (file: File) => {
+  // Handle files dropped into the dropzone
+  function handleFileDrop(acceptedFiles: File[]) {
+    setUploadSuccess(false);
+    setValidationErrors([]);
+    setUploadError(null);
+    
+    if (acceptedFiles.length === 0) return;
+    
+    const file = acceptedFiles[0];
+    processFile(file);
+  }
+
+  // Process the CSV file
+  function processFile(file: File) {
+    setIsValidating(true);
+    
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        // Check for parse errors
-        if (results.errors && results.errors.length > 0) {
-          setErrors(results.errors.map(err => `CSV parsing error: ${err.message} on row ${err.row}`));
-          setParsedData([]);
+        setIsValidating(false);
+        
+        if (results.errors.length > 0) {
+          setValidationErrors(results.errors.map(err => `Line ${err.row}: ${err.message}`));
           return;
         }
-
-        // Validate required fields in each row
-        const validationErrors: string[] = [];
-        const dataRows = results.data as any[];
         
-        if (dataRows.length === 0) {
-          validationErrors.push('CSV file is empty');
-        } else if (dataRows.length > 1000) {
-          validationErrors.push('CSV has too many rows (limit: 1000)');
+        // Validate the parsed data
+        const jobs = results.data as JobData[];
+        const errors = validateJobsData(jobs);
+        
+        if (errors.length > 0) {
+          setValidationErrors(errors);
+          return;
         }
         
-        // Check required headers
-        const requiredFields = ['title', 'description'];
-        const headers = results.meta.fields || [];
-        const missingHeaders = requiredFields.filter(field => !headers.includes(field));
-        
-        if (missingHeaders.length > 0) {
-          validationErrors.push(`Missing required columns: ${missingHeaders.join(', ')}`);
-        }
-        
-        // Validate each row
-        dataRows.forEach((row, index) => {
-          requiredFields.forEach(field => {
-            if (!row[field] || row[field].trim() === '') {
-              validationErrors.push(`Row ${index + 2}: Missing required field "${field}"`);
-            }
-          });
-        });
-        
-        if (validationErrors.length > 0) {
-          setErrors(validationErrors);
-          setParsedData([]);
-        } else {
-          setParsedData(dataRows);
-        }
+        setCsvData(jobs);
+      },
+      error: (error) => {
+        setIsValidating(false);
+        setValidationErrors([`CSV parsing error: ${error.message}`]);
       }
     });
-  };
+  }
 
-  const uploadJobs = async () => {
-    if (!parsedData.length || !userId) return;
+  // Validate the job data
+  function validateJobsData(jobs: JobData[]): string[] {
+    const errors: string[] = [];
+    
+    if (jobs.length === 0) {
+      errors.push('No job entries found in the CSV file.');
+      return errors;
+    }
 
-    setIsUploading(true);
-    setIsProcessing(true);
-    setErrors([]);
-    setStatus({
-      total: parsedData.length,
-      processed: 0,
-      successful: 0,
-      failed: 0
+    // Check for required fields in each job
+    jobs.forEach((job, index) => {
+      if (!job.title) {
+        errors.push(`Row ${index + 2}: Missing job title.`);
+      }
+      
+      if (!job.description) {
+        errors.push(`Row ${index + 2}: Missing job description.`);
+      }
+      
+      if (!job.company_id && !job.company_name) {
+        errors.push(`Row ${index + 2}: Missing company information (company_id or company_name).`);
+      }
     });
+    
+    return errors;
+  }
 
+  // Get company ID for the jobs (create a new record if needed)
+  async function ensureCompanyIds(): Promise<JobData[]> {
+    // For jobs without a company_id but with a company_name,
+    // we should either fetch existing company or create new one
+    const jobsWithCompanyIds = await Promise.all(
+      csvData.map(async (job) => {
+        if (job.company_id) {
+          return job;
+        }
+        
+        if (job.company_name) {
+          // Check if company already exists
+          const { data: existingCompany } = await supabase
+            .from('companies')
+            .select('id')
+            .eq('name', job.company_name)
+            .maybeSingle();
+            
+          if (existingCompany?.id) {
+            return { ...job, company_id: existingCompany.id };
+          }
+          
+          // Create new company
+          const { data: newCompany, error } = await supabase
+            .from('companies')
+            .insert({ 
+              name: job.company_name,
+              description: `Auto-created for job import: ${job.title}`
+            })
+            .select('id')
+            .single();
+            
+          if (error) {
+            console.error('Failed to create company:', error);
+            // Return job without company_id
+            return job;
+          }
+          
+          return { ...job, company_id: newCompany.id };
+        }
+        
+        return job;
+      })
+    );
+    
+    return jobsWithCompanyIds;
+  }
+
+  // Upload the job data to Supabase
+  async function handleUpload() {
     try {
-      // 1. Create an import record
-      const { data: importData, error: importError } = await supabase
+      setIsUploading(true);
+      setUploadProgress(10);
+      setUploadError(null);
+      
+      // First ensure all jobs have company_id
+      const jobsWithCompanyIds = await ensureCompanyIds();
+      setUploadProgress(30);
+      
+      // Create a job import record
+      const { data: importRecord, error: importError } = await supabase
         .from('job_imports')
         .insert({
           source: 'csv',
           status: 'processing',
-          jobs_processed: parsedData.length,
-          created_by: userId
+          jobs_processed: jobsWithCompanyIds.length,
+          metadata: { filename: 'csv-upload', timestamp: new Date().toISOString() }
         })
         .select('id')
         .single();
-
-      if (importError || !importData) {
-        throw new Error(`Failed to create import record: ${importError?.message}`);
+        
+      if (importError) {
+        throw new Error(`Failed to create import record: ${importError.message}`);
       }
-
-      // 2. Prepare the job data
-      const processedJobs = await Promise.all(parsedData.map(async (job) => {
-        try {
-          // Handle company logic
-          let companyId = '';
-          if (job.company_id) {
-            // Use provided company ID if available
-            companyId = job.company_id;
-          } else if (job.company_name) {
-            // Check if company exists by name
-            const { data: existingCompanies } = await supabase
-              .from('companies')
-              .select('id')
-              .eq('name', job.company_name)
-              .maybeSingle();
-            
-            if (existingCompanies) {
-              companyId = existingCompanies.id;
-            } else {
-              // Create new company
-              const { data: newCompany, error: companyError } = await supabase
-                .from('companies')
-                .insert({
-                  name: job.company_name,
-                  is_verified: false
-                })
-                .select('id')
-                .single();
-              
-              if (companyError || !newCompany) {
-                throw new Error(`Failed to create company: ${companyError?.message}`);
-              }
-              
-              companyId = newCompany.id;
-            }
-          } else {
-            // If no company info provided, use a default or throw error
-            throw new Error('No company information provided');
-          }
-
-          // Get current user ID for the posted_by field
-          const { data: userData } = await supabase.auth.getUser();
-          const currentUserId = userData?.user?.id;
-
-          // Format job data
-          return {
-            title: job.title,
-            company_id: companyId,
-            description: job.description,
-            location: job.location || null,
-            type: job.type || 'full-time',
-            salary: job.salary || null,
-            category: job.category || null,
-            url: job.url || null,
-            status: 'active',
-            posted_by: currentUserId || null,
-            posted_date: new Date().toISOString(),
-            import_id: importData.id,
-            api_source: 'csv'
-          };
-        } catch (error: any) {
-          console.error('Error processing job:', error);
-          setStatus(prev => ({
-            ...prev,
-            processed: prev.processed + 1,
-            failed: prev.failed + 1
-          }));
-          return null;
-        }
-      }));
-
-      // Remove any null entries (failed processing)
-      const validJobs = processedJobs.filter(Boolean);
-
-      // 3. Use the edge function to process jobs in batches
-      const result = await invokeFunction('process-csv-jobs', {
-        jobs: validJobs,
-        importId: importData.id
-      });
-
-      if (!result || result.error) {
-        throw new Error(`Error processing jobs: ${result?.error || 'Unknown error'}`);
-      }
-
-      setStatus({
-        total: parsedData.length,
-        processed: parsedData.length,
-        successful: result.data?.jobIds?.length || 0,
-        failed: parsedData.length - (result.data?.jobIds?.length || 0)
-      });
-
-      // 4. Update the import record with results
-      await supabase
-        .from('job_imports')
-        .update({
-          status: 'completed',
-          jobs_imported: result.data?.jobIds?.length || 0,
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', importData.id);
       
-      toast.success(`Successfully imported ${result.data?.jobIds?.length || 0} jobs`);
-      onUploadComplete();
-    } catch (error: any) {
-      console.error('CSV upload failed:', error);
-      setErrors([`Upload failed: ${error.message || 'Unknown error'}`]);
-      toast.error('CSV upload failed');
+      const importIdValue = importRecord.id;
+      setImportId(importIdValue);
+      setUploadProgress(40);
+      
+      // Process the jobs using our edge function
+      const { data, error } = await supabase.functions.invoke(
+        'process-csv-jobs', 
+        {
+          body: {
+            jobs: jobsWithCompanyIds,
+            importId: importIdValue
+          }
+        }
+      );
+      
+      setUploadProgress(90);
+      
+      if (error) {
+        throw new Error(`Error processing jobs: ${error.message}`);
+      }
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error processing jobs');
+      }
+      
+      // Update the UI with the results
+      setUploadProgress(100);
+      setUploadSuccess(true);
+      
+      const responseData = data as ResponseData;
+      if (responseData.jobIds && responseData.jobIds.length > 0) {
+        toast.success(`Successfully imported ${responseData.jobIds.length} jobs`, {
+          description: `Job IDs: ${responseData.jobIds.slice(0, 3).join(', ')}${responseData.jobIds.length > 3 ? '...' : ''}`,
+          duration: 5000,
+        });
+      } else {
+        toast.success(`Jobs successfully processed`, {
+          description: responseData.message || 'Your jobs have been imported',
+          duration: 5000,
+        });
+      }
+      
+      // Clear the data
+      setCsvData([]);
+      
+      // Call the callback if provided
+      if (onUploadComplete) {
+        onUploadComplete();
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error during upload';
+      setUploadError(errorMessage);
+      toast.error('Failed to upload jobs', {
+        description: errorMessage,
+        duration: 5000,
+      });
     } finally {
       setIsUploading(false);
-      setIsProcessing(false);
     }
-  };
-
-  const cancelUpload = () => {
-    setFile(null);
-    setParsedData([]);
-    setErrors([]);
-    setStatus({
-      total: 0,
-      processed: 0,
-      successful: 0,
-      failed: 0
-    });
-  };
-
-  const getProgressColor = () => {
-    if (status.failed > 0) return 'bg-yellow-500';
-    return 'bg-green-500';
-  };
+  }
 
   return (
-    <div className="space-y-4">
-      {!file && (
-        <div 
-          {...getRootProps()} 
-          className={`border-2 border-dashed rounded-lg p-6 transition-colors ${
-            isDragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300'
-          }`}
-        >
-          <input {...getInputProps()} />
-          <div className="flex flex-col items-center justify-center space-y-2 text-center">
-            <Upload className="h-10 w-10 text-gray-400" />
-            <p className="text-sm font-medium">
-              Drag &amp; drop a CSV file here, or click to select a file
-            </p>
-            <p className="text-xs text-gray-500">
-              Maximum file size: 10MB. File must be in CSV format.
-            </p>
-          </div>
-        </div>
-      )}
-      
-      {file && !isProcessing && (
-        <div className="border rounded-lg p-4 space-y-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <FileText className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="font-medium">{file.name}</p>
-                <p className="text-xs text-gray-500">
-                  {(file.size / 1024).toFixed(1)} KB • {parsedData.length} jobs
-                </p>
-              </div>
+    <Card className="w-full">
+      <CardContent className="p-6">
+        <div className="space-y-6">
+          {/* Upload Area */}
+          <div
+            {...getRootProps()}
+            className={`
+              border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+              ${isDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'}
+            `}
+          >
+            <input {...getInputProps()} disabled={isUploading} />
+            <div className="flex flex-col items-center justify-center space-y-3">
+              <Upload size={36} className="text-gray-500" />
+              <h3 className="text-lg font-medium">Drop CSV file here or click to browse</h3>
+              <p className="text-sm text-gray-500 max-w-md">
+                Upload a CSV file with job data. The file should include columns for title, company_id,
+                description, and optional fields like location, type, salary, and category.
+              </p>
             </div>
-            <Button variant="ghost" size="sm" onClick={cancelUpload}>
-              <X className="h-4 w-4" />
-            </Button>
           </div>
           
-          {errors.length > 0 ? (
-            <Alert variant="destructive" className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Upload Error</AlertTitle>
-              <AlertDescription>
-                <ul className="list-disc list-inside text-sm">
-                  {errors.slice(0, 5).map((error, index) => (
-                    <li key={index}>{error}</li>
+          {/* File Data Preview */}
+          {csvData.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">CSV File Validated</h4>
+                <Badge variant="outline" className="text-green-600 bg-green-50">
+                  {csvData.length} jobs ready
+                </Badge>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-md text-sm">
+                <p>First 3 job entries:</p>
+                <ul className="list-disc list-inside space-y-1 mt-2">
+                  {csvData.slice(0, 3).map((job, i) => (
+                    <li key={i} className="truncate">
+                      {job.title} - {job.company_name || job.company_id}
+                    </li>
                   ))}
-                  {errors.length > 5 && (
-                    <li>...and {errors.length - 5} more errors</li>
+                </ul>
+              </div>
+              <Button 
+                onClick={handleUpload} 
+                disabled={isUploading}
+                className="w-full"
+              >
+                {isUploading ? 'Uploading...' : 'Upload Jobs to Database'}
+              </Button>
+            </div>
+          )}
+          
+          {/* Validation Errors */}
+          {validationErrors.length > 0 && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="font-medium mb-1">CSV validation errors:</div>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  {validationErrors.slice(0, 5).map((error, i) => (
+                    <li key={i}>{error}</li>
+                  ))}
+                  {validationErrors.length > 5 && (
+                    <li>...and {validationErrors.length - 5} more errors</li>
                   )}
                 </ul>
               </AlertDescription>
             </Alert>
-          ) : (
-            <div className="flex justify-end">
-              <Button 
-                onClick={uploadJobs} 
-                disabled={isUploading}
-                className="flex items-center space-x-2"
-              >
-                {isUploading ? 'Uploading...' : 'Upload Jobs'}
-              </Button>
+          )}
+          
+          {/* Upload Error */}
+          {uploadError && (
+            <Alert variant="destructive">
+              <X className="h-4 w-4" />
+              <AlertDescription>
+                Upload failed: {uploadError}
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {/* Upload Success */}
+          {uploadSuccess && (
+            <Alert className="bg-green-50 text-green-800 border-green-200">
+              <Check className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                Jobs uploaded successfully! {importId && `Import ID: ${importId.substring(0, 8)}...`}
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {/* Upload Progress */}
+          {isValidating && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span>Validating CSV data...</span>
+              </div>
+              <Progress value={50} className="h-2" />
             </div>
           )}
-        </div>
-      )}
-      
-      {isProcessing && (
-        <div className="border rounded-lg p-4 space-y-4">
-          <div className="flex justify-between items-center">
-            <p className="font-medium">Processing {parsedData.length} jobs</p>
-            <Badge variant={isUploading ? "outline" : "default"}>
-              {isUploading ? "Processing..." : "Completed"}
-            </Badge>
-          </div>
           
-          <Progress 
-            value={(status.processed / status.total) * 100} 
-            className="w-full h-2"
-            indicatorClassName={getProgressColor()}
-          />
-          
-          <div className="flex justify-between text-sm text-gray-500">
-            <span>
-              {status.processed} / {status.total} processed
-            </span>
-            <div className="flex space-x-4">
-              <span className="flex items-center">
-                <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                {status.successful} successful
-              </span>
-              {status.failed > 0 && (
-                <span className="flex items-center">
-                  <X className="h-4 w-4 text-red-500 mr-1" />
-                  {status.failed} failed
-                </span>
-              )}
-            </div>
-          </div>
-          
-          {!isUploading && (
-            <div className="flex justify-end">
-              <Button 
-                onClick={cancelUpload}
-                variant="outline"
-              >
-                Close
-              </Button>
+          {isUploading && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span>Uploading jobs...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <Progress value={uploadProgress} className="h-2" />
             </div>
           )}
+          
+          {/* Helper Text */}
+          <div className="flex items-start space-x-2 text-sm text-gray-500">
+            <FileText className="h-5 w-5 flex-shrink-0" />
+            <p>
+              Need help with your CSV format? Make sure your file has columns for title, description, 
+              and either company_id or company_name. Optional columns include location, type, salary, and category.
+            </p>
+          </div>
         </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
-};
-
-export default CsvJobUpload;
+}

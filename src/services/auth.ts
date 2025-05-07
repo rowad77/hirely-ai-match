@@ -1,5 +1,6 @@
 
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export type User = {
   id: string;
@@ -9,68 +10,75 @@ export type User = {
   companyId?: string;
 };
 
-// Mock user data, in a real app this would come from your backend/Supabase
-const MOCK_USERS = {
-  'company@example.com': {
-    id: 'c1',
-    name: 'Acme Inc',
-    email: 'company@example.com',
-    password: 'password',
-    role: 'company' as const,
-    companyId: 'c1',
-  },
-  'candidate@example.com': {
-    id: 'u1',
-    name: 'John Doe',
-    email: 'candidate@example.com',
-    password: 'password',
-    role: 'candidate' as const,
-  },
-  'owner@example.com': {
-    id: 'o1',
-    name: 'Platform Owner',
-    email: 'owner@example.com',
-    password: 'password',
-    role: 'owner' as const,
-  }
-};
-
+// This service now acts as a backup/fallback for the Supabase auth
+// It's kept for backward compatibility but primarily delegates to Supabase
 class AuthService {
   private storageKey = 'hirely_user';
   
   getCurrentUser(): User | null {
-    const userData = localStorage.getItem(this.storageKey);
-    if (!userData) return null;
-    try {
-      return JSON.parse(userData) as User;
-    } catch (e) {
-      console.error('Failed to parse user data', e);
-      return null;
+    // Try to get user from Supabase first
+    const supabaseUser = supabase.auth.getSession()
+      .then(({ data }) => data.session?.user)
+      .catch(() => null);
+    
+    // If Supabase fails, fall back to local storage
+    if (!supabaseUser) {
+      const userData = localStorage.getItem(this.storageKey);
+      if (!userData) return null;
+      try {
+        return JSON.parse(userData) as User;
+      } catch (e) {
+        console.error('Failed to parse user data', e);
+        return null;
+      }
     }
+    
+    return null;
   }
 
+  // This is now a fallback method that primarily delegates to Supabase auth
+  // but maintains the same interface for backward compatibility
   login(email: string, password: string): Promise<User> {
     return new Promise((resolve, reject) => {
-      // Simulate API call delay
-      setTimeout(() => {
-        const user = MOCK_USERS[email as keyof typeof MOCK_USERS];
-        if (user && user.password === password) {
-          // Remove password before storing
-          const { password: _, ...userWithoutPassword } = user;
-          localStorage.setItem(this.storageKey, JSON.stringify(userWithoutPassword));
-          resolve(userWithoutPassword);
+      // Delegate to Supabase auth
+      supabase.auth.signInWithPassword({
+        email,
+        password
+      }).then(({ data, error }) => {
+        if (error) {
+          reject(error);
+        } else if (data.user) {
+          const role = data.user.user_metadata.role || 'candidate';
+          const user: User = {
+            id: data.user.id,
+            name: data.user.user_metadata.full_name || data.user.email || 'User',
+            email: data.user.email || '',
+            role: role as 'candidate' | 'company' | 'owner',
+            companyId: data.user.user_metadata.company_id
+          };
+          
+          // Store in localStorage as backup
+          localStorage.setItem(this.storageKey, JSON.stringify(user));
+          resolve(user);
         } else {
-          reject(new Error('Invalid email or password'));
+          reject(new Error('User not found'));
         }
-      }, 800);
+      }).catch(error => {
+        reject(error);
+      });
     });
   }
 
   logout(): void {
+    // Clear local storage
     localStorage.removeItem(this.storageKey);
-    // In a real app, you might want to redirect here
-    window.location.href = '/login';
-    toast.success('Logged out successfully');
+    
+    // Logout from Supabase (this will trigger the auth state change in AuthContext)
+    supabase.auth.signOut().then(() => {
+      toast.success('Logged out successfully');
+    }).catch(error => {
+      console.error('Error during logout:', error);
+    });
   }
 
   isAuthenticated(): boolean {

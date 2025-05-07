@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
@@ -73,6 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fetchUserProfile(currentSession.user.id);
       }
       
+      setIsLoading(false);
+    }).catch(error => {
+      console.error("Error getting session:", error);
       setIsLoading(false);
     });
 
