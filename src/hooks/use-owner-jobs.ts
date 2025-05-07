@@ -17,7 +17,7 @@ export const useOwnerJobs = () => {
     setLoading(true);
     setError(null);
     try {
-      // Fetch jobs with company names joined
+      // Fetch jobs with company information
       const { data, error: jobsError } = await supabase
         .from('jobs')
         .select('*, companies(name)')
@@ -29,17 +29,16 @@ export const useOwnerJobs = () => {
 
       // Process the data to flatten the company name
       const processedJobs: Job[] = data?.map(job => {
-        const jobWithCompany = { ...job } as Job;
+        const jobWithCompany = { ...job } as any; // Using any here to allow company_name extraction
         
         // Extract company name from the nested companies object
-        if (job.companies) {
-          // Handle potential types
-          const companiesData = job.companies as any;
+        if (jobWithCompany.companies) {
+          const companiesData = jobWithCompany.companies;
           jobWithCompany.company_name = companiesData.name;
-          delete jobWithCompany.companies;
+          delete jobWithCompany.companies; // Remove the nested structure
         }
         
-        return jobWithCompany;
+        return jobWithCompany as Job;
       }) || [];
       
       setJobs(processedJobs);

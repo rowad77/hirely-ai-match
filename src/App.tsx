@@ -1,4 +1,3 @@
-
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
@@ -21,25 +20,36 @@ const queryClient = new QueryClient({
   },
 });
 
+// Import our new error boundary
+import GlobalErrorBoundary from './components/ui/GlobalErrorBoundary';
+import { NetworkStatusIndicator } from './components/ui/NetworkStatusIndicator';
+
 function App() {
   return (
-    <ErrorBoundary>
-      <ThemeProvider defaultTheme="system" storageKey="vite-react-theme">
-        <LanguageProvider>
-          <QueryClientProvider client={queryClient}>
-            <BrowserRouter>
-              <AuthProvider>
-                <JobsFilterProvider>
-                  <Toaster position="bottom-center" richColors closeButton />
-                  <ShadcnToaster />
-                  <AppRoutes />
-                </JobsFilterProvider>
-              </AuthProvider>
-            </BrowserRouter>
-          </QueryClientProvider>
-        </LanguageProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
+    <GlobalErrorBoundary>
+      <div className="App">
+        {/* Network status indicator - only show when offline or syncing */}
+        <div className="fixed top-4 right-4 z-50">
+          <NetworkStatusIndicator />
+        </div>
+        
+        <ThemeProvider defaultTheme="system" storageKey="vite-react-theme">
+          <LanguageProvider>
+            <QueryClientProvider client={queryClient}>
+              <BrowserRouter>
+                <AuthProvider>
+                  <JobsFilterProvider>
+                    <Toaster position="bottom-center" richColors closeButton />
+                    <ShadcnToaster />
+                    <AppRoutes />
+                  </JobsFilterProvider>
+                </AuthProvider>
+              </BrowserRouter>
+            </QueryClientProvider>
+          </LanguageProvider>
+        </ThemeProvider>
+      </div>
+    </GlobalErrorBoundary>
   );
 }
 

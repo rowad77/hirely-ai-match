@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,15 +9,30 @@ import MainLayout from '@/components/layout/MainLayout';
 import { useLanguage } from '@/context/LanguageContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Mail, Lock, WifiOff } from 'lucide-react';
+import { isNetworkError, isOnline } from '@/utils/network-status';
 
 const Login = () => {
   const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isNetworkError, setIsNetworkError] = useState(false);
+  const [isOffline, setIsOffline] = useState(!isOnline());
   const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -30,7 +44,15 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    setIsNetworkError(false);
+    
+    // Early check for offline status
+    if (isOffline) {
+      setError('You appear to be offline. Please check your internet connection and try again.');
+      toast.error("Network connection error", {
+        description: "Please check your internet connection and try again.",
+      });
+      return;
+    }
 
     try {
       await login(email, password);
@@ -39,13 +61,10 @@ const Login = () => {
       });
       navigate('/dashboard');
     } catch (error) {
-      // Check if it's a network error
-      const isOffline = error instanceof Error && 
-        (error.message === 'Failed to fetch' || 
-         error.message.includes('NetworkError') ||
-         error.message.includes('network'));
+      // Check if it's a network error for better user feedback
+      const networkProblem = error instanceof Error && isNetworkError(error);
       
-      setIsNetworkError(isOffline);
+      setIsOffline(networkProblem);
       
       const errorMessage = error instanceof Error 
         ? error.message 
@@ -53,7 +72,7 @@ const Login = () => {
         
       setError(errorMessage);
       
-      if (isOffline) {
+      if (networkProblem) {
         toast.error("Network connection error", {
           description: "Please check your internet connection and try again.",
         });
@@ -85,7 +104,7 @@ const Login = () => {
 
             <div className="mt-8">
               <div className="mt-6">
-                {isNetworkError && (
+                {isOffline && (
                   <Alert variant="destructive" className="mb-4 animate-fade-in">
                     <WifiOff className="h-4 w-4" />
                     <AlertDescription>
@@ -94,7 +113,7 @@ const Login = () => {
                   </Alert>
                 )}
                 
-                {error && !isNetworkError && (
+                {error && !isOffline && (
                   <Alert variant="destructive" className="mb-4 animate-fade-in">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{error}</AlertDescription>
@@ -120,6 +139,7 @@ const Login = () => {
                         onChange={(e) => setEmail(e.target.value)}
                         className="pl-10 focus:ring-hirely focus:border-hirely transition-all duration-200"
                         placeholder="you@example.com"
+                        disabled={isOffline}
                       />
                     </div>
                   </div>
@@ -142,6 +162,7 @@ const Login = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         className="pl-10 focus:ring-hirely focus:border-hirely transition-all duration-200"
                         placeholder="••••••••"
+                        disabled={isOffline}
                       />
                     </div>
                   </div>
@@ -158,7 +179,7 @@ const Login = () => {
                     <Button
                       type="submit"
                       className="w-full flex justify-center py-2 px-4 bg-hirely hover:bg-hirely-dark transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
-                      disabled={isLoading}
+                      disabled={isLoading || isOffline}
                     >
                       {isLoading ? t('loading') : t('login')}
                     </Button>
@@ -182,6 +203,7 @@ const Login = () => {
                       type="button"
                       variant="outline"
                       className="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                      disabled={isOffline}
                     >
                       <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
                         <path
