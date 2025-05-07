@@ -1,20 +1,31 @@
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Upload, FileText, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
+import { useDropzone } from 'react-dropzone';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle, FileText, Upload, CheckCircle, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { useSupabaseFunction } from '@/hooks/use-supabase-function';
+import Papa from 'papaparse';
+import { v4 as uuidv4 } from 'uuid';
 
 interface CsvJobUploadProps {
   onUploadComplete: () => void;
 }
 
+interface ProcessingStatus {
+  total: number;
+  processed: number;
+  successful: number;
+  failed: number;
+}
+
 interface JobData {
   title: string;
-  company_name?: string;
+  company_name?: string; 
   company_id: string;
   location?: string;
   description: string;
@@ -22,361 +33,383 @@ interface JobData {
   salary?: string;
   category?: string;
   url?: string;
-  [key: string]: any; // For other potential CSV fields
 }
 
-// Default column mapping from CSV to expected format
-const defaultColumnMapping = {
-  title: 'title',
-  company: 'company_name',
-  location: 'location',
-  description: 'description',
-  job_type: 'type',
-  salary: 'salary',
-  category: 'category',
-  url: 'url'
-};
+interface ImportRecord {
+  id: string;
+}
 
 const CsvJobUpload: React.FC<CsvJobUploadProps> = ({ onUploadComplete }) => {
   const [file, setFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState<string>('');
+  const [parsedData, setParsedData] = useState<any[]>([]);
+  const [errors, setErrors] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [uploadStats, setUploadStats] = useState<{
-    total: number;
-    success: number;
-    error: number;
-  } | null>(null);
-  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [status, setStatus] = useState<ProcessingStatus>({
+    total: 0,
+    processed: 0,
+    successful: 0,
+    failed: 0
+  });
+  const { invokeFunction } = useSupabaseFunction();
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      
-      // Check if file is a CSV
-      if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
-        toast.error('Please upload a CSV file');
-        return;
+  useEffect(() => {
+    // Get the current user ID when component mounts
+    const fetchUserId = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) {
+        setUserId(data.user.id);
       }
-      
-      setFile(selectedFile);
-      setFileName(selectedFile.name);
-      setProgress(0);
-      setUploadStats(null);
-      setUploadErrors([]);
-    }
-  };
+    };
+    
+    fetchUserId();
+  }, []);
 
-  const parseCsv = async (fileContent: string): Promise<JobData[]> => {
-    // Basic CSV parsing
-    const rows = fileContent.split('\n').filter(row => row.trim());
-    const headers = rows[0].split(',').map(header => header.trim().toLowerCase());
-    
-    const jobs: JobData[] = [];
-    
-    // Process each row starting from index 1 (skip header)
-    for (let i = 1; i < rows.length; i++) {
-      try {
-        const rowData = rows[i].split(',');
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: {
+      'text/csv': ['.csv'],
+      'application/vnd.ms-excel': ['.csv'],
+    },
+    maxFiles: 1,
+    onDrop: (acceptedFiles) => {
+      setErrors([]);
+      const selectedFile = acceptedFiles[0];
+      if (selectedFile) {
+        if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
+          setErrors(['File size exceeds 10MB limit']);
+          return;
+        }
+        setFile(selectedFile);
+        parseCsv(selectedFile);
+      }
+    }
+  });
+
+  const parseCsv = (file: File) => {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        // Check for parse errors
+        if (results.errors && results.errors.length > 0) {
+          setErrors(results.errors.map(err => `CSV parsing error: ${err.message} on row ${err.row}`));
+          setParsedData([]);
+          return;
+        }
+
+        // Validate required fields in each row
+        const validationErrors: string[] = [];
+        const dataRows = results.data as any[];
         
-        if (rowData.length !== headers.length) {
-          setUploadErrors(prev => [...prev, `Row ${i + 1}: Column count mismatch`]);
-          continue;
+        if (dataRows.length === 0) {
+          validationErrors.push('CSV file is empty');
+        } else if (dataRows.length > 1000) {
+          validationErrors.push('CSV has too many rows (limit: 1000)');
         }
         
-        const job: Record<string, any> = {};
+        // Check required headers
+        const requiredFields = ['title', 'description'];
+        const headers = results.meta.fields || [];
+        const missingHeaders = requiredFields.filter(field => !headers.includes(field));
         
-        // Map CSV columns to job fields using the mapping
-        headers.forEach((header, index) => {
-          const mappedField = Object.entries(defaultColumnMapping)
-            .find(([_, value]) => value === header)?.[0] || header;
-          
-          job[mappedField] = rowData[index]?.trim() || '';
+        if (missingHeaders.length > 0) {
+          validationErrors.push(`Missing required columns: ${missingHeaders.join(', ')}`);
+        }
+        
+        // Validate each row
+        dataRows.forEach((row, index) => {
+          requiredFields.forEach(field => {
+            if (!row[field] || row[field].trim() === '') {
+              validationErrors.push(`Row ${index + 2}: Missing required field "${field}"`);
+            }
+          });
         });
         
-        // Mandatory fields
-        if (!job.title) {
-          setUploadErrors(prev => [...prev, `Row ${i + 1}: Missing title`]);
-          continue;
+        if (validationErrors.length > 0) {
+          setErrors(validationErrors);
+          setParsedData([]);
+        } else {
+          setParsedData(dataRows);
         }
-        
-        if (!job.description) {
-          setUploadErrors(prev => [...prev, `Row ${i + 1}: Missing description`]);
-          continue;
-        }
-        
-        // Default values
-        job.company_id = '00000000-0000-0000-0000-000000000000'; // Default company ID
-        job.type = job.type || 'full-time';
-        
-        jobs.push(job as JobData);
-      } catch (error) {
-        setUploadErrors(prev => [...prev, `Row ${i + 1}: ${error}`]);
       }
-    }
-    
-    return jobs;
+    });
   };
 
   const uploadJobs = async () => {
-    if (!file) {
-      toast.error('Please select a file to upload');
-      return;
-    }
-    
+    if (!parsedData.length || !userId) return;
+
     setIsUploading(true);
-    setProgress(10);
-    setUploadErrors([]);
-    
+    setIsProcessing(true);
+    setErrors([]);
+    setStatus({
+      total: parsedData.length,
+      processed: 0,
+      successful: 0,
+      failed: 0
+    });
+
     try {
-      // Read the file
-      const reader = new FileReader();
-      
-      reader.onload = async (e) => {
+      // 1. Create an import record
+      const { data: importData, error: importError } = await supabase
+        .from('job_imports')
+        .insert({
+          source: 'csv',
+          status: 'processing',
+          jobs_processed: parsedData.length,
+          created_by: userId
+        })
+        .select('id')
+        .single();
+
+      if (importError || !importData) {
+        throw new Error(`Failed to create import record: ${importError?.message}`);
+      }
+
+      // 2. Prepare the job data
+      const processedJobs = await Promise.all(parsedData.map(async (job) => {
         try {
-          const content = e.target?.result as string;
-          setProgress(30);
-          
-          // Parse CSV
-          const jobs = await parseCsv(content);
-          
-          if (jobs.length === 0) {
-            toast.error('No valid jobs found in the CSV');
-            setIsUploading(false);
-            return;
-          }
-          
-          setProgress(50);
-          
-          // Create import record
-          const { data: importData, error: importError } = await supabase
-            .from('job_imports')
-            .insert({
-              source: 'csv_upload',
-              status: 'processing',
-              jobs_processed: jobs.length,
-              metadata: {
-                filename: fileName,
-                column_count: Object.keys(jobs[0]).length
-              }
-            })
-            .select('id')
-            .single();
+          // Handle company logic
+          let companyId = '';
+          if (job.company_id) {
+            // Use provided company ID if available
+            companyId = job.company_id;
+          } else if (job.company_name) {
+            // Check if company exists by name
+            const { data: existingCompanies } = await supabase
+              .from('companies')
+              .select('id')
+              .eq('name', job.company_name)
+              .maybeSingle();
             
-          if (importError) {
-            throw new Error(`Failed to create import record: ${importError.message}`);
-          }
-          
-          setProgress(70);
-          
-          // Process jobs in batches to avoid payload size limitations
-          const batchSize = 50;
-          let successCount = 0;
-          let errorCount = 0;
-          
-          for (let i = 0; i < jobs.length; i += batchSize) {
-            const batch = jobs.slice(i, i + batchSize);
-            
-            // Format jobs for insertion
-            const jobsToInsert = batch.map(job => ({
-              title: job.title,
-              company_id: job.company_id,
-              description: job.description,
-              location: job.location || null,
-              type: job.type,
-              salary: job.salary || null,
-              category: job.category || null,
-              url: job.url || null,
-              status: 'active',
-              posted_by: (await supabase.auth.getUser()).data.user?.id || null,
-              posted_date: new Date().toISOString(),
-              import_id: importData.id,
-              api_source: 'csv'
-            }));
-            
-            // Insert jobs
-            const { data, error } = await supabase
-              .from('jobs')
-              .insert(jobsToInsert)
-              .select('id');
-              
-            if (error) {
-              console.error('Error inserting jobs batch:', error);
-              errorCount += batch.length;
+            if (existingCompanies) {
+              companyId = existingCompanies.id;
             } else {
-              successCount += data.length;
+              // Create new company
+              const { data: newCompany, error: companyError } = await supabase
+                .from('companies')
+                .insert({
+                  name: job.company_name,
+                  is_verified: false
+                })
+                .select('id')
+                .single();
+              
+              if (companyError || !newCompany) {
+                throw new Error(`Failed to create company: ${companyError?.message}`);
+              }
+              
+              companyId = newCompany.id;
             }
-            
-            // Update progress
-            setProgress(70 + Math.floor((i / jobs.length) * 25));
-          }
-          
-          // Update import record
-          await supabase
-            .from('job_imports')
-            .update({
-              status: 'completed',
-              jobs_imported: successCount,
-              completed_at: new Date().toISOString(),
-              errors: uploadErrors.length > 0 ? { messages: uploadErrors } : null
-            })
-            .eq('id', importData.id);
-            
-          setProgress(100);
-          
-          // Set stats
-          setUploadStats({
-            total: jobs.length,
-            success: successCount,
-            error: errorCount + uploadErrors.length
-          });
-          
-          if (successCount > 0) {
-            toast.success(`Successfully imported ${successCount} jobs`);
-            onUploadComplete();
           } else {
-            toast.error('Failed to import any jobs');
+            // If no company info provided, use a default or throw error
+            throw new Error('No company information provided');
           }
-        } catch (error) {
-          console.error('Error processing CSV:', error);
-          toast.error(`Error processing CSV: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        } finally {
-          setIsUploading(false);
+
+          // Get current user ID for the posted_by field
+          const { data: userData } = await supabase.auth.getUser();
+          const currentUserId = userData?.user?.id;
+
+          // Format job data
+          return {
+            title: job.title,
+            company_id: companyId,
+            description: job.description,
+            location: job.location || null,
+            type: job.type || 'full-time',
+            salary: job.salary || null,
+            category: job.category || null,
+            url: job.url || null,
+            status: 'active',
+            posted_by: currentUserId || null,
+            posted_date: new Date().toISOString(),
+            import_id: importData.id,
+            api_source: 'csv'
+          };
+        } catch (error: any) {
+          console.error('Error processing job:', error);
+          setStatus(prev => ({
+            ...prev,
+            processed: prev.processed + 1,
+            failed: prev.failed + 1
+          }));
+          return null;
         }
-      };
+      }));
+
+      // Remove any null entries (failed processing)
+      const validJobs = processedJobs.filter(Boolean);
+
+      // 3. Use the edge function to process jobs in batches
+      const result = await invokeFunction('process-csv-jobs', {
+        jobs: validJobs,
+        importId: importData.id
+      });
+
+      if (!result || result.error) {
+        throw new Error(`Error processing jobs: ${result?.error || 'Unknown error'}`);
+      }
+
+      setStatus({
+        total: parsedData.length,
+        processed: parsedData.length,
+        successful: result.data?.jobIds?.length || 0,
+        failed: parsedData.length - (result.data?.jobIds?.length || 0)
+      });
+
+      // 4. Update the import record with results
+      await supabase
+        .from('job_imports')
+        .update({
+          status: 'completed',
+          jobs_imported: result.data?.jobIds?.length || 0,
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', importData.id);
       
-      reader.onerror = () => {
-        toast.error('Failed to read file');
-        setIsUploading(false);
-      };
-      
-      reader.readAsText(file);
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error(`Upload error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.success(`Successfully imported ${result.data?.jobIds?.length || 0} jobs`);
+      onUploadComplete();
+    } catch (error: any) {
+      console.error('CSV upload failed:', error);
+      setErrors([`Upload failed: ${error.message || 'Unknown error'}`]);
+      toast.error('CSV upload failed');
+    } finally {
       setIsUploading(false);
+      setIsProcessing(false);
     }
   };
 
+  const cancelUpload = () => {
+    setFile(null);
+    setParsedData([]);
+    setErrors([]);
+    setStatus({
+      total: 0,
+      processed: 0,
+      successful: 0,
+      failed: 0
+    });
+  };
+
+  const getProgressColor = () => {
+    if (status.failed > 0) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Upload Jobs via CSV</CardTitle>
-        <CardDescription>
-          Upload a CSV file to import multiple jobs at once.
-          Make sure your CSV has the following headers: title, company, location, description, job_type, salary, category, url.
-        </CardDescription>
-      </CardHeader>
+    <div className="space-y-4">
+      {!file && (
+        <div 
+          {...getRootProps()} 
+          className={`border-2 border-dashed rounded-lg p-6 transition-colors ${
+            isDragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300'
+          }`}
+        >
+          <input {...getInputProps()} />
+          <div className="flex flex-col items-center justify-center space-y-2 text-center">
+            <Upload className="h-10 w-10 text-gray-400" />
+            <p className="text-sm font-medium">
+              Drag &amp; drop a CSV file here, or click to select a file
+            </p>
+            <p className="text-xs text-gray-500">
+              Maximum file size: 10MB. File must be in CSV format.
+            </p>
+          </div>
+        </div>
+      )}
       
-      <CardContent>
-        <div className="space-y-4">
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-            {!file ? (
-              <div className="space-y-2">
-                <div className="flex justify-center">
-                  <Upload className="h-8 w-8 text-gray-400" />
-                </div>
-                <p className="text-sm text-gray-500">
-                  Drag and drop a CSV file here, or click to select a file
+      {file && !isProcessing && (
+        <div className="border rounded-lg p-4 space-y-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-3">
+              <FileText className="h-8 w-8 text-blue-500" />
+              <div>
+                <p className="font-medium">{file.name}</p>
+                <p className="text-xs text-gray-500">
+                  {(file.size / 1024).toFixed(1)} KB • {parsedData.length} jobs
                 </p>
-                <label className="cursor-pointer">
-                  <Input
-                    type="file"
-                    accept=".csv"
-                    onChange={handleFileChange}
-                    className="sr-only"
-                  />
-                  <span className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors">
-                    Select File
-                  </span>
-                </label>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex justify-center">
-                  <FileText className="h-8 w-8 text-blue-500" />
-                </div>
-                <p className="text-sm font-medium">{fileName}</p>
-                <div className="flex justify-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setFile(null);
-                      setFileName('');
-                    }}
-                  >
-                    Change File
-                  </Button>
-                </div>
-              </div>
-            )}
+            </div>
+            <Button variant="ghost" size="sm" onClick={cancelUpload}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
           
-          {isUploading && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs">
-                <span>Uploading...</span>
-                <span>{progress}%</span>
-              </div>
-              <Progress value={progress} className="h-2" />
-            </div>
-          )}
-          
-          {uploadStats && (
-            <div className="bg-gray-50 p-4 rounded-md">
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                {uploadStats.error === 0 ? (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                ) : uploadStats.success === 0 ? (
-                  <XCircle className="h-5 w-5 text-red-500" />
-                ) : (
-                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                )}
-                Upload Results
-              </h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <p className="text-sm text-gray-500">Total</p>
-                  <p className="text-xl font-bold">{uploadStats.total}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-500">Successful</p>
-                  <p className="text-xl font-bold text-green-600">{uploadStats.success}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-500">Failed</p>
-                  <p className="text-xl font-bold text-red-600">{uploadStats.error}</p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {uploadErrors.length > 0 && (
-            <div className="bg-red-50 p-4 rounded-md space-y-2">
-              <h4 className="font-medium text-red-800">Errors</h4>
-              <div className="max-h-40 overflow-auto text-sm">
-                <ul className="list-disc pl-5 space-y-1">
-                  {uploadErrors.map((error, index) => (
-                    <li key={index} className="text-red-700">{error}</li>
+          {errors.length > 0 ? (
+            <Alert variant="destructive" className="mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Upload Error</AlertTitle>
+              <AlertDescription>
+                <ul className="list-disc list-inside text-sm">
+                  {errors.slice(0, 5).map((error, index) => (
+                    <li key={index}>{error}</li>
                   ))}
+                  {errors.length > 5 && (
+                    <li>...and {errors.length - 5} more errors</li>
+                  )}
                 </ul>
-              </div>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="flex justify-end">
+              <Button 
+                onClick={uploadJobs} 
+                disabled={isUploading}
+                className="flex items-center space-x-2"
+              >
+                {isUploading ? 'Uploading...' : 'Upload Jobs'}
+              </Button>
             </div>
           )}
         </div>
-      </CardContent>
+      )}
       
-      <CardFooter>
-        <Button 
-          onClick={uploadJobs} 
-          disabled={!file || isUploading}
-          className="w-full"
-        >
-          {isUploading ? 'Uploading...' : 'Upload Jobs'}
-        </Button>
-      </CardFooter>
-    </Card>
+      {isProcessing && (
+        <div className="border rounded-lg p-4 space-y-4">
+          <div className="flex justify-between items-center">
+            <p className="font-medium">Processing {parsedData.length} jobs</p>
+            <Badge variant={isUploading ? "outline" : "default"}>
+              {isUploading ? "Processing..." : "Completed"}
+            </Badge>
+          </div>
+          
+          <Progress 
+            value={(status.processed / status.total) * 100} 
+            className="w-full h-2"
+            indicatorClassName={getProgressColor()}
+          />
+          
+          <div className="flex justify-between text-sm text-gray-500">
+            <span>
+              {status.processed} / {status.total} processed
+            </span>
+            <div className="flex space-x-4">
+              <span className="flex items-center">
+                <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                {status.successful} successful
+              </span>
+              {status.failed > 0 && (
+                <span className="flex items-center">
+                  <X className="h-4 w-4 text-red-500 mr-1" />
+                  {status.failed} failed
+                </span>
+              )}
+            </div>
+          </div>
+          
+          {!isUploading && (
+            <div className="flex justify-end">
+              <Button 
+                onClick={cancelUpload}
+                variant="outline"
+              >
+                Close
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 

@@ -1,218 +1,160 @@
 
 import { useState, useEffect } from 'react';
 import OwnerLayout from '@/components/layout/OwnerLayout';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useLanguage } from '@/context/LanguageContext';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Check, X } from 'lucide-react';
 
-type CompanyRequest = {
+type CompanyProfile = {
   id: string;
+  user_id: string;
   email: string;
-  company_name: string;
+  full_name: string;
+  approval_status: 'pending' | 'approved' | 'rejected';
   created_at: string;
-  status: string;
-  role: string;
+  company_name?: string;
 };
 
 const CompanyApprovals = () => {
-  const { t } = useLanguage();
-  const [companyRequests, setCompanyRequests] = useState<CompanyRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [companies, setCompanies] = useState<CompanyProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Fetch pending company approvals
   useEffect(() => {
-    fetchCompanyRequests();
+    const fetchPendingCompanies = async () => {
+      setIsLoading(true);
+      try {
+        const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
+        if (usersError) throw usersError;
+
+        // Filter users with role 'company' and approval_status 'pending'
+        const companyUsers = usersData.users.filter(user => 
+          user.user_metadata && 
+          user.user_metadata.role === 'company' && 
+          (user.user_metadata.approval_status === 'pending' || !user.user_metadata.approval_status)
+        );
+
+        const profiles = companyUsers.map(user => ({
+          id: user.id,
+          user_id: user.id,
+          email: user.email || 'Unknown',
+          full_name: user.user_metadata?.full_name || 'Unknown',
+          approval_status: (user.user_metadata?.approval_status as 'pending' | 'approved' | 'rejected') || 'pending',
+          created_at: user.created_at,
+          company_name: user.user_metadata?.company_name
+        }));
+
+        setCompanies(profiles);
+      } catch (error: any) {
+        console.error('Error fetching companies:', error);
+        toast.error('Failed to load pending companies');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPendingCompanies();
   }, []);
 
   const handleApprove = async (userId: string) => {
-    setActionLoading(userId);
     try {
-      // Update the user's metadata
-      const { error } = await supabase.auth.admin.updateUserById(userId, {
+      await supabase.auth.admin.updateUserById(userId, {
         user_metadata: { approval_status: 'approved' }
       });
-      
-      if (error) throw error;
-      
-      // Update local state
-      setCompanyRequests(prev => 
-        prev.map(req => 
-          req.id === userId ? { ...req, status: 'approved' } : req
-        )
-      );
-      
+
+      setCompanies(companies.map(company => 
+        company.id === userId 
+          ? { ...company, approval_status: 'approved' }
+          : company
+      ));
+
       toast.success('Company approved successfully');
     } catch (error) {
+      console.error('Error approving company:', error);
       toast.error('Failed to approve company');
-      console.error(error);
-    } finally {
-      setActionLoading(null);
     }
   };
-  
+
   const handleReject = async (userId: string) => {
-    setActionLoading(userId);
     try {
-      // Update the user's metadata
-      const { error } = await supabase.auth.admin.updateUserById(userId, {
+      await supabase.auth.admin.updateUserById(userId, {
         user_metadata: { approval_status: 'rejected' }
       });
-      
-      if (error) throw error;
-      
-      // Update local state
-      setCompanyRequests(prev => 
-        prev.map(req => 
-          req.id === userId ? { ...req, status: 'rejected' } : req
-        )
-      );
-      
-      toast.success('Company rejected successfully');
+
+      setCompanies(companies.map(company => 
+        company.id === userId 
+          ? { ...company, approval_status: 'rejected' }
+          : company
+      ));
+
+      toast.success('Company rejected');
     } catch (error) {
+      console.error('Error rejecting company:', error);
       toast.error('Failed to reject company');
-      console.error(error);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const fetchCompanyRequests = async () => {
-    setLoading(true);
-    try {
-      // First get all users with role 'company'
-      const { data, error } = await supabase.auth.admin.listUsers();
-      
-      if (error) {
-        throw error;
-      }
-
-      if (!data) {
-        setCompanyRequests([]);
-        return;
-      }
-      
-      // Filter and map the company users
-      const companyUsers = data.users
-        .filter(user => {
-          // Make sure user_metadata exists and is an object before checking it
-          const metadata = user.user_metadata as Record<string, any> | null;
-          return metadata && metadata.role === 'company';
-        })
-        .map(user => {
-          // Now we've verified user_metadata exists and is an object
-          const metadata = user.user_metadata as Record<string, any> || {};
-          return {
-            id: user.id,
-            email: user.email || '',
-            company_name: metadata.full_name || '',
-            created_at: user.created_at,
-            status: metadata.approval_status || 'pending',
-            role: metadata.role || ''
-          };
-        });
-
-      setCompanyRequests(companyUsers);
-    } catch (error) {
-      console.error('Error fetching company requests:', error);
-      toast.error('Failed to load company requests');
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <OwnerLayout title={t('companyRequests')}>
-      <div className="container mx-auto py-8 px-4">
-        <h1 className="text-2xl font-bold mb-6">{t('companyRequests')}</h1>
-        
-        {loading ? (
-          <div className="text-center py-10">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status">
-              <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">Loading...</span>
-            </div>
-            <p className="mt-2 text-gray-600">Loading company requests...</p>
-          </div>
-        ) : companyRequests.length > 0 ? (
-          <div className="bg-white shadow overflow-hidden rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {companyRequests.map((request) => (
-                  <TableRow key={request.id} className="hover:bg-gray-50">
-                    <TableCell>
-                      <div className="flex items-center">
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{request.company_name}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-gray-500">{request.email}</div>
-                    </TableCell>
-                    <TableCell>
-                      <span 
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                          ${request.status === 'approved' ? 'bg-green-100 text-green-800' : 
-                            request.status === 'rejected' ? 'bg-red-100 text-red-800' : 
-                            'bg-yellow-100 text-yellow-800'}`}
-                      >
-                        {request.status}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {new Date(request.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {request.status === 'pending' && (
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleApprove(request.id)}
-                            disabled={actionLoading === request.id}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            {actionLoading === request.id ? 'Processing...' : t('approve')}
-                          </Button>
-                          <Button 
-                            size="sm"
-                            variant="destructive" 
-                            onClick={() => handleReject(request.id)}
-                            disabled={actionLoading === request.id}
-                          >
-                            {actionLoading === request.id ? 'Processing...' : t('reject')}
-                          </Button>
-                        </div>
-                      )}
-                      {request.status !== 'pending' && (
-                        <span className="text-gray-500 italic">Processed</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+    <OwnerLayout title="Company Approvals">
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Pending Company Approvals</h1>
+        </div>
+
+        {isLoading ? (
+          <div className="text-center py-10">Loading pending approvals...</div>
+        ) : companies.length === 0 ? (
+          <div className="text-center py-10 text-gray-500">
+            No pending company approvals at this time
           </div>
         ) : (
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg p-8 text-center">
-            <p className="text-gray-500">No company requests found.</p>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Company Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Registration Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {companies.map((company) => (
+                <TableRow key={company.id}>
+                  <TableCell className="font-medium">{company.full_name || company.company_name || 'Unknown'}</TableCell>
+                  <TableCell>{company.email}</TableCell>
+                  <TableCell>{new Date(company.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
+                      Pending
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="default" 
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handleApprove(company.id)}
+                      >
+                        <Check className="h-4 w-4 mr-1" /> Approve
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        onClick={() => handleReject(company.id)} 
+                      >
+                        <X className="h-4 w-4 mr-1" /> Reject
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </div>
     </OwnerLayout>
