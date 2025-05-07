@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,7 +22,8 @@ import {
   Ban,
   Clock,
   Download,
-  RefreshCw
+  RefreshCw,
+  Upload
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -38,6 +40,7 @@ import { useOwnerJobs } from '@/hooks/use-owner-jobs';
 import { Tables } from '@/integrations/supabase/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
+import CsvUploadDialog from '@/components/owner/CsvUploadDialog';
 
 const OwnerJobs = () => {
   const { jobs, loading, refetchJobs } = useOwnerJobs();
@@ -121,6 +124,12 @@ const OwnerJobs = () => {
     job.location?.toLowerCase().includes(searchTerm.toLowerCase() || '')
   );
 
+  const handleCsvUploadComplete = () => {
+    refetchJobs();
+    fetchImportHistory();
+    toast.success('CSV import completed successfully');
+  };
+
   return (
     <OwnerLayout title="Manage All Jobs">
       <div className="space-y-6">
@@ -135,6 +144,9 @@ const OwnerJobs = () => {
             />
           </div>
           <div className="flex space-x-2">
+            {/* CSV Upload Dialog */}
+            <CsvUploadDialog onUploadComplete={handleCsvUploadComplete} />
+            
             {/* Job Import Sheet */}
             <Sheet open={importSidebarOpen} onOpenChange={setImportSidebarOpen}>
               <SheetTrigger asChild>

@@ -104,10 +104,8 @@ const CompanyApprovals = () => {
       const companyUsers = data.users
         .filter(user => {
           // Make sure user_metadata exists and is an object before checking it
-          if (!user.user_metadata || typeof user.user_metadata !== 'object') {
-            return false;
-          }
-          return user.user_metadata.role === 'company';
+          const metadata = user.user_metadata as Record<string, any> | null;
+          return metadata && metadata.role === 'company';
         })
         .map(user => {
           // Now we've verified user_metadata exists and is an object
