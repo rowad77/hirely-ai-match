@@ -9,13 +9,14 @@ import { useAuth } from '@/context/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { useLanguage } from '@/context/LanguageContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Mail, Lock } from 'lucide-react';
+import { AlertCircle, Mail, Lock, WifiOff } from 'lucide-react';
 
 const Login = () => {
   const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isNetworkError, setIsNetworkError] = useState(false);
   const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -29,6 +30,7 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
+    setIsNetworkError(false);
 
     try {
       await login(email, password);
@@ -37,15 +39,29 @@ const Login = () => {
       });
       navigate('/dashboard');
     } catch (error) {
+      // Check if it's a network error
+      const isOffline = error instanceof Error && 
+        (error.message === 'Failed to fetch' || 
+         error.message.includes('NetworkError') ||
+         error.message.includes('network'));
+      
+      setIsNetworkError(isOffline);
+      
       const errorMessage = error instanceof Error 
         ? error.message 
         : "Please check your credentials and try again.";
         
       setError(errorMessage);
       
-      toast.error(t('login') + " failed", {
-        description: errorMessage,
-      });
+      if (isOffline) {
+        toast.error("Network connection error", {
+          description: "Please check your internet connection and try again.",
+        });
+      } else {
+        toast.error(t('login') + " failed", {
+          description: errorMessage,
+        });
+      }
     }
   };
 
@@ -69,7 +85,16 @@ const Login = () => {
 
             <div className="mt-8">
               <div className="mt-6">
-                {error && (
+                {isNetworkError && (
+                  <Alert variant="destructive" className="mb-4 animate-fade-in">
+                    <WifiOff className="h-4 w-4" />
+                    <AlertDescription>
+                      Network connection error. Please check your internet connection and try again.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {error && !isNetworkError && (
                   <Alert variant="destructive" className="mb-4 animate-fade-in">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{error}</AlertDescription>

@@ -113,6 +113,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
+      
+      // Try to handle network connectivity issues
+      if (!navigator.onLine) {
+        throw new Error('You appear to be offline. Please check your internet connection and try again.');
+      }
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
