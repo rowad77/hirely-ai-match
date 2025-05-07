@@ -14,9 +14,9 @@ export const mockLocalStorage = () => {
     removeItem: jest.fn((key: string): void => {
       delete store[key];
     }),
-    clear: jest.fn(): void => {
+    clear: jest.fn((): void => {
       Object.keys(store).forEach(key => delete store[key]);
-    },
+    }),
     key: jest.fn((index: number): string => Object.keys(store)[index] || null),
     length: jest.fn((): number => Object.keys(store).length)
   };
