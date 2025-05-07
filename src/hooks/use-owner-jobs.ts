@@ -4,26 +4,49 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 
+export interface Job extends Tables<'jobs'> {
+  company_name?: string;
+}
+
 export const useOwnerJobs = () => {
-  const [jobs, setJobs] = useState<Tables<'jobs'>[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   const fetchJobs = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const { data, error } = await supabase
+      // Fetch jobs with company names joined
+      const { data, error: jobsError } = await supabase
         .from('jobs')
-        .select('*')
+        .select('*, companies(name)')
         .order('posted_date', { ascending: false });
 
-      if (error) {
-        toast.error('Error fetching jobs', { description: error.message });
-        setJobs([]);
-      } else {
-        setJobs(data || []);
+      if (jobsError) {
+        throw new Error(jobsError.message);
       }
+
+      // Process the data to flatten the company name
+      const processedJobs: Job[] = data?.map(job => {
+        const jobWithCompany = { ...job } as Job;
+        
+        // Extract company name from the nested companies object
+        if (job.companies) {
+          // Handle potential types
+          const companies = job.companies as unknown as { name: string };
+          jobWithCompany.company_name = companies.name;
+          delete jobWithCompany.companies;
+        }
+        
+        return jobWithCompany;
+      }) || [];
+      
+      setJobs(processedJobs);
     } catch (err) {
-      toast.error('Unexpected error', { description: String(err) });
+      const error = err as Error;
+      setError(error);
+      toast.error('Error fetching jobs', { description: error.message });
     } finally {
       setLoading(false);
     }
@@ -33,7 +56,11 @@ export const useOwnerJobs = () => {
     fetchJobs();
   }, []);
 
-  const refetchJobs = () => fetchJobs();
-
-  return { jobs, loading, refetchJobs };
+  return { 
+    jobs, 
+    isLoading: loading, 
+    error, 
+    refresh: fetchJobs,
+    refetchJobs: fetchJobs 
+  };
 };

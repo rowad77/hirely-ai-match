@@ -18,6 +18,18 @@ type CompanyProfile = {
   company_name?: string;
 };
 
+interface UserWithMetadata {
+  id: string;
+  email: string | null;
+  created_at: string;
+  user_metadata?: {
+    full_name?: string;
+    company_name?: string;
+    role?: string;
+    approval_status?: 'pending' | 'approved' | 'rejected';
+  };
+}
+
 const CompanyApprovals = () => {
   const [companies, setCompanies] = useState<CompanyProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,7 +39,12 @@ const CompanyApprovals = () => {
     const fetchPendingCompanies = async () => {
       setIsLoading(true);
       try {
-        const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
+        // Note: We're using any here because the admin API types are not fully supported
+        const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers() as {
+          data: { users: UserWithMetadata[] };
+          error: any;
+        };
+        
         if (usersError) throw usersError;
 
         // Filter users with role 'company' and approval_status 'pending'
