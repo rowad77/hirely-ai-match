@@ -1,3 +1,4 @@
+
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
@@ -5,9 +6,11 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { JobsFilterProvider } from '@/context/JobsFilterContext';
 import { LanguageProvider } from '@/context/LanguageContext';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import AppRoutes from '@/routes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AnimatePresence } from 'framer-motion';
+import GlobalErrorBoundary from './components/ui/GlobalErrorBoundary';
+import { NetworkStatusIndicator } from './components/ui/NetworkStatusIndicator';
+import AppRoutes from '@/routes';
 
 // Create a queryClient with optimized settings
 const queryClient = new QueryClient({
@@ -19,10 +22,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-// Import our new error boundary
-import GlobalErrorBoundary from './components/ui/GlobalErrorBoundary';
-import { NetworkStatusIndicator } from './components/ui/NetworkStatusIndicator';
 
 function App() {
   return (
@@ -41,7 +40,9 @@ function App() {
                   <JobsFilterProvider>
                     <Toaster position="bottom-center" richColors closeButton />
                     <ShadcnToaster />
-                    <AppRoutes />
+                    <AnimatePresence mode="wait">
+                      <AppRoutes />
+                    </AnimatePresence>
                   </JobsFilterProvider>
                 </AuthProvider>
               </BrowserRouter>

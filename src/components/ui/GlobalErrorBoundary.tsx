@@ -1,8 +1,9 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { ErrorDisplay } from './error-display';
 import { toast } from 'sonner';
 import { isNetworkError } from '@/utils/network-status';
+import { errorTracker } from '@/utils/error-tracking';
+import { ErrorDisplay } from './error-boundary/error-display';
 
 interface Props {
   children: ReactNode;
@@ -14,15 +15,20 @@ interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  errorId: string | null;
 }
 
+/**
+ * Global Error Boundary - catches errors at the application root level
+ */
 class GlobalErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
+      errorId: null
     };
   }
 
@@ -34,8 +40,22 @@ class GlobalErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    this.setState({ errorInfo });
+    const errorId = `global_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    this.setState({ errorInfo, errorId });
+    
     console.error('GlobalErrorBoundary caught an error:', error, errorInfo);
+    
+    // Track with our error utility
+    errorTracker.trackError({
+      type: 'render',
+      message: `Global Error: ${error.message || 'Unknown error'}`,
+      stack: error.stack,
+      context: {
+        componentStack: errorInfo.componentStack,
+        errorId,
+        isGlobal: true
+      }
+    });
     
     // Show toast for better visibility
     const isOfflineError = isNetworkError(error);
@@ -46,7 +66,9 @@ class GlobalErrorBoundary extends Component<Props, State> {
       });
     } else {
       toast.error('An unexpected error occurred', { 
-        description: error.message || 'Please try again or contact support if the issue persists.'
+        description: errorId ? 
+          `We've logged this error (ID: ${errorId})` : 
+          error.message || 'Please try again or contact support if the issue persists.'
       });
     }
     
@@ -59,7 +81,8 @@ class GlobalErrorBoundary extends Component<Props, State> {
     this.setState({
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
+      errorId: null
     });
   };
 
@@ -81,7 +104,12 @@ class GlobalErrorBoundary extends Component<Props, State> {
               : "The application encountered an unexpected error."
           }
           error={this.state.error}
-          retryAction={this.resetError}
+          errorId={this.state.errorId}
+          retryAction={() => {
+            this.resetError();
+            window.location.href = '/';
+          }}
+          className="max-w-md mx-auto mt-10"
         />
       );
     }

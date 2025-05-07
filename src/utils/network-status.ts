@@ -14,19 +14,18 @@ if (typeof window !== 'undefined') {
   window.addEventListener('online', () => notifySubscribers(true));
   window.addEventListener('offline', () => notifySubscribers(false));
   
-  // Additional listeners for better offline detection
-  window.addEventListener('fetch', (event) => {
-    const originalFetch = event.request;
-    event.respondWith(
-      fetch(originalFetch).catch(error => {
+  // Additional network error detection through fetch interception
+  const originalFetch = window.fetch;
+  window.fetch = function(...args) {
+    return originalFetch.apply(this, args)
+      .catch(error => {
         if (isNetworkError(error) && navigator.onLine) {
           // We're actually offline despite browser reporting online
           notifySubscribers(false);
         }
         throw error;
-      })
-    );
-  }, { passive: true });
+      });
+  };
 }
 
 /**
