@@ -1,8 +1,17 @@
-
 /**
  * Test utilities for component and function testing
  */
-import { jest } from '@jest/globals';
+// Type-only import to avoid actual import of Jest functions
+type { Jest } from '@jest/environment';
+// Create a mock jest object type for testing environments
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace NodeJS {
+    interface Global {
+      jest: Jest;
+    }
+  }
+}
 
 // Mock implementations for browser APIs
 export const mockLocalStorage = () => {

@@ -4,7 +4,16 @@
  * 
  * @jest
  */
-import { jest, describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+// Import directly since we've now installed the @jest/globals package
+import { 
+  jest, 
+  describe, 
+  it, 
+  expect, 
+  beforeAll, 
+  afterAll, 
+  beforeEach 
+} from '@jest/globals';
 import { 
   isNetworkError, 
   isOnline,
